@@ -45,7 +45,7 @@ These are the five failure modes most likely to bite a real user that the spec i
 ## File Structure
 
 ```
-CHANGELOG.md / CONTRIBUTING.md / AGENTS.md / CLAUDE.md   project documents (spec §13)
+README.md / CHANGELOG.md / CONTRIBUTING.md / AGENTS.md / CLAUDE.md   project documents (spec §13)
 package.json                     scripts, pinned deps
 electron.vite.config.ts          build config for main / preload / renderer (+ @shared alias)
 vitest.config.ts                 two test projects: node (main/shared) and renderer (jsdom)
@@ -91,7 +91,7 @@ tests/renderer/settings-page.test.tsx
 **Files:**
 - Create: `package.json`, `electron.vite.config.ts`, `vitest.config.ts`, `tsconfig.json`, `tsconfig.node.json`, `tsconfig.web.json`, `.prettierrc.yaml`, `.prettierignore`
 - Create: `src/main/index.ts`, `src/preload/index.ts`, `src/preload/index.d.ts`, `src/renderer/index.html`, `src/renderer/src/main.tsx`, `src/renderer/src/App.tsx`, `src/renderer/src/env.d.ts`
-- Create: `CHANGELOG.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`
+- Create: `README.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`
 - Create: `tests/project.test.ts`
 - Delete: `spikes/` (throwaway spike; findings are in spec §11)
 
@@ -401,6 +401,54 @@ export default function App(): React.JSX.Element {
 
 - [ ] **Step 4: Write the project documents (spec §13)**
 
+`README.md`:
+
+````markdown
+# Folk Dance Player
+
+A music player made for **folk dance organizers**. Build the running order for a dance session from
+your music library, play it with auto-continue and teaching stops, and show dancers a large-font
+**projector view** of what was played, what's playing (with the dance's Canva slide) and what's
+coming up — while you keep programming on your laptop.
+
+> **Status:** early development (v0.x). macOS first; Windows later.
+
+## Features
+
+- **Import your music.** Add files or folders, drag and drop, or import from Apple Music's `Library.xml` (the whole library or chosen playlists).
+- **Organize it.** Record country, teacher, choreographer, dance type and difficulty for each song, with autocomplete. Use favorites, a holding area and playlists.
+- **Search** by song title, teacher, choreographer or country. Accents don't matter: "pasa" finds "Paşa".
+- **Build programs** (the dances for a session) by drag and drop, with STOP/Teaching markers. Save and reload them.
+- **Play.** Auto-continue with an adjustable delay, a countdown, preview any song by double-clicking, and slow songs down for teaching without changing their pitch.
+- **Projector view.** A borderless, large-font display on a second screen or projector, with each dance's Canva slide. Slides are saved for use offline.
+- **Fullscreen on one screen.** When no projector is connected, the same view can cover the laptop screen after an idle timeout.
+
+## Getting started (developers)
+
+Requires macOS, Node 24 and npm 12.
+
+```bash
+npm install
+npm install-scripts approve esbuild
+npm run dev
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for scripts, conventions and the release process.
+
+## Project documents
+
+- [Design spec](docs/superpowers/specs/2026-10-13-folk-dance-player-electron-design.md): what the app does and how it's built
+- [Implementation plans](docs/superpowers/plans/)
+- [CHANGELOG.md](CHANGELOG.md): release notes
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to work on the project
+- [AGENTS.md](AGENTS.md): guide and decision log for AI agents and contributors
+
+## Acknowledgements
+
+Inspired by **MITPlayer**, the Visual Basic app many organizers used for years. Thank you for
+showing how this should work.
+````
+
 `CHANGELOG.md`:
 
 ```markdown
@@ -577,6 +625,12 @@ describe('project documents', () => {
     expect(read('CLAUDE.md').trim()).toBe('@AGENTS.md')
   })
 
+  test('README.md describes this app, not the Electron template', () => {
+    const readme = read('README.md')
+    expect(readme).toMatch(/^# Folk Dance Player$/m)
+    expect(readme).not.toMatch(/electron-vite|An Electron application with React/i)
+  })
+
   test('AGENTS.md has a Decisions log and CONTRIBUTING.md exists', () => {
     expect(read('AGENTS.md')).toMatch(/^## Decisions$/m)
     expect(read('CONTRIBUTING.md')).toMatch(/^# Contributing/m)
@@ -592,7 +646,7 @@ npm install-scripts approve esbuild
 npm test
 ```
 
-Expected: `tests/project.test.ts` — 7 passed. (`npm install-scripts approve esbuild` writes an `allowScripts` entry to `package.json`; npm 12 blocks install scripts by default. Electron downloads its binary on first launch, not at install.)
+Expected: `tests/project.test.ts` — 8 passed. (`npm install-scripts approve esbuild` writes an `allowScripts` entry to `package.json`; npm 12 blocks install scripts by default. Electron downloads its binary on first launch, not at install.)
 
 - [ ] **Step 7: Check that the pins test catches a loose version**
 
