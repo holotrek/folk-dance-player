@@ -65,7 +65,7 @@ not be made to work reliably. This rewrite moves to Electron, where that has bee
 
 ## 4. Data model
 
-Stored in SQLite (`better-sqlite3`) in the main process. Data is kept in three layers: local file
+Stored in SQLite via Node's built-in `node:sqlite` in the main process (no native add-on to rebuild; verified with FTS5 in Electron 44 and Node 24). Data is kept in three layers: local file
 facts, shareable song facts, and personal/local data. Shareable and personal fields never share a table.
 
 ```
@@ -390,7 +390,7 @@ Approach A (chosen): **the main process owns all state; the control window plays
   - **Build:** electron-vite, React, TypeScript
   - **State:** Zustand, for UI-local state only (selection, search text)
   - **Drag and drop:** dnd-kit
-  - **Libraries:** better-sqlite3, music-metadata, plist
+  - **Libraries:** `node:sqlite` (built in), music-metadata, plist
   - **Packaging:** electron-builder (a signed macOS `.dmg`)
 - **Dev gotcha:** VS Code's terminal sets `ELECTRON_RUN_AS_NODE=1`, so npm scripts run Electron with that variable unset.
 
