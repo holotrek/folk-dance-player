@@ -221,7 +221,7 @@ PROGRAMS                  [+]
   - **STOP markers:** inserted with a button or context menu.
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
 - **Holding panel:** files with `in_holding`, above the library list.
-- **Library list:** searchable by song title, teacher, choreographer and country. The search uses SQLite FTS5 over those columns plus artist. The list is filtered by the sidebar selection.
+- **Library list:** searchable by song title, teacher, choreographer and country. The search uses SQLite FTS5 over those columns plus artist. Accents don't matter: the tokenizer strips combining accents (ş, ç, é…), and the index triggers fold separate letters such as ı, ł, ø, æ and ß. Search-box text always goes through `toFtsQuery()` (`src/main/db/fts.ts`), which folds it the same way and quotes each word, so punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection.
 
 ### 6.3 Music page
 
@@ -432,7 +432,7 @@ The music never stops because of a side failure, and the projector never shows a
 
 ## 11. Spike findings (2026-10-13)
 
-The throwaway spike is in `spikes/display-canva/`; delete it once this spec is approved. It was run on a MacBook with a 1080p HDMI projector.
+The throwaway spike was deleted after this spec was approved; only its display helper is kept, at `docs/spikes/display-mode.swift`, for the display setup assistant (§12). It was run on a MacBook with a 1080p HDMI projector.
 
 - **Borderless projector window:** fills the target display exactly in extended mode, and the control window keeps focus.
   - Requires `enableLargerThanScreen: true` plus the screen-saver level set before sizing. Otherwise macOS clamps the window below the menu bar.
@@ -492,7 +492,7 @@ How to work on the project:
 - **Scripts:** `dev`, `start`, `build`, `typecheck`, `test`, `format`.
 - **Known gotchas:**
   - VS Code sets `ELECTRON_RUN_AS_NODE`. The scripts unset it.
-  - Electron downloads its binary on first launch.
+  - Electron 44 has no install script of its own, so `postinstall` runs `install-electron` to download the binary. Without it, electron-vite fails with "Electron uninstall".
 - **Workflow:** spec, then plan, then test-first implementation, with conventional commits that each end with the co-author line when an AI assisted.
 - **Code conventions:**
   - Prettier settings
