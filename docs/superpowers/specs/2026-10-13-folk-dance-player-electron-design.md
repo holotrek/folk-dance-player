@@ -300,15 +300,19 @@ With a slide:
 │ PREVIOUSLY       │                          │
 │ PLAYED           │      CANVA SLIDE         │
 │  Misirlou        │                          │
+│ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │                          │
 │  Zemer Atik      │                          │
 ├──────────────────┴──────────────────────────┤
-│ NOW PLAYING: Hora Mare — Romania            │
+│ NOW PLAYING                                 │
+│  Hora Mare                          Romania │
 │ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────  │  ← red elapsed-time line
 ├─────────────────────────────────────────────┤
 │ UP NEXT                                     │
-│  Tfilati — Israel                           │
-│  Ali Pasa — Turkey                          │
-│  Kendime — Turkey                           │
+│  Tfilati                             Israel │
+│ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │  ← subtle divider between entries
+│  Ali Pasa                            Turkey │
+│ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │
+│  Kendime                             Turkey │
 └─────────────────────────────────────────────┘
 ```
 
@@ -317,20 +321,24 @@ Without a slide, previously played takes the full width of the top row and inclu
 ```
 ├─────────────────────────────────────────────┤
 │ PREVIOUSLY PLAYED                           │
-│  Misirlou — Greece                          │
-│  Zemer Atik — Israel                        │
+│  Misirlou                            Greece │
+│ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈ │
+│  Zemer Atik                          Israel │
 ├─────────────────────────────────────────────┤
 ```
 
 | State | Top row | Middle | Bottom |
 |---|---|---|---|
-| Playing | previously played + current song's slide | current song — country, with red progress line | upcoming |
-| Stopped / teaching / countdown | previously played + **next** song's slide | "Up next: title — country" or countdown | rest of upcoming |
+| Playing | previously played + current song's slide | current song (title left, country right), with red progress line | upcoming |
+| Stopped / teaching / countdown | previously played + **next** song's slide | "Up next" with the next song (title left, country right), or countdown | rest of upcoming |
 | Relevant song has no slide (or no image and offline) | previously played, full width, with country | as above | as above |
 
-- **Up next** is a vertical list, one dance per line as `title — country`. It shows as many items as fit in its area.
-- **Previously played** shows titles only when a slide is beside it, because the column is narrow. With no slide it shows `title — country`, like Now Playing and Up next. Newest is at the top.
-- **A missing country** is simply left off (`title` alone), never shown as an empty dash.
+- **Entry rows** follow the Flutter app's style: the title is left-aligned and the country is right-aligned on the same line. This applies to Now Playing, Up next, and previously played when it shows country.
+- **Dividers:** a subtle, low-contrast horizontal line separates list entries, so short titles and countries clearly pair up across the gap.
+- **Long titles** truncate with an ellipsis before they reach the country, so the country is never pushed off or overlapped.
+- **Up next** is a vertical list showing as many entries as fit in its area.
+- **Previously played** shows titles only when a slide is beside it, because the column is narrow. With no slide it shows the country too. Newest is at the top.
+- **A missing country** leaves the right side empty.
 
 - **Read-only.** The view renders state snapshots from main and sends nothing back except diagnostics.
 - **Errors** are never shown on the projector, only in the control window.
