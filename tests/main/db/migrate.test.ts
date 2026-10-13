@@ -43,13 +43,12 @@ describe('migrate', () => {
   test('refuses a database newer than the app and leaves it unchanged', () => {
     const db = openDatabase(':memory:')
     migrate(db, [m1, m2])
-    const error = (() => {
-      try {
-        migrate(db, [m1])
-      } catch (e) {
-        return e
-      }
-    })()
+    let error: unknown
+    try {
+      migrate(db, [m1])
+    } catch (e) {
+      error = e
+    }
     expect(error).toBeInstanceOf(SchemaTooNewError)
     expect(error).toMatchObject({ dbVersion: 2, appVersion: 1 })
     expect(getSchemaVersion(db)).toBe(2)
