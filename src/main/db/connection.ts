@@ -1,0 +1,8 @@
+import { DatabaseSync } from 'node:sqlite'
+
+export function openDatabase(path: string): DatabaseSync {
+  const db = new DatabaseSync(path)
+  db.exec('PRAGMA foreign_keys = ON; PRAGMA busy_timeout = 5000;')
+  if (path !== ':memory:') db.exec('PRAGMA journal_mode = WAL;')
+  return db
+}
