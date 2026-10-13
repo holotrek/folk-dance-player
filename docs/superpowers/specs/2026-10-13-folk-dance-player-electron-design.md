@@ -11,6 +11,8 @@ A music player for folk dance organizers. Before and during a dance event, an op
 it. A separate **projector view** shows dancers, from across the room, what was played, what is
 playing (with the dance's Canva slide), and what is coming up.
 
+The design is based on **MITPlayer**, an older Visual Basic app for the same purpose.
+
 The Flutter version stalled mainly because a fullscreen window on a second display (projector) could
 not be made to work reliably. This rewrite moves to Electron, where that has been proven (see §11).
 
@@ -453,3 +455,5 @@ The throwaway spike is in `spikes/display-canva/`; delete it once this spec is a
   - An OS-style "Keep these settings? Reverting in 15 s" confirmation that reverts automatically.
 - **Converting AIFF/ALAC** so those files can be imported.
 - **Windows build and testing.**
+- **Import from MITPlayer:** read MITPlayer's metadata file and map its fields into `songs` (and its lists into playlists or programs, if it has them), through the same mapping step and summary as other imports (§5). The file format still needs to be examined from a real sample before this can be designed.
+- **About screen:** if an "About this app" screen is added, it includes a thank-you crediting MITPlayer as the inspiration for this app.
