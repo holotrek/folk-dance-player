@@ -125,6 +125,24 @@ settings                      key, value (JSON)
   - Teacher and Choreographer share one combined suggestion list: the distinct non-empty values of `dance_song_prefs.teacher` and `dances.choreographer`.
   - Country has its own list: the distinct values of `dances.country`.
 
+**Labels: how a song and its dance are shown**
+
+One shared function builds every song/dance label, so the control window and the projector always agree. A label has up to three parts:
+- **Song:** the song's title. Omitted when it's the same as the dance name, so nothing is repeated.
+- **Dance:** the dance name.
+- **Choreographer**, in parentheses. Shown only when the song is linked to dances by **more than one choreographer**, which is when it's needed to tell them apart. A dance with no choreographer (a traditional dance) never shows empty parentheses.
+
+The control window uses the one-line form `Song | Dance (Choreographer)`:
+
+| Song | Dance | Choreographers linked to the song | Label |
+|---|---|---|---|
+| Hora de la Munte | Hora Mare | none (traditional) | Hora de la Munte \| Hora Mare |
+| Svornato | Svornato | Jaap Leegwater and others | Svornato (Jaap Leegwater) |
+| Pusteno Ludo | Pravo Rhodopsko Oro | Yves Moreau and others | Pusteno Ludo \| Pravo Rhodopsko Oro (Yves Moreau) |
+| Hora Fetelor | Hora Fetelor | one, or none | Hora Fetelor |
+
+The projector uses the same parts with a different emphasis (§8.2): the dance name and choreographer are large, and the song title is smaller.
+
 **Search**
 
 - **One `library_fts` row per song.** It covers the song's title and artist plus, for every linked dance, its name, country, choreographer and the pairing's teacher.
@@ -254,16 +272,16 @@ PROGRAMS                  [+]
 └──────────┴──────────────────────────────┴──────────────────────────────────┘
 ```
 
-- **Player bar:** transport controls, the current dance (and song, when its title differs), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the projector toggle.
+- **Player bar:** transport controls, the current item's label (§4 "Labels"), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the projector toggle.
 - **Previously played:** the play log for the current program, newest first. It scrolls.
 - **Program list:** only **unplayed** items, in order. Played items stay in storage (`played_at`) but are not shown here.
   - **Reordering:** drag and drop.
   - **Adding:** drag songs in from the library, holding or playlists, or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance.
-  - **Choosing the dance:** each item shows its dance name, and the song's title when it differs. An item whose song has several dances has a **Dance** menu (right-click) to switch to another linked dance.
+  - **Choosing the dance:** each item shows its label (§4 "Labels"). An item whose song has several dances has a **Dance** menu (right-click) listing every linked dance by its label, so dances with the same name are told apart by choreographer.
   - **STOP markers:** inserted with a button or context menu.
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
 - **Holding panel:** files with `in_holding`, above the library list.
-- **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection.
+- **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection.
 
 ### 6.3 Music page
 
@@ -392,10 +410,24 @@ Without a slide, previously played takes the full width of the top row and inclu
 | Stopped / teaching / countdown | previously played + **next** dance's slide | "Up next" with the next dance (name left, country right), or countdown | rest of upcoming |
 | Relevant dance has no slide (or no image and offline) | previously played, full width, with country | as above | as above |
 
-- **What is shown is the dance.** Entry rows show the **dance name**. In Now Playing, the song's title also appears in smaller text under the dance name *only when it differs* (Hora Mare / *Hora de la Munte*).
+- **What is shown is the dance, using the label rules (§4 "Labels"):**
+  - **Large text:** the dance name, plus the choreographer in parentheses when the label calls for it.
+  - **Smaller text:** the song title, *only when it differs* from the dance name, marked with ♪. In Now Playing it sits on its own line under the dance name. In Up next, and in previously played at full width, it follows on the same line.
+  - **Previously played beside a slide** (the narrow column) shows only the large part.
+
+```
+NOW PLAYING
+ Pravo Rhodopsko Oro (Yves Moreau)                     Bulgaria
+   ♪ Pusteno Ludo
+ ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━──────────────────────
+UP NEXT
+ Svornato (Jaap Leegwater)                             Bulgaria
+ ┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈┈
+ Hora Mare  ♪ Hora de la Munte                          Romania
+```
 - **Entry rows** follow the Flutter app's style: the name is left-aligned and the country is right-aligned on the same line. This applies to Now Playing, Up next, and previously played when it shows country.
 - **Dividers:** a subtle, low-contrast horizontal line separates list entries, so short titles and countries clearly pair up across the gap.
-- **Long titles** truncate with an ellipsis before they reach the country, so the country is never pushed off or overlapped.
+- **Long titles** truncate with an ellipsis before they reach the country, so the country is never pushed off or overlapped. The smaller song title is truncated first, then the dance name.
 - **Up next** is a vertical list showing as many entries as fit in its area.
 - **Previously played** shows titles only when a slide is beside it, because the column is narrow. With no slide it shows the country too. Newest is at the top.
 - **A missing country** leaves the right side empty.
@@ -493,6 +525,7 @@ The music never stops because of a side failure, and the projector never shows a
   - `content_hash` relinking.
   - Canva: URL normalization, deck parsing (title plus the ordered page IDs and titles, from a saved view-page fixture), slide number → page ID, page ID → current position, and the fallback when parsing fails.
   - Songs and dances: the automatic one-to-one dance on import, never linking by name, default-dance fallback, linking and unlinking, merging dances.
+  - Labels: song omitted when it equals the dance name; choreographer shown only when a song's dances have more than one choreographer; no empty parentheses for traditional dances. Cover all four examples in §4.
 - **Database (in-memory SQLite):** migrations, repositories, `library_fts` search across songs and their dances (it must stay current when a dance or teacher changes), autocomplete queries, the playlist overwrite-protection decision.
 - **End-to-end (Playwright + Electron):**
   - import a fixture folder, then search
