@@ -24,6 +24,7 @@ This is plan 1 of 7. Later plans: 2 Import · 3 Library · 4 Programs & playback
 - **UI is built from Mantine components** (`@mantine/core`). Don't hand-roll a control Mantine provides.
 - **Custom CSS lives only in co-located CSS Modules** (`Component.module.css`, imported as `classes`), and only for layout, overrides, or truly custom controls. The only global stylesheet is Mantine's (`@mantine/core/styles.css`). No inline `style={{…}}` beyond one-off dynamic values.
 - **File names** are kebab-case `.ts`. React components are PascalCase `.tsx`.
+- **Maintain the project documents (spec §13).** Every user-facing change adds a line under `## [Unreleased]` in `CHANGELOG.md` in the same commit, written for organizers. Every decision a future contributor would need adds an entry to `AGENTS.md` → Decisions.
 - **Commit after every task** with a conventional-commit message. Every commit message ends with:
   ```
   Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
@@ -44,6 +45,7 @@ These are the five failure modes most likely to bite a real user that the spec i
 ## File Structure
 
 ```
+CHANGELOG.md / CONTRIBUTING.md / AGENTS.md / CLAUDE.md   project documents (spec §13)
 package.json                     scripts, pinned deps
 electron.vite.config.ts          build config for main / preload / renderer (+ @shared alias)
 vitest.config.ts                 two test projects: node (main/shared) and renderer (jsdom)
@@ -89,6 +91,7 @@ tests/renderer/settings-page.test.tsx
 **Files:**
 - Create: `package.json`, `electron.vite.config.ts`, `vitest.config.ts`, `tsconfig.json`, `tsconfig.node.json`, `tsconfig.web.json`, `.prettierrc.yaml`, `.prettierignore`
 - Create: `src/main/index.ts`, `src/preload/index.ts`, `src/preload/index.d.ts`, `src/renderer/index.html`, `src/renderer/src/main.tsx`, `src/renderer/src/App.tsx`, `src/renderer/src/env.d.ts`
+- Create: `CHANGELOG.md`, `CONTRIBUTING.md`, `AGENTS.md`, `CLAUDE.md`
 - Create: `tests/project.test.ts`
 - Delete: `spikes/` (throwaway spike; findings are in spec §11)
 
@@ -286,7 +289,10 @@ out
 dist
 node_modules
 package-lock.json
+docs
 ```
+
+(`docs` is excluded so formatting never rewrites the spec and plans.)
 
 - [ ] **Step 3: Write the minimal app source**
 
@@ -393,7 +399,144 @@ export default function App(): React.JSX.Element {
 }
 ```
 
-- [ ] **Step 4: Write the failing project test**
+- [ ] **Step 4: Write the project documents (spec §13)**
+
+`CHANGELOG.md`:
+
+```markdown
+# Changelog
+
+All notable changes to Folk Dance Player are documented here. These sections are the official
+release notes.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project
+adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+```
+
+`CLAUDE.md`:
+
+```markdown
+@AGENTS.md
+```
+
+`AGENTS.md`:
+
+```markdown
+# AGENTS.md
+
+Guide for AI agents (and people) working on Folk Dance Player. Read this first.
+
+## Orientation
+
+Folk Dance Player is a macOS-first Electron app for folk dance organizers: index a music library,
+build a **program** (the dances for one session), play it, and show a large-font **projector view**
+with Canva slides on a second display. It replaces an earlier Flutter app and is inspired by
+MITPlayer.
+
+- Spec: `docs/superpowers/specs/2026-10-13-folk-dance-player-electron-design.md`
+- Plans: `docs/superpowers/plans/` (one per subsystem; written when reached)
+- Release notes: `CHANGELOG.md` · How to contribute: `CONTRIBUTING.md`
+
+## Non-negotiable conventions
+
+- **The main process owns all state.** Renderers call `window.api.invoke` on channels in `src/shared/contract.ts`. The projector window is read-only.
+- **Use `node:sqlite`.** Schema changes are new numbered migrations. A migration that has been released is never edited.
+- **Keep the data layers separate.** `files` holds local facts, `songs` holds shareable facts (one per file), and `file_prefs`, `playlists` and `slide_cache` hold personal or local data.
+- **UI comes from Mantine components.** Custom CSS goes only in co-located `*.module.css` files.
+- **Pin exact dependency versions,** each at least two weeks old when added.
+- **Work test-first** (Vitest). Commit with conventional-commit messages.
+- **Add a `CHANGELOG.md` line** under `Unreleased` for every user-facing change, in the same commit.
+- **Add a decision below** whenever you make one a future contributor would otherwise have to rediscover.
+
+## Decisions
+
+Newest first. Format: **date — decision.** Why. *Rejected:* alternatives.
+
+- **2026-10-13 — Mantine components with scoped CSS Modules for the UI.** Avoid hand-rolling standard controls (autocomplete, number inputs, dialogs, notifications); keep custom CSS small and component-scoped. *Rejected:* shadcn/ui + Tailwind (utility classes instead of scoped CSS), Radix Themes (no autocomplete or notifications).
+- **2026-10-13 — Built-in `node:sqlite` instead of `better-sqlite3`.** No native add-on to rebuild for Electron, and tests run on the same SQLite (3.53.4, FTS5) as the app. *Rejected:* better-sqlite3 (needs separate builds for Node and Electron).
+- **2026-10-13 — Exact version pins, each at least two weeks old; Vite stays on 7.x.** Reproducible builds, and avoiding brand-new releases. electron-vite 5 supports Vite only up to 7.
+- **2026-10-13 — Double-click plays a preview everywhere except the program.** A preview stops the current song, is logged and shown on the projector, and never auto-continues; afterwards the program's next item is queued. Double-clicking in the program does nothing, because the program means "play in this order"; drag an item to the top instead.
+- **2026-10-13 — Played program items are hidden but kept** (`program_items.played_at`). Saved programs record what was actually danced. *Rejected:* deleting items as they play (the Flutter behavior).
+- **2026-10-13 — Auto-continue is on by default,** with the delay editable in the player bar. STOP markers, replays and previews always halt.
+- **2026-10-13 — Playlists are separate from programs.** Playlists organize the library; programs are a session's running order. Apple Music playlists are recreated exactly, and a re-import asks before overwriting local edits.
+- **2026-10-13 — One `songs` row per file, in three data layers.** Editing one recording's metadata must never affect another. Keeping shareable facts separate leaves room for a future shared metadata database. *Rejected:* several files sharing one song record.
+- **2026-10-13 — Canva slides use the plain `/view` link in a `WebContentsView`, with a synthetic mouse pass after every slide change; saved slide images are used when offline.** `/view` can't be iframed (X-Frame-Options: deny). `?embed` can, but its controls never fade. Canva fades its controls only after mouse activity. *Rejected:* `?embed` iframe, and cropping (the controls overlap slide content).
+- **2026-10-13 — The projector window is borderless** (`frame: false`, `enableLargerThanScreen: true`, `setAlwaysOnTop(true, 'screen-saver')` before `setBounds`, `showInactive()`). This was the most seamless option on laptop and projector. Without `enableLargerThanScreen`, macOS clamps the window below the menu bar. *Rejected:* native macOS fullscreen (new Space and an animation), simple fullscreen.
+- **2026-10-13 — The projector view never closes on mouse or Esc in projector mode;** it does in laptop mode. The operator keeps working while the projector is up. Laptop mode must always be escapable.
+- **2026-10-13 — Main process is the single source of truth; the control window plays audio through `<audio>`.** This prevents the Flutter app's desync bugs. `<audio>` with `preservesPitch` gives speed changes without changing pitch (verified at 0.5×, 0.75× and 1.25×). *Rejected:* state in the renderer synced with BroadcastChannel; audio in a hidden window.
+- **2026-10-13 — Electron rewrite of the Flutter app, macOS first.** The Flutter version couldn't reliably put a fullscreen window on a second display; a spike proved Electron can. *Rejected:* continuing with Flutter.
+```
+
+`CONTRIBUTING.md`:
+
+````markdown
+# Contributing to Folk Dance Player
+
+## Prerequisites
+
+- macOS (primary platform)
+- Node 24 and npm 12
+
+## Setup
+
+```bash
+npm install
+npm install-scripts approve esbuild   # npm 12 blocks install scripts until approved
+npm run dev
+```
+
+**Gotchas:**
+
+- **VS Code's terminal sets `ELECTRON_RUN_AS_NODE=1`.** That makes Electron run as plain Node, so `npm run dev` and `npm start` unset it. Do the same in any new script that launches Electron.
+- **Electron downloads its binary on first launch,** not during `npm install`.
+
+## Scripts
+
+| Script | What it does |
+|---|---|
+| `npm run dev` | Run the app with hot reload |
+| `npm start` | Run the last production build |
+| `npm run build` | Typecheck, then build to `out/` |
+| `npm run typecheck` | TypeScript checks for main/preload and renderer |
+| `npm test` | All tests (Vitest: node + renderer projects) |
+| `npm run format` | Prettier |
+
+## Workflow
+
+1. **Design changes go into the spec first** (`docs/superpowers/specs/`). Implementation follows a plan in `docs/superpowers/plans/`.
+2. **Test-first:** write the failing test, make it pass, then commit.
+3. **Use conventional commits** (`feat:`, `fix:`, `chore:`, `docs:`…). Commits made with an AI assistant end with its `Co-Authored-By:` line.
+4. **For user-facing changes,** add a line under `## [Unreleased]` in `CHANGELOG.md` in the same commit, written for organizers.
+5. **For decisions a future contributor would need to know,** add an entry to the Decisions log in `AGENTS.md`.
+
+## Conventions
+
+- **Prettier:** single quotes, no semicolons, 100 columns, no trailing commas.
+- **UI:** use Mantine components first. Custom CSS only in a co-located `Component.module.css`, and only for layout, overrides or custom controls.
+- **Renderers never touch Node or the database.** Everything goes through `window.api.invoke`.
+
+## Common changes
+
+- **Adding a dependency:** pin the exact version (no `^` or `~`), choose a release at least two weeks old, and say why in the commit message.
+- **Changing the database:** add `src/main/db/migrations/00N-name.ts` and append it to `MIGRATIONS`. Never edit a migration that has been released.
+- **Adding an IPC channel:**
+  1. Add it to `InvokeContract` in `src/shared/contract.ts`.
+  2. Add it to `INVOKE_CHANNELS`. Typecheck fails until you do.
+  3. Implement it in `createHandlers`.
+
+## Releasing
+
+1. `npm test` and `npm run build` pass. Complete the manual hardware checklist in spec §10.2 (projector, Canva, offline slides, slowed audio).
+2. Bump `version` in `package.json` (semver).
+3. In `CHANGELOG.md`, move the `Unreleased` entries under `## [x.y.z] - YYYY-MM-DD`.
+4. Commit as `chore(release): vx.y.z` and tag `vx.y.z`.
+5. Build the signed `.dmg` (see the packaging plan).
+````
+
+
+- [ ] **Step 5: Write the failing project test**
 
 `tests/project.test.ts`:
 
@@ -416,9 +559,32 @@ describe('package.json', () => {
     expect(loose).toEqual([])
   })
 })
+
+// Spec §13: release notes, contributing guide and decision log are part of the repo.
+describe('project documents', () => {
+  const read = (f: string): string => readFileSync(resolve(__dirname, '..', f), 'utf8')
+
+  test('CHANGELOG.md has an Unreleased section', () => {
+    expect(read('CHANGELOG.md')).toMatch(/^## \[Unreleased\]$/m)
+  })
+
+  test('CHANGELOG.md versions are Keep a Changelog headings', () => {
+    const headings = read('CHANGELOG.md').match(/^## .*$/gm) ?? []
+    for (const h of headings) expect(h).toMatch(/^## \[(Unreleased|\d+\.\d+\.\d+)\]( - \d{4}-\d{2}-\d{2})?$/)
+  })
+
+  test('CLAUDE.md imports AGENTS.md', () => {
+    expect(read('CLAUDE.md').trim()).toBe('@AGENTS.md')
+  })
+
+  test('AGENTS.md has a Decisions log and CONTRIBUTING.md exists', () => {
+    expect(read('AGENTS.md')).toMatch(/^## Decisions$/m)
+    expect(read('CONTRIBUTING.md')).toMatch(/^# Contributing/m)
+  })
+})
 ```
 
-- [ ] **Step 5: Install and run the tests**
+- [ ] **Step 6: Install and run the tests**
 
 ```bash
 npm install --no-audit --no-fund
@@ -426,14 +592,14 @@ npm install-scripts approve esbuild
 npm test
 ```
 
-Expected: `tests/project.test.ts` — 3 passed. (`npm install-scripts approve esbuild` writes an `allowScripts` entry to `package.json`; npm 12 blocks install scripts by default. Electron downloads its binary on first launch, not at install.)
+Expected: `tests/project.test.ts` — 7 passed. (`npm install-scripts approve esbuild` writes an `allowScripts` entry to `package.json`; npm 12 blocks install scripts by default. Electron downloads its binary on first launch, not at install.)
 
-- [ ] **Step 6: Check that the pins test catches a loose version**
+- [ ] **Step 7: Check that the pins test catches a loose version**
 
 Temporarily change `"vite": "7.3.6"` to `"vite": "^7.3.6"` in `package.json` and run `npm test`.
 Expected: FAIL in "all dependency versions are pinned exactly", listing `vite`. Then revert the change and re-run `npm test`, which should PASS.
 
-- [ ] **Step 7: Typecheck, build and launch**
+- [ ] **Step 8: Typecheck, build and launch**
 
 ```bash
 npm run typecheck
@@ -447,7 +613,7 @@ Expected:
 
 Quit the app (⌘Q).
 
-- [ ] **Step 8: Format and commit**
+- [ ] **Step 9: Format and commit**
 
 ```bash
 npx prettier --write .
@@ -2163,7 +2329,19 @@ cp /tmp/fdp-backup.sqlite "$DB"
 
 The first command prints `{ user_version: 99 }`. The `cp` restores your library.
 
-- [ ] **Step 11: Format and commit**
+- [ ] **Step 11: Add the release notes**
+
+This is the first user-facing change, so add these lines under `## [Unreleased]` in `CHANGELOG.md`:
+
+```markdown
+### Added
+
+- Program, Music and Settings pages, with a library sidebar (playlists and programs arrive in later releases).
+- Settings for import (Genre is Country), auto-continue, the countdown before the first song, and the idle fullscreen view. They are saved between launches.
+- Folk Dance Player won't open a music library created by a newer version of the app, and leaves that library unchanged.
+```
+
+- [ ] **Step 12: Format and commit**
 
 ```bash
 npx prettier --write .
