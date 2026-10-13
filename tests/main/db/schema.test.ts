@@ -87,7 +87,10 @@ describe('initial schema', () => {
     db.prepare(
       "INSERT INTO program_items (program_id, position, kind, file_id) VALUES (?, 1, 'track', ?)"
     ).run(p, f)
-    db.prepare("INSERT INTO play_log (file_id, program_id, kind) VALUES (?, ?, 'program')").run(f, p)
+    db.prepare("INSERT INTO play_log (file_id, program_id, kind) VALUES (?, ?, 'program')").run(
+      f,
+      p
+    )
 
     db.prepare('DELETE FROM files WHERE id = ?').run(f)
 
@@ -148,7 +151,11 @@ describe('songs full-text index', () => {
   })
 
   test('indexes values containing punctuation', () => {
-    addSong(addFile('/1.mp3'), { title: 'Hasapiko', dance_type: '4-Wall', country: "Côte d'Ivoire" })
+    addSong(addFile('/1.mp3'), {
+      title: 'Hasapiko',
+      dance_type: '4-Wall',
+      country: "Côte d'Ivoire"
+    })
     expect(search('"ivoire"')).toEqual(['Hasapiko'])
   })
 
