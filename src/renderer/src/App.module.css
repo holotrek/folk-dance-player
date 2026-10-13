@@ -1,0 +1,4 @@
+.main {
+  height: calc(100dvh - var(--app-shell-header-height, 0px));
+  box-sizing: border-box;
+}
