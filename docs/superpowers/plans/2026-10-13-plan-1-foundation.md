@@ -6,7 +6,7 @@
 
 **Architecture:** The main process owns the database (`node:sqlite`) and every piece of state. Renderers call it only through one typed request/response contract (`src/shared/contract.ts`), exposed by the preload as `window.api.invoke`. Database code, the migration runner, the settings store and the IPC handlers are plain TypeScript with no Electron imports, so Vitest tests them directly against an in-memory database.
 
-**Tech Stack:** Electron 44.4.5, electron-vite 5.0.0, Vite 7.3.6, React 19.3.0, TypeScript 5.9.3, `node:sqlite` (built into Node 24 / Electron 44), Vitest 4.1.11, Testing Library + jsdom, Prettier 3.9.9.
+**Tech Stack:** Electron 44.4.5, electron-vite 5.0.0, Vite 7.3.6, React 19.3.0, Mantine 9.6.3 (UI components) with CSS Modules for scoped styles, TypeScript 5.9.3, `node:sqlite` (built into Node 24 / Electron 44), Vitest 4.1.11, Testing Library + jsdom, Prettier 3.9.9.
 
 **Spec:** `docs/superpowers/specs/2026-10-13-folk-dance-player-electron-design.md`. Read §4 (data model) and §9 (architecture) before starting.
 
@@ -21,6 +21,8 @@ This is plan 1 of 7. Later plans: 2 Import · 3 Library · 4 Programs & playback
 - **Renderers never touch Node or the database directly.** Every call goes through `window.api.invoke(channel, ...args)`, and the preload only allows channels listed in `INVOKE_CHANNELS`.
 - **Keep the data layers separate.** Shareable song facts (`songs`), local file facts (`files`) and personal data (`file_prefs`, `playlists`, `slide_cache`) never share a table (spec §4).
 - **Code style:** Prettier with `singleQuote: true`, `semi: false`, `printWidth: 100`, `trailingComma: none`.
+- **UI is built from Mantine components** (`@mantine/core`). Don't hand-roll a control Mantine provides.
+- **Custom CSS lives only in co-located CSS Modules** (`Component.module.css`, imported as `classes`), and only for layout, overrides, or truly custom controls. The only global stylesheet is Mantine's (`@mantine/core/styles.css`). No inline `style={{…}}` beyond one-off dynamic values.
 - **File names** are kebab-case `.ts`. React components are PascalCase `.tsx`.
 - **Commit after every task** with a conventional-commit message. Every commit message ends with:
   ```
@@ -62,9 +64,10 @@ src/preload/index.d.ts           Window.api typing
 src/renderer/index.html
 src/renderer/src/main.tsx        React root
 src/renderer/src/App.tsx         page switching + layout
-src/renderer/src/styles.css
-src/renderer/src/components/Sidebar.tsx
-src/renderer/src/pages/ProgramPage.tsx
+src/renderer/src/theme.ts        Mantine theme
+src/renderer/src/App.module.css  shell layout (scoped)
+src/renderer/src/components/Sidebar.tsx + Sidebar.module.css
+src/renderer/src/pages/ProgramPage.tsx + ProgramPage.module.css
 src/renderer/src/pages/MusicPage.tsx
 src/renderer/src/pages/SettingsPage.tsx
 tests/project.test.ts            package.json script guard
@@ -74,7 +77,8 @@ tests/main/db/migrate.test.ts
 tests/main/db/schema.test.ts
 tests/main/settings/settings-store.test.ts
 tests/main/ipc/handlers.test.ts
-tests/renderer/setup.ts
+tests/renderer/setup.ts          jsdom mocks Mantine needs (matchMedia, ResizeObserver, scrollIntoView)
+tests/renderer/render.tsx         renderWithMantine()
 tests/renderer/settings-page.test.tsx
 ```
 
@@ -123,7 +127,9 @@ rm -rf spikes
   },
   "dependencies": {
     "@electron-toolkit/preload": "3.0.2",
-    "@electron-toolkit/utils": "4.0.0"
+    "@electron-toolkit/utils": "4.0.0",
+    "@mantine/core": "9.6.3",
+    "@mantine/hooks": "9.6.3"
   },
   "devDependencies": {
     "@electron-toolkit/tsconfig": "2.0.0",
@@ -1559,38 +1565,96 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `src/main/index.ts`, `src/renderer/src/App.tsx`, `src/renderer/src/main.tsx`
-- Create: `src/renderer/src/styles.css`, `src/renderer/src/components/Sidebar.tsx`, `src/renderer/src/pages/ProgramPage.tsx`, `src/renderer/src/pages/MusicPage.tsx`, `src/renderer/src/pages/SettingsPage.tsx`
-- Create: `tests/renderer/setup.ts`
+- Create: `src/renderer/src/theme.ts`, `src/renderer/src/App.module.css`
+- Create: `src/renderer/src/components/Sidebar.tsx`, `src/renderer/src/components/Sidebar.module.css`
+- Create: `src/renderer/src/pages/ProgramPage.tsx`, `src/renderer/src/pages/ProgramPage.module.css`
+- Create: `src/renderer/src/pages/MusicPage.tsx`, `src/renderer/src/pages/SettingsPage.tsx`
+- Create: `tests/renderer/setup.ts`, `tests/renderer/render.tsx`
 - Test: `tests/renderer/settings-page.test.tsx`
 
 **Interfaces:**
 - Consumes: everything from Tasks 2–5.
 - Produces:
-  - `SettingsPage({ api }: { api: RendererApi })` (default export from `pages/SettingsPage.tsx`).
+  - `theme` (Mantine theme, `src/renderer/src/theme.ts`). Every renderer root and test wraps itself in `<MantineProvider theme={theme}>`.
+  - `renderWithMantine(ui: React.ReactElement)` (`tests/renderer/render.tsx`). All later renderer tests use it instead of `render`.
+  - `SettingsPage({ api }: { api: RendererApi })` (default export of `pages/SettingsPage.tsx`).
   - `Sidebar()`, `ProgramPage()`, `MusicPage()` as layout placeholders. Plans 3 and 4 fill them in.
   - The app opens `<userData>/folk-dance-player.sqlite` at startup and migrates it. If that fails, it shows an error dialog and quits without touching the file.
 
-- [ ] **Step 1: Write the renderer test setup and the failing Settings page tests**
+**Mantine notes for the implementer:**
+- **`NumberInput`** clamps to `min`/`max` on blur by default. We pass `clampBehavior="none"` so that the main process does the validating (single source of truth), and a rejected value is reported rather than silently changed.
+- **jsdom** lacks `matchMedia`, `ResizeObserver` and `scrollIntoView`, which Mantine uses. `tests/renderer/setup.ts` stubs them.
+
+- [ ] **Step 1: Write the theme, the renderer test setup and the render helper**
+
+`src/renderer/src/theme.ts`:
+
+```ts
+import { createTheme } from '@mantine/core'
+
+export const theme = createTheme({
+  primaryColor: 'red',
+  defaultRadius: 'md'
+})
+```
 
 `tests/renderer/setup.ts`:
 
 ```ts
 import '@testing-library/jest-dom/vitest'
 import { cleanup } from '@testing-library/react'
-import { afterEach } from 'vitest'
+import { afterEach, vi } from 'vitest'
+
+// jsdom lacks these browser APIs; Mantine uses them.
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  value: vi.fn().mockImplementation((query: string) => ({
+    matches: false,
+    media: query,
+    onchange: null,
+    addListener: vi.fn(),
+    removeListener: vi.fn(),
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+    dispatchEvent: vi.fn()
+  }))
+})
+
+class ResizeObserverStub {
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+}
+window.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver
+Element.prototype.scrollIntoView = vi.fn()
 
 afterEach(() => cleanup())
 ```
 
+`tests/renderer/render.tsx`:
+
+```tsx
+import { MantineProvider } from '@mantine/core'
+import { render, type RenderResult } from '@testing-library/react'
+import { theme } from '@renderer/theme'
+
+export function renderWithMantine(ui: React.ReactElement): RenderResult {
+  return render(<MantineProvider theme={theme}>{ui}</MantineProvider>)
+}
+```
+
+- [ ] **Step 2: Write the failing Settings page tests**
+
 `tests/renderer/settings-page.test.tsx`:
 
 ```tsx
-import { render, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import type { RendererApi } from '@shared/contract'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 import SettingsPage from '@renderer/pages/SettingsPage'
+import { renderWithMantine } from './render'
 
 function fakeApi(initial: Settings = DEFAULT_SETTINGS) {
   let current: Settings = { ...initial }
@@ -1618,23 +1682,23 @@ function fakeApi(initial: Settings = DEFAULT_SETTINGS) {
 describe('SettingsPage', () => {
   test('shows the stored settings', async () => {
     const { api } = fakeApi({ ...DEFAULT_SETTINGS, 'autoContinue.seconds': 8 })
-    render(<SettingsPage api={api} />)
+    renderWithMantine(<SettingsPage api={api} />)
     expect(await screen.findByLabelText('Genre is Country')).toBeChecked()
-    expect(screen.getByLabelText('Auto-continue after (seconds)')).toHaveValue(8)
+    expect(screen.getByLabelText('Auto-continue after (seconds)')).toHaveValue('8')
     expect(await screen.findByText('/data/folk-dance-player.sqlite')).toBeInTheDocument()
   })
 
   test('saves a toggled setting', async () => {
     const { api, calls } = fakeApi()
-    render(<SettingsPage api={api} />)
+    renderWithMantine(<SettingsPage api={api} />)
     await userEvent.click(await screen.findByLabelText('Genre is Country'))
     expect(calls).toContainEqual(['settings:set', 'import.genreIsCountry', false])
     expect(screen.getByLabelText('Genre is Country')).not.toBeChecked()
   })
 
-  test('saves a number setting', async () => {
+  test('saves a number setting on blur', async () => {
     const { api, calls } = fakeApi()
-    render(<SettingsPage api={api} />)
+    renderWithMantine(<SettingsPage api={api} />)
     const input = await screen.findByLabelText('Countdown before first song (seconds)')
     await userEvent.clear(input)
     await userEvent.type(input, '3')
@@ -1642,31 +1706,34 @@ describe('SettingsPage', () => {
     expect(calls).toContainEqual(['settings:set', 'countdown.seconds', 3])
   })
 
-  test('shows an error and keeps the saved value when a save is rejected', async () => {
+  test('shows an error and restores the saved value when a save is rejected', async () => {
     const { api } = fakeApi()
-    render(<SettingsPage api={api} />)
+    renderWithMantine(<SettingsPage api={api} />)
     const input = await screen.findByLabelText('Auto-continue after (seconds)')
     await userEvent.clear(input)
     await userEvent.type(input, '-4')
     await userEvent.tab()
     expect(await screen.findByRole('alert')).toHaveTextContent("Couldn't save setting")
     // The field re-mounts after a rejected save, so look it up again.
-    expect(screen.getByLabelText('Auto-continue after (seconds)')).toHaveValue(5)
+    expect(screen.getByLabelText('Auto-continue after (seconds)')).toHaveValue('5')
   })
 })
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+Mantine's `NumberInput` is a text input, so its DOM value is the string `'8'`, not the number `8`.
+
+- [ ] **Step 3: Run the tests to verify they fail**
 
 Run: `npx vitest run --project renderer`
 Expected: FAIL — cannot resolve `@renderer/pages/SettingsPage`.
 
-- [ ] **Step 3: Implement the Settings page**
+- [ ] **Step 4: Implement the Settings page**
 
 `src/renderer/src/pages/SettingsPage.tsx`:
 
 ```tsx
 import { useEffect, useState } from 'react'
+import { Alert, Code, Loader, NumberInput, Stack, Switch, Text, Title } from '@mantine/core'
 import type { AppInfo, RendererApi } from '@shared/contract'
 import type { SettingKey, Settings } from '@shared/settings'
 
@@ -1695,119 +1762,175 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
     }
   }
 
-  if (!settings) return <p>Loading settings…</p>
+  if (!settings) return <Loader m="md" />
 
-  const checkbox = (key: BooleanKey, label: string): React.JSX.Element => (
-    <label className="setting">
-      <input
-        type="checkbox"
-        checked={settings[key]}
-        onChange={(e) => save(key, e.target.checked)}
-      />
-      {label}
-    </label>
+  const toggle = (key: BooleanKey, label: string): React.JSX.Element => (
+    <Switch
+      label={label}
+      checked={settings[key]}
+      onChange={(e) => save(key, e.currentTarget.checked)}
+    />
   )
 
   const number = (key: NumberKey, label: string, min: number, max: number): React.JSX.Element => (
-    <label className="setting">
-      {label}
-      <input
-        key={`${key}-${revision}`}
-        type="number"
-        min={min}
-        max={max}
-        defaultValue={settings[key]}
-        onBlur={(e) => {
-          const value = Number(e.target.value)
-          if (e.target.value !== '' && value !== settings[key]) save(key, value)
-        }}
-      />
-    </label>
+    <NumberInput
+      key={`${key}-${revision}`}
+      label={label}
+      min={min}
+      max={max}
+      clampBehavior="none"
+      allowDecimal={false}
+      w={260}
+      defaultValue={settings[key]}
+      onBlur={(e) => {
+        const raw = e.currentTarget.value
+        const value = Number(raw)
+        if (raw !== '' && value !== settings[key]) save(key, value)
+      }}
+    />
   )
 
   return (
-    <div className="page settings-page">
-      <h2>Settings</h2>
+    <Stack p="md" gap="lg" maw={640}>
+      <Title order={2}>Settings</Title>
       {error && (
-        <p role="alert" className="error">
+        <Alert color="red" role="alert">
           {error}
-        </p>
+        </Alert>
       )}
-      <section>
-        <h3>Import</h3>
-        {checkbox('import.genreIsCountry', 'Genre is Country')}
-      </section>
-      <section>
-        <h3>Playback</h3>
-        {checkbox('autoContinue.enabled', 'Auto-continue to the next song')}
+      <Stack gap="xs">
+        <Title order={4}>Import</Title>
+        {toggle('import.genreIsCountry', 'Genre is Country')}
+      </Stack>
+      <Stack gap="xs">
+        <Title order={4}>Playback</Title>
+        {toggle('autoContinue.enabled', 'Auto-continue to the next song')}
         {number('autoContinue.seconds', 'Auto-continue after (seconds)', 0, 600)}
         {number('countdown.seconds', 'Countdown before first song (seconds)', 0, 60)}
-      </section>
-      <section>
-        <h3>Fullscreen on this screen</h3>
-        {checkbox('autoFullscreen.enabled', 'Show fullscreen view when idle')}
+      </Stack>
+      <Stack gap="xs">
+        <Title order={4}>Fullscreen on this screen</Title>
+        {toggle('autoFullscreen.enabled', 'Show fullscreen view when idle')}
         {number('autoFullscreen.seconds', 'Idle time before fullscreen (seconds)', 5, 3600)}
-      </section>
+      </Stack>
       {info && (
-        <section className="about">
-          <h3>About</h3>
-          <p>Version {info.version}</p>
-          <p>
-            Library database (schema {info.schemaVersion}): <code>{info.dbPath}</code>
-          </p>
-        </section>
+        <Stack gap={4}>
+          <Title order={4}>About</Title>
+          <Text size="sm">Version {info.version}</Text>
+          <Text size="sm">Library database (schema {info.schemaVersion}):</Text>
+          <Code>{info.dbPath}</Code>
+        </Stack>
       )}
-    </div>
+    </Stack>
   )
 }
 ```
 
-The database path is wrapped in its own `<code>` element so the test can find it with `findByText`.
+The database path sits in its own `<Code>` element so the test can find it with `findByText`.
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [ ] **Step 5: Run the tests to verify they pass**
 
 Run: `npx vitest run --project renderer`
 Expected: PASS (4 tests).
 
-- [ ] **Step 5: Implement the shell: sidebar, placeholder pages, App, styles**
+- [ ] **Step 6: Implement the shell: sidebar, placeholder pages, App, renderer root**
+
+`src/renderer/src/components/Sidebar.module.css`:
+
+```css
+.root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.programs {
+  flex: 1;
+  min-height: 0;
+}
+```
 
 `src/renderer/src/components/Sidebar.tsx`:
 
 ```tsx
+import { NavLink, ScrollArea, Text, TextInput } from '@mantine/core'
+import classes from './Sidebar.module.css'
+
 // Layout per spec §6.1. Library/playlist/program data arrives in plans 3 and 4.
 export default function Sidebar(): React.JSX.Element {
   return (
-    <nav className="sidebar" aria-label="Library">
-      <h4>Library</h4>
-      <ul>
-        <li>♪ All Music</li>
-        <li>★ Favorites</li>
-      </ul>
-      <h4>Playlists</h4>
-      <p className="empty">No playlists yet</p>
-      <h4>Programs</h4>
-      <input type="search" placeholder="Search programs…" aria-label="Search programs" />
-      <div className="programs-list">
-        <p className="empty">No programs yet</p>
-      </div>
+    <nav className={classes.root} aria-label="Library">
+      <Text size="xs" fw={700} c="dimmed" tt="uppercase" mb={4}>
+        Library
+      </Text>
+      <NavLink label="♪ All Music" active />
+      <NavLink label="★ Favorites" />
+
+      <Text size="xs" fw={700} c="dimmed" tt="uppercase" mt="md" mb={4}>
+        Playlists
+      </Text>
+      <Text size="sm" c="dimmed">
+        No playlists yet
+      </Text>
+
+      <Text size="xs" fw={700} c="dimmed" tt="uppercase" mt="md" mb={4}>
+        Programs
+      </Text>
+      <TextInput size="xs" placeholder="Search programs…" aria-label="Search programs" mb="xs" />
+      <ScrollArea className={classes.programs}>
+        <Text size="sm" c="dimmed">
+          No programs yet
+        </Text>
+      </ScrollArea>
     </nav>
   )
+}
+```
+
+`src/renderer/src/pages/ProgramPage.module.css`:
+
+```css
+.root {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-sm);
+  height: 100%;
+}
+
+.grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 3fr;
+  gap: var(--mantine-spacing-sm);
 }
 ```
 
 `src/renderer/src/pages/ProgramPage.tsx`:
 
 ```tsx
+import { Paper, Text } from '@mantine/core'
+import classes from './ProgramPage.module.css'
+
 // Layout per spec §6.2. Filled in by plan 4.
 export default function ProgramPage(): React.JSX.Element {
+  const panel = (label: string): React.JSX.Element => (
+    <Paper withBorder p="sm">
+      <Text fw={600}>{label}</Text>
+    </Paper>
+  )
   return (
-    <div className="page program-page">
-      <div className="player-bar">Player</div>
-      <div className="program-grid">
-        <section className="panel">Previously played</section>
-        <section className="panel">Holding</section>
-        <section className="panel">Program</section>
-        <section className="panel">Library</section>
+    <div className={classes.root}>
+      <Paper withBorder p="sm">
+        <Text fw={600}>Player</Text>
+      </Paper>
+      <div className={classes.grid}>
+        {panel('Previously played')}
+        {panel('Holding')}
+        {panel('Program')}
+        {panel('Library')}
       </div>
     </div>
   )
@@ -1817,14 +1940,25 @@ export default function ProgramPage(): React.JSX.Element {
 `src/renderer/src/pages/MusicPage.tsx`:
 
 ```tsx
+import { Stack, Text, Title } from '@mantine/core'
+
 // Spec §6.3. Filled in by plans 2 and 3.
 export default function MusicPage(): React.JSX.Element {
   return (
-    <div className="page">
-      <h2>Music</h2>
-      <p className="empty">Your library is empty.</p>
-    </div>
+    <Stack p="md">
+      <Title order={2}>Music</Title>
+      <Text c="dimmed">Your library is empty.</Text>
+    </Stack>
   )
+}
+```
+
+`src/renderer/src/App.module.css`:
+
+```css
+.main {
+  height: calc(100dvh - var(--app-shell-header-height, 0px));
+  box-sizing: border-box;
 }
 ```
 
@@ -1832,190 +1966,65 @@ export default function MusicPage(): React.JSX.Element {
 
 ```tsx
 import { useState } from 'react'
+import { AppShell, Tabs } from '@mantine/core'
 import Sidebar from './components/Sidebar'
 import MusicPage from './pages/MusicPage'
 import ProgramPage from './pages/ProgramPage'
 import SettingsPage from './pages/SettingsPage'
+import classes from './App.module.css'
 
 type Page = 'program' | 'music' | 'settings'
-const PAGES: { id: Page; label: string }[] = [
-  { id: 'program', label: 'Program' },
-  { id: 'music', label: 'Music' },
-  { id: 'settings', label: 'Settings' }
-]
 
 export default function App(): React.JSX.Element {
   const [page, setPage] = useState<Page>('program')
   return (
-    <div className={`app ${page === 'settings' ? 'no-sidebar' : ''}`}>
-      <header className="tabs" role="tablist">
-        {PAGES.map((p) => (
-          <button
-            key={p.id}
-            role="tab"
-            aria-selected={page === p.id}
-            onClick={() => setPage(p.id)}
-          >
-            {p.label}
-          </button>
-        ))}
-      </header>
-      {page !== 'settings' && <Sidebar />}
-      <main>
+    <AppShell
+      header={{ height: 48 }}
+      navbar={{ width: 220, breakpoint: 0, collapsed: { desktop: page === 'settings' } }}
+      padding="sm"
+    >
+      <AppShell.Header px="sm">
+        <Tabs value={page} onChange={(v) => v && setPage(v as Page)} variant="pills" pt={8}>
+          <Tabs.List>
+            <Tabs.Tab value="program">Program</Tabs.Tab>
+            <Tabs.Tab value="music">Music</Tabs.Tab>
+            <Tabs.Tab value="settings">Settings</Tabs.Tab>
+          </Tabs.List>
+        </Tabs>
+      </AppShell.Header>
+      <AppShell.Navbar p="sm">
+        <Sidebar />
+      </AppShell.Navbar>
+      <AppShell.Main className={classes.main}>
         {page === 'program' && <ProgramPage />}
         {page === 'music' && <MusicPage />}
         {page === 'settings' && <SettingsPage api={window.api} />}
-      </main>
-    </div>
+      </AppShell.Main>
+    </AppShell>
   )
 }
 ```
 
-`src/renderer/src/styles.css`:
-
-```css
-:root {
-  --bg: #f6f6f7;
-  --panel: #ffffff;
-  --text: #1d1d1f;
-  --muted: #6e6e73;
-  --border: #d9d9de;
-  --accent: #c8102e;
-  font-family: -apple-system, system-ui, sans-serif;
-  font-size: 14px;
-  color: var(--text);
-  background: var(--bg);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #1c1c1e;
-    --panel: #2c2c2e;
-    --text: #f2f2f7;
-    --muted: #98989d;
-    --border: #3a3a3c;
-  }
-}
-
-body {
-  margin: 0;
-}
-
-.app {
-  display: grid;
-  grid-template-columns: 220px 1fr;
-  grid-template-rows: auto 1fr;
-  height: 100vh;
-}
-.app.no-sidebar {
-  grid-template-columns: 1fr;
-}
-.tabs {
-  grid-column: 1 / -1;
-  display: flex;
-  gap: 4px;
-  padding: 8px 12px;
-  border-bottom: 1px solid var(--border);
-}
-.tabs button {
-  border: 0;
-  background: none;
-  padding: 6px 14px;
-  border-radius: 6px;
-  color: var(--text);
-  font: inherit;
-}
-.tabs button[aria-selected='true'] {
-  background: var(--panel);
-  font-weight: 600;
-}
-.sidebar {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-  padding: 8px 12px;
-  border-right: 1px solid var(--border);
-}
-.sidebar h4 {
-  margin: 14px 0 4px;
-  font-size: 11px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.sidebar ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-}
-.sidebar li {
-  padding: 4px 6px;
-}
-.programs-list {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  margin-top: 6px;
-}
-main {
-  min-height: 0;
-  overflow: auto;
-}
-.page {
-  padding: 12px 16px;
-}
-.empty {
-  color: var(--muted);
-}
-.program-page {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  box-sizing: border-box;
-}
-.player-bar {
-  padding: 10px;
-  margin-bottom: 8px;
-  background: var(--panel);
-  border-radius: 8px;
-}
-.program-grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 3fr;
-  gap: 8px;
-  min-height: 0;
-}
-.panel {
-  background: var(--panel);
-  border-radius: 8px;
-  padding: 8px;
-  overflow: auto;
-}
-.settings-page section {
-  margin-bottom: 18px;
-}
-.setting {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  margin: 6px 0;
-}
-.setting input[type='number'] {
-  width: 70px;
-}
-.error {
-  color: var(--accent);
-}
-```
-
-`src/renderer/src/main.tsx` — add the stylesheet import as the first line:
+`src/renderer/src/main.tsx`:
 
 ```tsx
-import './styles.css'
+import '@mantine/core/styles.css'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { MantineProvider } from '@mantine/core'
+import App from './App'
+import { theme } from './theme'
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <MantineProvider theme={theme} defaultColorScheme="auto">
+      <App />
+    </MantineProvider>
+  </StrictMode>
+)
 ```
 
-- [ ] **Step 6: Wire the database and IPC into the main process**
+- [ ] **Step 7: Wire the database and IPC into the main process**
 
 Replace `src/main/index.ts` with:
 
@@ -2110,7 +2119,7 @@ app.on('window-all-closed', () => {
 })
 ```
 
-- [ ] **Step 7: Run all tests, typecheck and build**
+- [ ] **Step 8: Run all tests, typecheck and build**
 
 ```bash
 npm test
@@ -2121,19 +2130,20 @@ Expected:
 - All tests pass: the project tests, every node test from Tasks 2–5, and the 4 renderer tests.
 - Typecheck and build succeed.
 
-- [ ] **Step 8: Manual check — the app runs end to end**
+- [ ] **Step 9: Manual check — the app runs end to end**
 
 ```bash
 npm start
 ```
 
 Expected:
-1. The window shows the **Program / Music / Settings** tabs. Program and Music show the sidebar (Library, Playlists, Programs with a search box). Program shows the four-panel placeholder grid.
-2. **Settings** shows the toggles and number fields, plus an About section with version `0.1.0`, schema `1` and a path ending in `Folk Dance Player/folk-dance-player.sqlite`.
-3. Untick **Genre is Country**, change **Auto-continue after** to `9`, then press Tab. Quit with ⌘Q and run `npm start` again. Both changes are still there.
-4. Type `-1` into **Auto-continue after** and press Tab. A red "Couldn't save setting…" message appears, and the field goes back to `9`.
+1. **Header:** Mantine pill tabs **Program / Music / Settings**. The app follows the system light/dark mode.
+2. **Program and Music** show the left navbar: Library (All Music highlighted, Favorites), Playlists, and Programs with a search box. Program shows a "Player" bar above a 2×2 grid of bordered panels.
+3. **Settings** hides the navbar. It shows switches and number fields, plus an About section with version `0.1.0`, schema `1` and a path ending in `Folk Dance Player/folk-dance-player.sqlite`.
+4. **Persistence:** turn off **Genre is Country**, change **Auto-continue after** to `9`, then press Tab. Quit (⌘Q) and run `npm start` again. Both changes are still there.
+5. **Rejected value:** type `-1` into **Auto-continue after** and press Tab. A red "Couldn't save setting…" alert appears, and the field goes back to `9`.
 
-- [ ] **Step 9: Manual check — a newer-schema database is refused (Review Focus 1)**
+- [ ] **Step 10: Manual check — a newer-schema database is refused (Review Focus 1)**
 
 ```bash
 DB="$HOME/Library/Application Support/Folk Dance Player/folk-dance-player.sqlite"
@@ -2153,13 +2163,13 @@ cp /tmp/fdp-backup.sqlite "$DB"
 
 The first command prints `{ user_version: 99 }`. The `cp` restores your library.
 
-- [ ] **Step 10: Format and commit**
+- [ ] **Step 11: Format and commit**
 
 ```bash
 npx prettier --write .
 npm test
 git add -A
-git commit -m "feat(app): open and migrate library on startup; control-window shell and settings page
+git commit -m "feat(app): open and migrate library on startup; Mantine control-window shell and settings page
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
