@@ -2,22 +2,23 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Organizers can bring music into the library in bulk. They can add files and folders with a picker or by drag and drop, or import from Apple Music's `Library.xml` (the whole library or chosen playlists, with the playlists recreated). They confirm the tag mapping before each import, watch progress (and can cancel), and get a summary of what happened to every file.
+**Goal:** First, revise the database for the spec's dances-and-songs model (§4). Then organizers can bring music into the library in bulk. They can add files and folders with a picker or by drag and drop, or import from Apple Music's `Library.xml` (the whole library or chosen playlists, with the playlists recreated). They confirm the tag mapping before each import, watch progress (and can cancel), and get a summary of what happened to every file.
 
 **Architecture:**
-- **Main process:** `ImportService` writes results to SQLite one file at a time, using the re-import rules in spec §5.4. It applies Apple playlists with the overwrite protection in §5.3 and streams progress to the renderer over a new event channel.
+- **Database (Task 1):** migration 001, which hasn't been released, is rewritten for the dances-and-songs model:
+  - songs, dances and the `dance_songs` pairings, plus personal `song_prefs`, `dance_prefs` and `dance_song_prefs`
+  - Canva decks, with slide images keyed by page ID
+  - `dance_id` on program items and the play log
+  - a `library_fts` search index with one row per song, covering its dances
+- **Main process:** `ImportService` writes results to SQLite one file at a time, using the re-import rules in spec §5.4. Each new song gets its own automatic dance. It applies Apple playlists with the overwrite protection in §5.3 and streams progress to the renderer over a new event channel.
 - **Utility process:** an Electron utility process, one per job, scans folders, reads tags and fingerprints files. Its job runner (`worker-core.ts`) has no Electron imports, so tests run the whole pipeline in-process against real generated MP3 files and Apple XML.
 - **Renderer:** the Music page drives a Mantine dialog: mapping → Apple options → playlist decisions → progress → summary.
 
 **Tech Stack:** As Plan 1, plus `music-metadata` 11.16.1 (tag reading) and `plist` 5.0.0 (Library.xml). Both are ESM-only, so they are **devDependencies** and Vite bundles them into the build.
 
-**Spec:** `docs/superpowers/specs/2026-10-13-folk-dance-player-electron-design.md`. Read §4 (data model), §5 (importing music) and §9 (architecture).
+**Spec:** `docs/superpowers/specs/2026-10-13-folk-dance-player-electron-design.md`. Read §4 (data model, including "Songs and dances" and "Search"), §5 (importing music) and §9 (architecture).
 
-This is plan 2 of 7. Plan 1 (Foundation) is merged. **Not in this plan:**
-- **"Re-apply mapping to selected"** (spec §5.2) needs the song table, so it is in Plan 3, which reuses `mapTagsToSong()`.
-- **Dropping onto the Program page's library list** arrives with that list in Plan 4, which reuses `DropZone`.
-
- Later plans: 3 Library · 4 Programs & playback · 5 Projector · 6 Canva slides · 7 Hardening & release.
+This is plan 2 of 7 (revised for the spec's dances-and-songs model). Plan 1 (Foundation) is merged. Later plans: 3 Library · 4 Programs & playback · 5 Projector · 6 Canva slides · 7 Hardening & release.
 
 ## Global Constraints
 
@@ -31,6 +32,11 @@ This is plan 2 of 7. Plan 1 (Foundation) is merged. **Not in this plan:**
   - conventional commits ending with `Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>`
 - **`music-metadata` and `plist` must be devDependencies.** Both are ESM-only, and `plist` has no `require` export. As runtime dependencies, electron-vite leaves them out of the bundle, and the utility process crashes with an ES-module resolution error (verified). As devDependencies, Vite bundles them, and they work in the built app (verified).
 - **Import `plist` as `import { parse } from 'plist'`.** Version 5 has no default export.
+- **Dances are separate from songs (spec §4).** Every new song gets a new dance with the song's title, linked to it and set as its default. Import **never** links a song to an existing dance by name, because names aren't unique. Fields are routed as follows:
+  - **Song:** title, artist
+  - **Dance:** name, country, choreographer
+  - **Pairing:** teacher (`dance_song_prefs`)
+- **Migration 001 is edited in place,** because it has never been released. The only existing database, the empty one on the developer's Mac, is deleted once in Task 1.
 - **Playable formats** (Chromium `<audio>`): `.mp3 .m4a .aac .wav .flac .ogg .oga .opus`. AIFF and Apple Lossless are reported as "unsupported format" in v1 (spec §5.4).
 - **Re-imports never overwrite song fields the user edited;** they only fill empty ones (spec §5.4). Edited Apple playlists are never replaced without the user's decision (spec §5.3).
 - **Search-box text must go through `toFtsQuery()`.** Not needed in this plan, but don't bypass it if you touch search.
@@ -40,20 +46,21 @@ This is plan 2 of 7. Plan 1 (Foundation) is merged. **Not in this plan:**
 
 These are the five failure modes most likely to bite an organizer. Each has a test in the task that owns it.
 
-1. **Re-importing after editing a song:** hand-edited titles, teachers or countries must survive. Only empty fields are filled. Task 5: "refreshes raw tags but only fills song fields that are empty".
-2. **Moving or renaming the music folder between imports:** the files must be relinked, keeping their songs, favorites and playlist entries, not duplicated. A copy whose original still exists is a new file. Task 5: the "relinks…" and "adds a copy…" tests.
-3. **Non-ASCII and space-containing file paths in Library.xml** (`Ali%20Pa%C5%9Fa.mp3`): they must decode to the real path. Task 4: "reads tracks with decoded file paths…".
-4. **Cancelling halfway:** already-imported songs are kept, and playlists are not half-written. Task 7: "stops early when cancelled…". The playlist step is skipped when cancelled.
-5. **An edited Apple playlist on re-import:** never replaced silently. With no decision it is kept; "Keep both" turns the edited copy into a local playlist. Task 6 conflict tests, plus Task 9's UI decision test.
+1. **Re-importing after editing a song or its dance:** hand-edited titles, teachers, choreographers or countries must survive. Only empty fields on the song, its *default* dance and that pairing are filled, and the song's other dances are untouched. Task 6: "refreshes raw tags but only fills…" and "fills only the song's default dance…".
+2. **Moving or renaming the music folder between imports:** the files must be relinked, keeping their songs, favorites and playlist entries, not duplicated. A copy whose original still exists is a new file. Task 6: the "relinks…" and "adds a copy…" tests.
+3. **Two different dances with the same name** (Svornato by different choreographers): import must never merge them, and a dance the user unlinked must not come back. Task 6: "never links a song to an existing dance by name" and "does not recreate a dance the user unlinked".
+4. **Cancelling halfway:** already-imported songs are kept, and playlists are not half-written. Task 8: "stops early when cancelled…". The playlist step is skipped when cancelled.
+5. **An edited Apple playlist on re-import:** never replaced silently. With no decision it is kept; "Keep both" turns the edited copy into a local playlist. Task 7 conflict tests, plus Task 10's UI decision test.
 
 ---
 
 ## File Structure
 
 ```
+src/main/db/migrations/001-initial.ts (modify)  dances-and-songs schema, Canva decks, library_fts
 src/shared/import.ts                     request/progress/summary/preview types, ImportMapping, emptySummary()
 src/shared/contract.ts (modify)          + import:* and library:stats channels, EventContract, on(), getPathsForFiles()
-src/main/import/mapping.ts               mapTagsToSong(): tags → song fields using the mapping settings
+src/main/import/mapping.ts               mapTags(): tags → song / automatic dance / pairing fields
 src/main/import/formats.ts               classifyPath(), isPlayableCodec()
 src/main/import/content-hash.ts          contentHash(): size + first/last 1 MB
 src/main/import/scan.ts                  findAudioFiles(): expand picked/dropped files and folders
@@ -76,6 +83,8 @@ src/renderer/src/ipc-error.ts            errorMessage(): strip Electron's IPC er
 src/renderer/src/import/*                useImportFlow + dialog steps + DropZone (+ .module.css)
 src/renderer/src/pages/MusicPage.tsx     (modify) song count, import buttons, drop zone, dialog
 src/renderer/src/App.tsx (modify)        pass api to MusicPage
+tests/main/helpers/library-fixtures.ts   addFile/addSong/addDance/link/searchSongs/songView
+tests/main/db/schema.test.ts (modify)    schema + library_fts tests for the new model
 tests/main/helpers/audio-fixtures.ts     mp3Bytes() (real ID3-tagged MP3s), tempDir()
 tests/main/helpers/apple-xml.ts          appleLibraryXml(): Library.xml like Music.app exports
 tests/main/import/*.test.ts              unit + pipeline tests
@@ -85,7 +94,730 @@ tests/renderer/music-import.test.tsx     import UI tests
 
 ---
 
-### Task 1: Dependencies, shared import types and tag mapping
+### Task 1: Revise the schema for dances and songs
+
+**Files:**
+- Modify: `src/main/db/migrations/001-initial.ts` (replace), `tests/main/db/schema.test.ts` (replace), `AGENTS.md`, `README.md`
+- Create: `tests/main/helpers/library-fixtures.ts`
+
+**Interfaces:**
+- Consumes: `openDatabase`, `migrate`, `MIGRATIONS`, `createTestDb`, `FOLD_MAP`, `toFtsQuery` (Plan 1).
+- Produces:
+  - **Tables** (column names exactly as in spec §4): `songs` (`title`, `artist`), `dances`, `dance_songs`, `song_prefs`, `dance_prefs`, `dance_song_prefs`, `file_prefs` (`is_favorite`, `in_holding`), `canva_decks`, `slide_cache` (`deck_id`, `page_id`), plus `dance_id` on `program_items` and `play_log`.
+  - **Search index:** `library_fts` with columns `title, artist, dance_names, countries, choreographers, teachers`. There is one row per song, `rowid` = `songs.id`, kept current by triggers. It replaces Plan 1's `songs_fts`.
+  - **Test helpers:**
+    - `addFile(db, path?)`, `addSong(db, fileId, { title, artist? })`, `addDance(db, { name, country?, choreographer? })`
+    - `link(db, danceId, songId, teacher?)`, which returns the `dance_songs` id
+    - `searchSongs(db, ftsQuery): string[]`
+    - `songView(db, fileId): { title; artist; dance; country; choreographer; teacher }`, which reads the song's default dance
+
+**Why edit migration 001 instead of adding 002:**
+- 001 has never been released, and no user has data in it.
+- `AGENTS.md`'s rule, "a released migration is never edited", is unaffected.
+- The one existing database is the empty one created on the developer's Mac during Plan 1. Its `user_version` is already 1, so it would never pick up the new tables, and Step 7 deletes it.
+
+**Search triggers:** each one re-indexes the affected songs by deleting their `library_fts` rows and re-inserting them from a `group_concat` over the linked dances and pairing teachers, with `FOLD_MAP` applied.
+- **On `songs`:** insert, update and delete.
+- **On `dances`:** update. A deleted dance cascades to `dance_songs`, whose delete trigger re-indexes.
+- **On `dance_songs`:** insert and delete.
+- **On `dance_song_prefs`:** insert, update and delete.
+
+**Also included:** the indexes on `playlist_items.file_id` and `program_items.file_id`, a minor deferred from Plan 1.
+
+- [ ] **Step 1: Write the library test helpers**
+
+`tests/main/helpers/library-fixtures.ts`:
+
+```ts
+import type { DatabaseSync } from 'node:sqlite'
+
+// Builders for songs, dances and pairings in schema and search tests.
+
+export function addFile(db: DatabaseSync, path = '/music/a.mp3'): number {
+  return Number(
+    db
+      .prepare("INSERT INTO files (path, file_size, mtime_ms, source) VALUES (?, 1, 1, 'files')")
+      .run(path).lastInsertRowid
+  )
+}
+
+export function addSong(
+  db: DatabaseSync,
+  fileId: number,
+  song: { title: string; artist?: string | null }
+): number {
+  return Number(
+    db
+      .prepare('INSERT INTO songs (file_id, uuid, title, artist) VALUES (?, ?, ?, ?)')
+      .run(fileId, crypto.randomUUID(), song.title, song.artist ?? null).lastInsertRowid
+  )
+}
+
+export function addDance(
+  db: DatabaseSync,
+  dance: { name: string; country?: string | null; choreographer?: string | null }
+): number {
+  return Number(
+    db
+      .prepare('INSERT INTO dances (uuid, name, country, choreographer) VALUES (?, ?, ?, ?)')
+      .run(crypto.randomUUID(), dance.name, dance.country ?? null, dance.choreographer ?? null)
+      .lastInsertRowid
+  )
+}
+
+// Links a dance to a song; returns the dance_songs id.
+export function link(db: DatabaseSync, danceId: number, songId: number, teacher?: string): number {
+  const id = Number(
+    db.prepare('INSERT INTO dance_songs (dance_id, song_id) VALUES (?, ?)').run(danceId, songId)
+      .lastInsertRowid
+  )
+  if (teacher) {
+    db.prepare('INSERT INTO dance_song_prefs (dance_song_id, teacher) VALUES (?, ?)').run(
+      id,
+      teacher
+    )
+  }
+  return id
+}
+
+// Titles of the songs matching an FTS5 query, in title order.
+export function searchSongs(db: DatabaseSync, query: string): string[] {
+  return db
+    .prepare(
+      `SELECT s.title FROM library_fts JOIN songs s ON s.id = library_fts.rowid
+       WHERE library_fts MATCH ? ORDER BY s.title`
+    )
+    .all(query)
+    .map((r) => r.title as string)
+}
+
+export interface SongView {
+  title: string
+  artist: string | null
+  dance: string | null
+  country: string | null
+  choreographer: string | null
+  teacher: string | null
+}
+
+// A file's song as the library shows it: with its default dance and that pairing's teacher.
+export function songView(db: DatabaseSync, fileId: number): SongView {
+  return db
+    .prepare(
+      `SELECT s.title, s.artist, d.name AS dance, d.country, d.choreographer, p.teacher
+       FROM songs s
+       LEFT JOIN song_prefs sp ON sp.song_id = s.id
+       LEFT JOIN dances d ON d.id = sp.default_dance_id
+       LEFT JOIN dance_songs ds ON ds.song_id = s.id AND ds.dance_id = d.id
+       LEFT JOIN dance_song_prefs p ON p.dance_song_id = ds.id
+       WHERE s.file_id = ?`
+    )
+    .get(fileId) as unknown as SongView
+}
+```
+
+- [ ] **Step 2: Replace the schema tests**
+
+Replace `tests/main/db/schema.test.ts` with:
+
+```ts
+import type { DatabaseSync } from 'node:sqlite'
+import { beforeEach, describe, expect, test } from 'vitest'
+import { FOLD_MAP, toFtsQuery } from '../../../src/main/db/fts'
+import { addDance, addFile, addSong, link, searchSongs } from '../helpers/library-fixtures'
+import { createTestDb } from '../helpers/test-db'
+
+let db: DatabaseSync
+
+const count = (table: string): number =>
+  (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n
+
+const search = (query: string): string[] => searchSongs(db, query)
+
+beforeEach(() => {
+  db = createTestDb()
+})
+
+describe('initial schema', () => {
+  test('creates every table from spec §4', () => {
+    const names = db
+      .prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name")
+      .all()
+      .map((r) => r.name as string)
+    for (const t of [
+      'files',
+      'songs',
+      'dances',
+      'dance_songs',
+      'song_prefs',
+      'dance_prefs',
+      'dance_song_prefs',
+      'file_prefs',
+      'canva_decks',
+      'slide_cache',
+      'playlists',
+      'playlist_items',
+      'programs',
+      'program_items',
+      'play_log',
+      'library_fts',
+      'settings'
+    ]) {
+      expect(names).toContain(t)
+    }
+  })
+
+  test('file paths are unique', () => {
+    addFile(db, '/music/a.mp3')
+    expect(() => addFile(db, '/music/a.mp3')).toThrow(/UNIQUE/)
+  })
+
+  test('each file has at most one song', () => {
+    const f = addFile(db)
+    addSong(db, f, { title: 'A' })
+    expect(() => addSong(db, f, { title: 'B' })).toThrow(/UNIQUE/)
+  })
+
+  test('apple_persistent_id is unique when present, many NULLs allowed', () => {
+    addFile(db, '/a.mp3')
+    addFile(db, '/b.mp3')
+    const set = db.prepare('UPDATE files SET apple_persistent_id = ? WHERE path = ?')
+    set.run('ABC123', '/a.mp3')
+    expect(() => set.run('ABC123', '/b.mp3')).toThrow(/UNIQUE/)
+  })
+
+  test('dances and songs are many-to-many, and a pairing is unique', () => {
+    const lesnoto = addDance(db, { name: 'Lesnoto' })
+    const pravo = addDance(db, { name: 'Pravo Rhodopsko Oro' })
+    const s1 = addSong(db, addFile(db, '/1.mp3'), { title: 'Pusteno Ludo' })
+    const s2 = addSong(db, addFile(db, '/2.mp3'), { title: 'Lesnoto Oro' })
+    link(db, lesnoto, s1)
+    link(db, lesnoto, s2)
+    link(db, pravo, s1)
+    expect(count('dance_songs')).toBe(3)
+    expect(() => link(db, lesnoto, s1)).toThrow(/UNIQUE/)
+  })
+
+  test('dance names are not unique', () => {
+    addDance(db, { name: 'Svornato', choreographer: 'Jaap Leegwater' })
+    expect(() => addDance(db, { name: 'Svornato', choreographer: 'Someone Else' })).not.toThrow()
+  })
+
+  test('deleting a file removes its song, pairings and prefs but keeps dances and history', () => {
+    const f = addFile(db)
+    const s = addSong(db, f, { title: 'Hora' })
+    const d = addDance(db, { name: 'Hora Mare' })
+    link(db, d, s, 'Sonia Dion')
+    db.prepare('INSERT INTO file_prefs (file_id, is_favorite) VALUES (?, 1)').run(f)
+    db.prepare('INSERT INTO song_prefs (song_id, default_dance_id) VALUES (?, ?)').run(s, d)
+    const p = Number(db.prepare("INSERT INTO programs (name) VALUES ('Tue')").run().lastInsertRowid)
+    db.prepare(
+      "INSERT INTO program_items (program_id, position, kind, file_id, dance_id) VALUES (?, 1, 'track', ?, ?)"
+    ).run(p, f, d)
+    db.prepare(
+      "INSERT INTO play_log (file_id, dance_id, program_id, kind) VALUES (?, ?, ?, 'program')"
+    ).run(f, d, p)
+
+    db.prepare('DELETE FROM files WHERE id = ?').run(f)
+
+    for (const t of ['songs', 'dance_songs', 'dance_song_prefs', 'song_prefs', 'file_prefs']) {
+      expect(count(t)).toBe(0)
+    }
+    expect(count('dances')).toBe(1)
+    expect(db.prepare('SELECT file_id, dance_id FROM program_items').get()).toEqual({
+      file_id: null,
+      dance_id: d
+    })
+    expect(db.prepare('SELECT file_id, dance_id FROM play_log').get()).toEqual({
+      file_id: null,
+      dance_id: d
+    })
+    expect(search('hora')).toEqual([])
+  })
+
+  test('deleting a dance removes its pairings and prefs and clears references to it', () => {
+    const s = addSong(db, addFile(db), { title: 'Hora' })
+    const d = addDance(db, { name: 'Hora Mare' })
+    link(db, d, s, 'Sonia Dion')
+    db.prepare("INSERT INTO dance_prefs (dance_id, notes) VALUES (?, 'W, 2 figures')").run(d)
+    db.prepare('INSERT INTO song_prefs (song_id, default_dance_id) VALUES (?, ?)').run(s, d)
+
+    db.prepare('DELETE FROM dances WHERE id = ?').run(d)
+
+    expect(count('dance_songs')).toBe(0)
+    expect(count('dance_song_prefs')).toBe(0)
+    expect(count('dance_prefs')).toBe(0)
+    expect(db.prepare('SELECT default_dance_id FROM song_prefs').get()).toEqual({
+      default_dance_id: null
+    })
+  })
+
+  test('check constraints reject invalid values', () => {
+    const f = addFile(db)
+    const d = addDance(db, { name: 'Hora' })
+    expect(() =>
+      db.prepare('INSERT INTO dance_prefs (dance_id, difficulty) VALUES (?, 6)').run(d)
+    ).toThrow(/CHECK/)
+    expect(() =>
+      db.prepare('INSERT INTO dance_prefs (dance_id, canva_page_index) VALUES (?, 0)').run(d)
+    ).toThrow(/CHECK/)
+    const p = Number(db.prepare("INSERT INTO programs (name) VALUES ('x')").run().lastInsertRowid)
+    expect(() =>
+      db
+        .prepare(
+          "INSERT INTO program_items (program_id, position, kind, file_id) VALUES (?, 1, 'stop', ?)"
+        )
+        .run(p, f)
+    ).toThrow(/CHECK/)
+    expect(() =>
+      db.prepare("INSERT INTO play_log (file_id, kind) VALUES (?, 'other')").run(f)
+    ).toThrow(/CHECK/)
+  })
+
+  test('canva decks have unique view links, and slide images are keyed by deck and page ID', () => {
+    const add = db.prepare('INSERT INTO canva_decks (view_url, design_id) VALUES (?, ?)')
+    const deck = Number(add.run('https://www.canva.com/design/D1/T/view', 'D1').lastInsertRowid)
+    expect(() => add.run('https://www.canva.com/design/D1/T/view', 'D1')).toThrow(/UNIQUE/)
+    const shot = db.prepare(
+      'INSERT INTO slide_cache (deck_id, page_id, image_path) VALUES (?, ?, ?)'
+    )
+    shot.run(deck, 'PBrWDbC9tVSzgzvW', '/cache/a.png')
+    expect(() => shot.run(deck, 'PBrWDbC9tVSzgzvW', '/cache/b.png')).toThrow(/UNIQUE|PRIMARY/)
+    db.prepare('DELETE FROM canva_decks WHERE id = ?').run(deck)
+    expect(count('slide_cache')).toBe(0)
+  })
+
+  test('programs.updated_at is set automatically', () => {
+    db.prepare("INSERT INTO programs (name) VALUES ('x')").run()
+    const row = db.prepare('SELECT created_at, updated_at FROM programs').get() as {
+      created_at: string
+      updated_at: string
+    }
+    expect(row.created_at).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+    expect(row.updated_at).toBe(row.created_at)
+  })
+})
+
+describe('library search (library_fts)', () => {
+  test('finds a song by its title, artist, dance name, country, choreographer and teacher', () => {
+    const s = addSong(db, addFile(db), { title: 'Pusteno Ludo', artist: 'Ensemble Trakia' })
+    link(
+      db,
+      addDance(db, {
+        name: 'Pravo Rhodopsko Oro',
+        country: 'Bulgaria',
+        choreographer: 'Yves Moreau'
+      }),
+      s,
+      'Sonia Dion'
+    )
+    for (const q of ['pusteno', 'trakia', 'rhodopsko', 'bulgaria', 'moreau', 'sonia']) {
+      expect(search(toFtsQuery(q)!), q).toEqual(['Pusteno Ludo'])
+    }
+  })
+
+  test('finds a song through any of its dances', () => {
+    const s = addSong(db, addFile(db), { title: 'Pusteno Ludo' })
+    link(db, addDance(db, { name: 'Pravo Rhodopsko Oro', country: 'Bulgaria' }), s)
+    link(db, addDance(db, { name: 'Lesnoto', country: 'Macedonia' }), s)
+    expect(search(toFtsQuery('lesnoto')!)).toEqual(['Pusteno Ludo'])
+    expect(search(toFtsQuery('macedonia')!)).toEqual(['Pusteno Ludo'])
+  })
+
+  test.each([
+    ['kirmizi', 'Kırmızı Gül'],
+    ['cicek dagi', 'Çiçek Dağı'],
+    ['lodz', 'Łódź'],
+    ['oland', 'Øland'],
+    ['aevintyri', 'Ævintýri'],
+    ['strassenpolka', 'Straßenpolka'],
+    ['Kırmızı', 'Kırmızı Gül'],
+    ['pasa', 'Ali Paşa']
+  ])('search %j finds %j', (query, title) => {
+    addSong(db, addFile(db), { title })
+    expect(search(toFtsQuery(query)!)).toEqual([title])
+  })
+
+  // Migration 001 has its own frozen copy of the fold map; it must cover every FOLD_MAP entry.
+  test.each(FOLD_MAP.map(([from, to]) => [from, to]))(
+    'index folds %j like the query does (%j), in song titles and dance fields',
+    (from, to) => {
+      const s = addSong(db, addFile(db), { title: `x${from}y` })
+      link(db, addDance(db, { name: `d${from}e`, country: `c${from}c` }), s)
+      expect(search(toFtsQuery(`x${to}y`)!)).toEqual([`x${from}y`])
+      expect(search(toFtsQuery(`d${to}e`)!)).toEqual([`x${from}y`])
+      expect(search(toFtsQuery(`c${to}c`)!)).toEqual([`x${from}y`])
+    }
+  )
+
+  // Review Focus (plan 1): punctuation typed into the search box must not break MATCH.
+  test('finds values containing punctuation through toFtsQuery', () => {
+    const s = addSong(db, addFile(db), { title: 'Ajde 4-Wall' })
+    link(db, addDance(db, { name: 'Ajde', country: "Côte d'Ivoire" }), s)
+    expect(search(toFtsQuery('4-Wall')!)).toEqual(['Ajde 4-Wall'])
+    expect(search(toFtsQuery("d'Ivoire")!)).toEqual(['Ajde 4-Wall'])
+  })
+
+  test('raw search-box text is not safe to pass to MATCH', () => {
+    expect(() => search('4-Wall')).toThrow()
+  })
+
+  describe('stays current when', () => {
+    let songId: number
+    let danceId: number
+    let pairingId: number
+
+    beforeEach(() => {
+      songId = addSong(db, addFile(db), { title: 'Hora de la Munte' })
+      danceId = addDance(db, { name: 'Hora Mare', country: 'Romania' })
+      pairingId = link(db, danceId, songId, 'Old Teacher')
+    })
+
+    test('the song is renamed', () => {
+      db.prepare("UPDATE songs SET title = 'Hora Veche' WHERE id = ?").run(songId)
+      expect(search(toFtsQuery('munte')!)).toEqual([])
+      expect(search(toFtsQuery('veche')!)).toEqual(['Hora Veche'])
+    })
+
+    test('the dance is edited', () => {
+      db.prepare("UPDATE dances SET country = 'Moldova' WHERE id = ?").run(danceId)
+      expect(search(toFtsQuery('romania')!)).toEqual([])
+      expect(search(toFtsQuery('moldova')!)).toEqual(['Hora de la Munte'])
+    })
+
+    test('the teacher is changed, added or removed', () => {
+      db.prepare("UPDATE dance_song_prefs SET teacher = 'New Teacher' WHERE dance_song_id = ?").run(
+        pairingId
+      )
+      expect(search(toFtsQuery('old')!)).toEqual([])
+      expect(search(toFtsQuery('new')!)).toEqual(['Hora de la Munte'])
+      db.prepare('DELETE FROM dance_song_prefs WHERE dance_song_id = ?').run(pairingId)
+      expect(search(toFtsQuery('new')!)).toEqual([])
+    })
+
+    test('a dance is linked or unlinked', () => {
+      const other = addDance(db, { name: 'Sârba' })
+      link(db, other, songId)
+      expect(search(toFtsQuery('sarba')!)).toEqual(['Hora de la Munte'])
+      db.prepare('DELETE FROM dance_songs WHERE dance_id = ?').run(other)
+      expect(search(toFtsQuery('sarba')!)).toEqual([])
+    })
+
+    test('the dance is deleted', () => {
+      db.prepare('DELETE FROM dances WHERE id = ?').run(danceId)
+      expect(search(toFtsQuery('mare')!)).toEqual([])
+      expect(search(toFtsQuery('munte')!)).toEqual(['Hora de la Munte'])
+    })
+  })
+})
+```
+
+- [ ] **Step 3: Run them to verify they fail**
+
+Run: `npx vitest run tests/main/db/schema.test.ts`
+Expected: FAIL. Many tests fail with errors such as `no such table: dances` or `no such table: library_fts`, because the current schema has `songs_fts` and puts dance fields on `songs`.
+
+- [ ] **Step 4: Rewrite migration 001**
+
+Replace `src/main/db/migrations/001-initial.ts` with:
+
+```ts
+import type { Migration } from '../migrate'
+
+const now = "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
+
+// Frozen copy of FOLD_MAP (src/main/db/fts.ts) as of this migration: letters the FTS tokenizer
+// doesn't fold. Released migrations never change; a later migration must rebuild library_fts to
+// change folding. schema.test.ts checks this list covers FOLD_MAP.
+const FOLD: readonly (readonly [string, string])[] = [
+  ['ı', 'i'],
+  ['ł', 'l'],
+  ['Ł', 'L'],
+  ['ø', 'o'],
+  ['Ø', 'O'],
+  ['æ', 'ae'],
+  ['Æ', 'AE'],
+  ['œ', 'oe'],
+  ['Œ', 'OE'],
+  ['ß', 'ss'],
+  ['ẞ', 'SS'],
+  ['đ', 'd'],
+  ['Đ', 'D'],
+  ['ð', 'd'],
+  ['Ð', 'D'],
+  ['þ', 'th'],
+  ['Þ', 'TH']
+]
+
+const fold = (expr: string): string =>
+  FOLD.reduce((sql, [from, to]) => `replace(${sql}, '${from}', '${to}')`, expr)
+
+// Re-indexes the songs whose ids are produced by `songIds` (a SQL expression or subquery):
+// one library_fts row per song with its title and artist plus, for every linked dance, its
+// name, country, choreographer and the pairing's teacher (spec §4 "Search").
+const linked = (column: string, join = ''): string =>
+  `(SELECT group_concat(${column}, ' ') FROM dance_songs ds JOIN dances d ON d.id = ds.dance_id ${join} WHERE ds.song_id = s.id)`
+
+const reindexSongs = (songIds: string): string => `
+      DELETE FROM library_fts WHERE rowid IN (${songIds});
+      INSERT INTO library_fts (rowid, title, artist, dance_names, countries, choreographers, teachers)
+      SELECT s.id, ${fold('s.title')}, ${fold('s.artist')},
+        ${fold(linked('d.name'))}, ${fold(linked('d.country'))}, ${fold(linked('d.choreographer'))},
+        ${fold(linked('p.teacher', 'JOIN dance_song_prefs p ON p.dance_song_id = ds.id'))}
+      FROM songs s WHERE s.id IN (${songIds});`
+
+// Full v1 schema — spec §4. Layers: local file facts (files); shareable facts (songs, dances,
+// dance_songs); personal/local data (song_prefs, dance_prefs, dance_song_prefs, file_prefs,
+// canva_decks, slide_cache, playlists).
+export const initial: Migration = {
+  version: 1,
+  name: 'initial',
+  sql: `
+    CREATE TABLE files (
+      id INTEGER PRIMARY KEY,
+      path TEXT NOT NULL UNIQUE,
+      file_size INTEGER NOT NULL,
+      mtime_ms INTEGER NOT NULL,
+      duration_ms INTEGER,
+      content_hash TEXT,
+      tag_title TEXT,
+      tag_artist TEXT,
+      tag_album_artist TEXT,
+      tag_genre TEXT,
+      source TEXT NOT NULL CHECK (source IN ('files', 'apple_xml')),
+      apple_persistent_id TEXT,
+      is_missing INTEGER NOT NULL DEFAULT 0 CHECK (is_missing IN (0, 1)),
+      missing_reason TEXT,
+      created_at TEXT NOT NULL DEFAULT ${now}
+    );
+    CREATE INDEX files_content_hash ON files (content_hash);
+    CREATE UNIQUE INDEX files_apple_persistent_id ON files (apple_persistent_id)
+      WHERE apple_persistent_id IS NOT NULL;
+
+    CREATE TABLE songs (
+      id INTEGER PRIMARY KEY,
+      file_id INTEGER NOT NULL UNIQUE REFERENCES files (id) ON DELETE CASCADE,
+      uuid TEXT NOT NULL UNIQUE,
+      title TEXT NOT NULL DEFAULT '',
+      artist TEXT
+    );
+
+    CREATE TABLE dances (
+      id INTEGER PRIMARY KEY,
+      uuid TEXT NOT NULL UNIQUE,
+      name TEXT NOT NULL DEFAULT '',
+      country TEXT,
+      choreographer TEXT,
+      dance_type TEXT
+    );
+    CREATE INDEX dances_name ON dances (name);
+
+    CREATE TABLE dance_songs (
+      id INTEGER PRIMARY KEY,
+      dance_id INTEGER NOT NULL REFERENCES dances (id) ON DELETE CASCADE,
+      song_id INTEGER NOT NULL REFERENCES songs (id) ON DELETE CASCADE,
+      created_at TEXT NOT NULL DEFAULT ${now},
+      UNIQUE (dance_id, song_id)
+    );
+    CREATE INDEX dance_songs_song ON dance_songs (song_id);
+
+    CREATE TABLE song_prefs (
+      song_id INTEGER PRIMARY KEY REFERENCES songs (id) ON DELETE CASCADE,
+      default_dance_id INTEGER REFERENCES dances (id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE canva_decks (
+      id INTEGER PRIMARY KEY,
+      view_url TEXT NOT NULL UNIQUE,
+      design_id TEXT NOT NULL,
+      title TEXT,
+      pages TEXT NOT NULL DEFAULT '[]',
+      synced_at TEXT,
+      last_error TEXT
+    );
+
+    CREATE TABLE dance_prefs (
+      dance_id INTEGER PRIMARY KEY REFERENCES dances (id) ON DELETE CASCADE,
+      difficulty INTEGER CHECK (difficulty IS NULL OR difficulty BETWEEN 1 AND 5),
+      notes TEXT,
+      canva_deck_id INTEGER REFERENCES canva_decks (id) ON DELETE SET NULL,
+      canva_page_id TEXT,
+      canva_page_index INTEGER CHECK (canva_page_index IS NULL OR canva_page_index >= 1)
+    );
+
+    CREATE TABLE dance_song_prefs (
+      dance_song_id INTEGER PRIMARY KEY REFERENCES dance_songs (id) ON DELETE CASCADE,
+      teacher TEXT
+    );
+
+    CREATE TABLE file_prefs (
+      file_id INTEGER PRIMARY KEY REFERENCES files (id) ON DELETE CASCADE,
+      is_favorite INTEGER NOT NULL DEFAULT 0 CHECK (is_favorite IN (0, 1)),
+      in_holding INTEGER NOT NULL DEFAULT 0 CHECK (in_holding IN (0, 1))
+    );
+
+    CREATE TABLE slide_cache (
+      deck_id INTEGER NOT NULL REFERENCES canva_decks (id) ON DELETE CASCADE,
+      page_id TEXT NOT NULL,
+      image_path TEXT,
+      captured_at TEXT,
+      last_error TEXT,
+      PRIMARY KEY (deck_id, page_id)
+    );
+
+    CREATE VIRTUAL TABLE library_fts USING fts5 (
+      title, artist, dance_names, countries, choreographers, teachers,
+      content = '', contentless_delete = 1,
+      tokenize = 'unicode61 remove_diacritics 2'
+    );
+    CREATE TRIGGER library_fts_song_insert AFTER INSERT ON songs BEGIN
+      ${reindexSongs('new.id')}
+    END;
+    CREATE TRIGGER library_fts_song_update AFTER UPDATE ON songs BEGIN
+      ${reindexSongs('new.id')}
+    END;
+    CREATE TRIGGER library_fts_song_delete AFTER DELETE ON songs BEGIN
+      DELETE FROM library_fts WHERE rowid = old.id;
+    END;
+    CREATE TRIGGER library_fts_dance_update AFTER UPDATE ON dances BEGIN
+      ${reindexSongs('SELECT song_id FROM dance_songs WHERE dance_id = new.id')}
+    END;
+    CREATE TRIGGER library_fts_link_insert AFTER INSERT ON dance_songs BEGIN
+      ${reindexSongs('new.song_id')}
+    END;
+    CREATE TRIGGER library_fts_link_delete AFTER DELETE ON dance_songs BEGIN
+      ${reindexSongs('old.song_id')}
+    END;
+    CREATE TRIGGER library_fts_teacher_insert AFTER INSERT ON dance_song_prefs BEGIN
+      ${reindexSongs('SELECT song_id FROM dance_songs WHERE id = new.dance_song_id')}
+    END;
+    CREATE TRIGGER library_fts_teacher_update AFTER UPDATE ON dance_song_prefs BEGIN
+      ${reindexSongs('SELECT song_id FROM dance_songs WHERE id = new.dance_song_id')}
+    END;
+    CREATE TRIGGER library_fts_teacher_delete AFTER DELETE ON dance_song_prefs BEGIN
+      ${reindexSongs('SELECT song_id FROM dance_songs WHERE id = old.dance_song_id')}
+    END;
+
+    CREATE TABLE playlists (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      source TEXT NOT NULL CHECK (source IN ('local', 'apple_xml')),
+      apple_persistent_id TEXT,
+      imported_at TEXT,
+      modified_at TEXT NOT NULL DEFAULT ${now},
+      created_at TEXT NOT NULL DEFAULT ${now}
+    );
+    CREATE UNIQUE INDEX playlists_apple_persistent_id ON playlists (apple_persistent_id)
+      WHERE apple_persistent_id IS NOT NULL;
+
+    CREATE TABLE playlist_items (
+      id INTEGER PRIMARY KEY,
+      playlist_id INTEGER NOT NULL REFERENCES playlists (id) ON DELETE CASCADE,
+      position INTEGER NOT NULL,
+      file_id INTEGER NOT NULL REFERENCES files (id) ON DELETE CASCADE
+    );
+    CREATE INDEX playlist_items_order ON playlist_items (playlist_id, position);
+    CREATE INDEX playlist_items_file ON playlist_items (file_id);
+
+    CREATE TABLE programs (
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      created_at TEXT NOT NULL DEFAULT ${now},
+      updated_at TEXT NOT NULL DEFAULT ${now}
+    );
+    CREATE INDEX programs_recent ON programs (updated_at DESC);
+
+    CREATE TABLE program_items (
+      id INTEGER PRIMARY KEY,
+      program_id INTEGER NOT NULL REFERENCES programs (id) ON DELETE CASCADE,
+      position INTEGER NOT NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('track', 'stop')),
+      file_id INTEGER REFERENCES files (id) ON DELETE SET NULL,
+      dance_id INTEGER REFERENCES dances (id) ON DELETE SET NULL,
+      played_at TEXT,
+      CHECK (kind = 'track' OR (file_id IS NULL AND dance_id IS NULL))
+    );
+    CREATE INDEX program_items_order ON program_items (program_id, position);
+    CREATE INDEX program_items_file ON program_items (file_id);
+
+    CREATE TABLE play_log (
+      id INTEGER PRIMARY KEY,
+      file_id INTEGER REFERENCES files (id) ON DELETE SET NULL,
+      dance_id INTEGER REFERENCES dances (id) ON DELETE SET NULL,
+      played_at TEXT NOT NULL DEFAULT ${now},
+      program_id INTEGER REFERENCES programs (id) ON DELETE SET NULL,
+      kind TEXT NOT NULL CHECK (kind IN ('program', 'preview', 'replay'))
+    );
+    CREATE INDEX play_log_program ON play_log (program_id, played_at DESC);
+    CREATE INDEX play_log_file ON play_log (file_id, played_at DESC);
+
+    CREATE TABLE settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+  `
+}
+```
+
+- [ ] **Step 5: Run the tests and typecheck**
+
+Run: `npx vitest run tests/main/db && npm test && npm run typecheck && npx prettier --check .`
+Expected:
+- `tests/main/db` passes (66 tests: 2 connection, 6 migrate, 13 fts, 45 schema).
+- The whole suite passes (100).
+- Typecheck and formatting are clean.
+
+- [ ] **Step 6: Update the decision log and README**
+
+In `AGENTS.md`, make these edits to the Decisions list:
+1. **The "Search folds letters…" entry.** Replace the sentence beginning ``So `songs_fts` is a contentless index`` with:
+   > So `library_fts` is a contentless index (`content = ''`, `contentless_delete = 1`) with one row per song: its title and artist, plus the name, country and choreographer of every linked dance and the pairings' teachers. Triggers on `songs`, `dances`, `dance_songs` and `dance_song_prefs` keep it current, and fold those letters using a frozen copy of `FOLD_MAP`.
+2. **In the same entry,** change ``rebuilds `songs_fts` `` to ``rebuilds `library_fts` ``, and ``storing folded shadow columns in `songs`.`` to ``storing folded shadow columns in `songs` and `dances`.``
+3. **The "One `songs` row per file, in three data layers" entry.** Replace it with:
+
+```markdown
+- **2026-10-13 — Dances are separate from songs, many-to-many, with an automatic one-to-one dance per imported song.** One tune can carry several dances, and one dance (Lesnoto) works with many tunes. Dance names aren't unique: there are several Svornatos by different choreographers. Import gives each new song its own same-named dance, its default, and never links by name; the library suggests "same dance?" instead. Each file still has exactly one `songs` row, so editing one recording never affects another. The teacher lives on the dance–song pairing (`dance_song_prefs`), the default dance on `song_prefs`, and difficulty, notes and the Canva slide on `dance_prefs`; all of these are personal. Songs, dances and pairings are the shareable layer. Labels show `Song | Dance (Choreographer)`, dropping the song when it matches the dance name and the choreographer unless the song's dances have more than one. _Rejected:_ dance fields on `songs` (can't model one tune with several dances); several files sharing one song; linking by name on import (wrong for the Svornatos).
+```
+
+In `README.md`, replace the **Organize it.** and **Search** feature bullets with:
+
+```markdown
+- **Organize it.** Link each song to the dances done to it: one tune can carry several dances, and one dance can be done to many tunes. Record each dance's country, choreographer, dance type, difficulty and notes, and who taught it to your group, with autocomplete. Use favorites, a holding area and playlists.
+- **Search** by song title, dance name, teacher, choreographer or country. Accents don't matter: "pasa" finds "Paşa".
+```
+
+Run: `npx vitest run tests/project.test.ts && npx prettier --check AGENTS.md README.md`
+Expected: 9 tests pass; formatting is clean.
+
+- [ ] **Step 7: Recreate the development database (manual)**
+
+The old database on this Mac is already at `user_version` 1, so it would keep the old tables. It's empty, so delete it:
+
+```bash
+rm -f "$HOME/Library/Application Support/Folk Dance Player/folk-dance-player.sqlite"{,-wal,-shm}
+npm run build && npm start
+```
+
+Expected: the app opens normally. Quit it, then confirm the new schema exists:
+
+```bash
+node -e "const {DatabaseSync}=require('node:sqlite');const d=new DatabaseSync(process.argv[1],{readOnly:true});console.log(d.prepare(\"select count(*) n from sqlite_master where name in ('dances','dance_songs','library_fts')\").get())" "$HOME/Library/Application Support/Folk Dance Player/folk-dance-player.sqlite"
+```
+
+Expected output: `{ n: 3 }`.
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add src/main/db/migrations/001-initial.ts tests/main/db/schema.test.ts tests/main/helpers/library-fixtures.ts AGENTS.md README.md
+git commit -m "feat(db): separate dances from songs; per-song library search across dances
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
+```
+
+---
+
+### Task 2: Dependencies, shared import types and tag mapping
 
 **Files:**
 - Modify: `package.json` (devDependencies)
@@ -96,7 +828,7 @@ tests/renderer/music-import.test.tsx     import UI tests
 - Consumes: `TagTarget` from `src/shared/settings.ts` (Plan 1).
 - Produces:
   - **`@shared/import`:** `ImportMapping`, `AppleSelection`, `PlaylistDecision`, `ImportRequest`, `ImportProgress`, `ImportSummaryItem`, `ImportSummary`, `ApplePlaylistInfo`, `ApplePreview`, `ApplePlaylistConflict`, `emptySummary()`.
-  - **`mapping.ts`:** `RawTags { title; artist; albumArtist; genre }` (each `string | null`), `MappedSong { title: string; artist; teacher; choreographer; country }`, `mapTagsToSong(tags: RawTags, path: string, mapping: ImportMapping): MappedSong`. It also re-exports `ImportMapping`.
+  - **`mapping.ts`:** `RawTags { title; artist; albumArtist; genre }` (each `string | null`), `MappedTags { song: { title; artist }; dance: { name; country; choreographer }; teacher }`, and `mapTags(tags: RawTags, path: string, mapping: ImportMapping): MappedTags`. The dance's name is the song's title. It also re-exports `ImportMapping`.
 
 - [ ] **Step 1: Add the dependencies**
 
@@ -196,7 +928,7 @@ export function emptySummary(): ImportSummary {
 
 ```ts
 import { describe, expect, test } from 'vitest'
-import { mapTagsToSong, type ImportMapping } from '../../../src/main/import/mapping'
+import { mapTags, type ImportMapping } from '../../../src/main/import/mapping'
 
 const mapping: ImportMapping = {
   artistTagTarget: 'artist',
@@ -206,67 +938,63 @@ const mapping: ImportMapping = {
 
 const tags = { title: 'Hora Mare', artist: 'Taraf', albumArtist: 'Sonia Dion', genre: 'Romania' }
 
-describe('mapTagsToSong', () => {
-  test('maps artist to artist and genre to country by default', () => {
-    expect(mapTagsToSong(tags, '/m/hora.mp3', mapping)).toEqual({
-      title: 'Hora Mare',
-      artist: 'Taraf',
-      teacher: null,
-      choreographer: null,
-      country: 'Romania'
+describe('mapTags', () => {
+  test('maps to the song, an automatic dance of the same name, and the pairing', () => {
+    expect(mapTags(tags, '/m/hora.mp3', mapping)).toEqual({
+      song: { title: 'Hora Mare', artist: 'Taraf' },
+      dance: { name: 'Hora Mare', country: 'Romania', choreographer: null },
+      teacher: null
     })
   })
 
-  test('routes album artist to teacher when configured', () => {
-    const song = mapTagsToSong(tags, '/m/hora.mp3', { ...mapping, albumArtistTagTarget: 'teacher' })
-    expect(song.teacher).toBe('Sonia Dion')
-    expect(song.artist).toBe('Taraf')
+  test('routes album artist to the pairing’s teacher when configured', () => {
+    const mapped = mapTags(tags, '/m/hora.mp3', { ...mapping, albumArtistTagTarget: 'teacher' })
+    expect(mapped.teacher).toBe('Sonia Dion')
+    expect(mapped.song.artist).toBe('Taraf')
   })
 
-  test('routes artist to choreographer when configured', () => {
-    const song = mapTagsToSong(tags, '/m/hora.mp3', {
-      ...mapping,
-      artistTagTarget: 'choreographer'
-    })
-    expect(song.choreographer).toBe('Taraf')
-    expect(song.artist).toBeNull()
+  test('routes artist to the dance’s choreographer when configured', () => {
+    const mapped = mapTags(tags, '/m/hora.mp3', { ...mapping, artistTagTarget: 'choreographer' })
+    expect(mapped.dance.choreographer).toBe('Taraf')
+    expect(mapped.song.artist).toBeNull()
   })
 
   test('the artist tag wins when both tags target the same field', () => {
-    const song = mapTagsToSong(tags, '/m/hora.mp3', { ...mapping, albumArtistTagTarget: 'artist' })
-    expect(song.artist).toBe('Taraf')
+    const mapped = mapTags(tags, '/m/hora.mp3', { ...mapping, albumArtistTagTarget: 'artist' })
+    expect(mapped.song.artist).toBe('Taraf')
   })
 
   test('album artist fills a shared target when the artist tag is empty', () => {
-    const song = mapTagsToSong({ ...tags, artist: null }, '/m/hora.mp3', {
+    const mapped = mapTags({ ...tags, artist: null }, '/m/hora.mp3', {
       ...mapping,
       albumArtistTagTarget: 'artist'
     })
-    expect(song.artist).toBe('Sonia Dion')
+    expect(mapped.song.artist).toBe('Sonia Dion')
   })
 
-  test('leaves country empty when genre is not country', () => {
+  test('leaves the dance’s country empty when genre is not country', () => {
     expect(
-      mapTagsToSong(tags, '/m/hora.mp3', { ...mapping, genreIsCountry: false }).country
+      mapTags(tags, '/m/hora.mp3', { ...mapping, genreIsCountry: false }).dance.country
     ).toBeNull()
   })
 
-  test('falls back to the file name for a missing or blank title', () => {
-    expect(mapTagsToSong({ ...tags, title: null }, '/m/Ajde Jano.mp3', mapping).title).toBe(
-      'Ajde Jano'
-    )
-    expect(mapTagsToSong({ ...tags, title: '  ' }, '/m/Ajde Jano.mp3', mapping).title).toBe(
-      'Ajde Jano'
-    )
+  test('falls back to the file name for a missing or blank title, for song and dance', () => {
+    const mapped = mapTags({ ...tags, title: '  ' }, '/m/Ajde Jano.mp3', mapping)
+    expect(mapped.song.title).toBe('Ajde Jano')
+    expect(mapped.dance.name).toBe('Ajde Jano')
   })
 
   test('trims values and treats blanks as empty', () => {
-    const song = mapTagsToSong(
+    const mapped = mapTags(
       { title: ' Hora ', artist: '  ', albumArtist: null, genre: ' Romania ' },
       '/m/x.mp3',
       mapping
     )
-    expect(song).toMatchObject({ title: 'Hora', artist: null, country: 'Romania' })
+    expect(mapped).toEqual({
+      song: { title: 'Hora', artist: null },
+      dance: { name: 'Hora', country: 'Romania', choreographer: null },
+      teacher: null
+    })
   })
 })
 ```
@@ -293,12 +1021,12 @@ export interface RawTags {
   genre: string | null
 }
 
-export interface MappedSong {
-  title: string
-  artist: string | null
+// Where an import puts a file's tags (spec §4, §5.2): the song, the automatic same-named dance
+// created for it, and the pairing between them.
+export interface MappedTags {
+  song: { title: string; artist: string | null }
+  dance: { name: string; country: string | null; choreographer: string | null }
   teacher: string | null
-  choreographer: string | null
-  country: string | null
 }
 
 const clean = (value: string | null): string | null => {
@@ -306,23 +1034,30 @@ const clean = (value: string | null): string | null => {
   return trimmed ? trimmed : null
 }
 
-// Spec §5.2: applied once when a song record is created (and by "Re-apply mapping").
-export function mapTagsToSong(tags: RawTags, path: string, mapping: ImportMapping): MappedSong {
-  const song: MappedSong = {
-    title: clean(tags.title) ?? basename(path, extname(path)),
+// Spec §5.2: applied once when a song and its dance are created (and by "Re-apply mapping").
+export function mapTags(tags: RawTags, path: string, mapping: ImportMapping): MappedTags {
+  const title = clean(tags.title) ?? basename(path, extname(path))
+  const routed: Record<'artist' | 'teacher' | 'choreographer', string | null> = {
     artist: null,
     teacher: null,
-    choreographer: null,
-    country: mapping.genreIsCountry ? clean(tags.genre) : null
+    choreographer: null
   }
   // The artist tag is applied first, so it wins when both tags target the same field.
   for (const [value, target] of [
     [clean(tags.artist), mapping.artistTagTarget],
     [clean(tags.albumArtist), mapping.albumArtistTagTarget]
   ] as const) {
-    if (value && target !== 'ignore' && song[target] === null) song[target] = value
+    if (value && target !== 'ignore' && routed[target] === null) routed[target] = value
   }
-  return song
+  return {
+    song: { title, artist: routed.artist },
+    dance: {
+      name: title,
+      country: mapping.genreIsCountry ? clean(tags.genre) : null,
+      choreographer: routed.choreographer
+    },
+    teacher: routed.teacher
+  }
 }
 ```
 
@@ -340,7 +1075,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 2: Finding music files: formats, fingerprint, folder scan
+### Task 3: Finding music files: formats, fingerprint, folder scan
 
 **Files:**
 - Create: `src/main/import/formats.ts`, `src/main/import/content-hash.ts`, `src/main/import/scan.ts`
@@ -650,14 +1385,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 3: Reading one audio file
+### Task 4: Reading one audio file
 
 **Files:**
 - Create: `src/main/import/read-file.ts`
 - Test: `tests/main/import/read-file.test.ts`
 
 **Interfaces:**
-- Consumes: `contentHash`, `classifyPath`, `isPlayableCodec` (Task 2); `RawTags` (Task 1).
+- Consumes: `contentHash`, `classifyPath`, `isPlayableCodec` (Task 3); `RawTags` (Task 2).
 - Produces:
   - `FileFacts { path; fileSize; mtimeMs; durationMs: number | null; contentHash; tags: RawTags }`
   - `ReadResult = { ok: true; facts } | { ok: false; path; reason: 'not_found' | 'unsupported' | 'unreadable'; detail }`
@@ -862,7 +1597,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 4: Reading Apple Music's Library.xml
+### Task 5: Reading Apple Music's Library.xml
 
 **Files:**
 - Create: `src/main/import/apple-library.ts`
@@ -870,7 +1605,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Test: `tests/main/import/apple-library.test.ts`
 
 **Interfaces:**
-- Consumes: `AppleSelection`, `ApplePreview` (Task 1); `RawTags` (Task 1).
+- Consumes: `AppleSelection`, `ApplePreview` (Task 2); `RawTags` (Task 2).
 - Produces:
   - **Types:** `AppleTrack { trackId; persistentId; path: string | null; tags: RawTags; durationMs; kind }`, `ApplePlaylist { persistentId; name; trackIds: number[] }`, `AppleLibrary { tracks: Map<number, AppleTrack>; playlists: ApplePlaylist[] }`, `class AppleLibraryError`.
   - **Functions:** `parseAppleLibrary(xml: string): AppleLibrary`, `previewAppleLibrary(lib): ApplePreview`, `selectAppleImport(lib, selection: AppleSelection): { tracks: AppleTrack[]; playlists: ApplePlaylist[] }`.
@@ -1211,23 +1946,27 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 5: Saving an imported file (re-import rules)
+### Task 6: Saving an imported file (re-import rules)
 
 **Files:**
 - Create: `src/main/import/save-file.ts`
-- Test: `tests/main/import/save-file.test.ts`
+- Test: `tests/main/import/save-file.test.ts` (uses `tests/main/helpers/library-fixtures.ts` from Task 1)
 
 **Interfaces:**
-- Consumes: `FileFacts` (Task 3); `mapTagsToSong`, `ImportMapping`, `MappedSong` (Task 1); `createTestDb` (Plan 1).
+- Consumes: `FileFacts` (Task 4); `mapTags`, `ImportMapping`, `MappedTags` (Task 2); the Task 1 schema; `createTestDb` (Plan 1); `addDance`, `link`, `songView` (Task 1 helpers).
 - Produces: `SaveOutcome = 'added' | 'updated' | 'relinked' | 'unchanged'`, `SaveContext { source: 'files' | 'apple_xml'; applePersistentId: string | null; mapping }`, `saveImportedFile(db, facts, ctx): { outcome; fileId }`.
 
 **Matching order (spec §5.4):**
 1. Same path.
 2. Same Apple persistent ID.
 3. Same fingerprint, where the old copy is marked missing or no longer exists on disk. This is a **relink**: the file row keeps its id, so its song, prefs, playlists and history follow.
-4. Otherwise, a new file and a new song (`crypto.randomUUID()`).
+4. Otherwise, a new file, saved as:
+   - its song
+   - a new dance with the song's title (`crypto.randomUUID()` for both uuids)
+   - the pairing between them, with the teacher in `dance_song_prefs` if the mapping gave one
+   - `song_prefs.default_dance_id` set to that dance
 
-Existing songs only get *empty* fields filled.
+**On re-import:** only *empty* fields are filled, on the song, on its **default** dance (`song_prefs`, else the earliest-linked dance) and on that pairing's teacher. If the user unlinked all of a song's dances, no dance is recreated.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -1242,6 +1981,7 @@ import type { ImportMapping } from '../../../src/main/import/mapping'
 import type { FileFacts } from '../../../src/main/import/read-file'
 import { saveImportedFile, type SaveContext } from '../../../src/main/import/save-file'
 import { tempDir, type TempDir } from '../helpers/audio-fixtures'
+import { addDance, link, songView } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 
 const mapping: ImportMapping = {
@@ -1268,8 +2008,16 @@ function facts(path: string, overrides: Partial<FileFacts> = {}): FileFacts {
 
 const fileRow = (id: number) =>
   db.prepare('SELECT * FROM files WHERE id = ?').get(id) as Record<string, unknown>
-const songRow = (fileId: number) =>
-  db.prepare('SELECT * FROM songs WHERE file_id = ?').get(fileId) as Record<string, unknown>
+const count = (table: string): number =>
+  (db.prepare(`SELECT COUNT(*) AS n FROM ${table}`).get() as { n: number }).n
+const songId = (fileId: number): number =>
+  (db.prepare('SELECT id FROM songs WHERE file_id = ?').get(fileId) as { id: number }).id
+const defaultDanceId = (fileId: number): number =>
+  (
+    db
+      .prepare('SELECT default_dance_id AS id FROM song_prefs WHERE song_id = ?')
+      .get(songId(fileId)) as { id: number }
+  ).id
 
 beforeEach(() => {
   db = createTestDb()
@@ -1278,7 +2026,7 @@ beforeEach(() => {
 afterEach(() => dir.cleanup())
 
 describe('saveImportedFile', () => {
-  test('adds a new file and its song, mapped from the tags', () => {
+  test('adds a file, its song, an automatic dance of the same name, and the pairing', () => {
     const path = dir.file('hora.mp3', 'x')
     const { outcome, fileId } = saveImportedFile(db, facts(path), fromFiles)
     expect(outcome).toBe('added')
@@ -1292,14 +2040,32 @@ describe('saveImportedFile', () => {
       source: 'files',
       is_missing: 0
     })
-    expect(songRow(fileId)).toMatchObject({
+    expect(songView(db, fileId)).toEqual({
       title: 'Hora Mare',
       artist: 'Taraf',
-      teacher: 'Sonia Dion',
+      dance: 'Hora Mare',
+      country: 'Romania',
       choreographer: null,
-      country: 'Romania'
+      teacher: 'Sonia Dion'
     })
-    expect(songRow(fileId).uuid).toMatch(/^[0-9a-f-]{36}$/)
+    expect(db.prepare('SELECT uuid FROM dances').get()).toEqual({
+      uuid: expect.stringMatching(/^[0-9a-f-]{36}$/)
+    })
+  })
+
+  test('never links a song to an existing dance by name', () => {
+    const a = saveImportedFile(
+      db,
+      facts(dir.file('a/Svornato.mp3', 'x'), { contentHash: 'h-a' }),
+      fromFiles
+    )
+    const b = saveImportedFile(
+      db,
+      facts(dir.file('b/Svornato.mp3', 'x'), { contentHash: 'h-b' }),
+      fromFiles
+    )
+    expect(count('dances')).toBe(2)
+    expect(defaultDanceId(a.fileId)).not.toBe(defaultDanceId(b.fileId))
   })
 
   test('reports an identical re-import as unchanged', () => {
@@ -1311,25 +2077,48 @@ describe('saveImportedFile', () => {
     })
   })
 
-  test('refreshes raw tags but only fills song fields that are empty', () => {
+  test('refreshes raw tags but only fills song, dance and pairing fields that are empty', () => {
     const path = dir.file('hora.mp3', 'x')
-    const { fileId } = saveImportedFile(
-      db,
-      facts(path, { tags: { title: 'Hora', artist: null, albumArtist: null, genre: null } }),
-      fromFiles
-    )
-    db.prepare("UPDATE songs SET title = 'Hora Mare (edited)' WHERE file_id = ?").run(fileId)
+    const bare = { title: 'Hora', artist: null, albumArtist: null, genre: null }
+    const { fileId } = saveImportedFile(db, facts(path, { tags: bare }), fromFiles)
+    db.prepare("UPDATE songs SET title = 'Hora (edited)' WHERE file_id = ?").run(fileId)
 
     const result = saveImportedFile(db, facts(path, { mtimeMs: 1_800_000_000_000 }), fromFiles)
 
     expect(result.outcome).toBe('updated')
     expect(fileRow(fileId)).toMatchObject({ tag_genre: 'Romania', mtime_ms: 1_800_000_000_000 })
-    expect(songRow(fileId)).toMatchObject({
-      title: 'Hora Mare (edited)',
+    expect(songView(db, fileId)).toEqual({
+      title: 'Hora (edited)',
       artist: 'Taraf',
-      teacher: 'Sonia Dion',
-      country: 'Romania'
+      dance: 'Hora',
+      country: 'Romania',
+      choreographer: null,
+      teacher: 'Sonia Dion'
     })
+  })
+
+  test('fills only the song’s default dance, leaving its other dances alone', () => {
+    const path = dir.file('hora.mp3', 'x')
+    const bare = { title: 'Hora', artist: null, albumArtist: null, genre: null }
+    const { fileId } = saveImportedFile(db, facts(path, { tags: bare }), fromFiles)
+    const other = addDance(db, { name: 'Sârba' })
+    link(db, other, songId(fileId))
+
+    saveImportedFile(db, facts(path), fromFiles)
+
+    expect(songView(db, fileId).country).toBe('Romania')
+    expect(db.prepare('SELECT country FROM dances WHERE id = ?').get(other)).toEqual({
+      country: null
+    })
+  })
+
+  test('does not recreate a dance the user unlinked', () => {
+    const path = dir.file('hora.mp3', 'x')
+    const { fileId } = saveImportedFile(db, facts(path), fromFiles)
+    db.prepare('DELETE FROM dance_songs').run()
+    saveImportedFile(db, facts(path, { mtimeMs: 2 }), fromFiles)
+    expect(count('dance_songs')).toBe(0)
+    expect(songView(db, fileId).title).toBe('Hora Mare')
   })
 
   test('matches an Apple Music track by persistent ID even when its file moved', () => {
@@ -1342,25 +2131,27 @@ describe('saveImportedFile', () => {
     expect(fileRow(first.fileId).path).toBe(newPath)
   })
 
-  test('relinks a moved file by its fingerprint when the old path is gone', () => {
+  test('relinks a moved file by its fingerprint when the old path is gone, keeping its dance', () => {
     const oldPath = dir.file('old/hora.mp3', 'x')
     const { fileId } = saveImportedFile(db, facts(oldPath), fromFiles)
-    db.prepare("UPDATE songs SET country = 'Moldova' WHERE file_id = ?").run(fileId)
+    db.prepare("UPDATE dances SET country = 'Moldova'").run()
     rmSync(oldPath)
     const newPath = dir.file('renamed/Hora Mare.mp3', 'x')
 
     expect(saveImportedFile(db, facts(newPath), fromFiles)).toEqual({ outcome: 'relinked', fileId })
     expect(fileRow(fileId)).toMatchObject({ path: newPath, is_missing: 0 })
-    expect(songRow(fileId).country).toBe('Moldova')
+    expect(songView(db, fileId).country).toBe('Moldova')
+    expect(count('dances')).toBe(1)
   })
 
-  test('adds a copy as a new file when the original is still on disk', () => {
+  test('adds a copy as a new file, song and dance when the original is still on disk', () => {
     const original = dir.file('a/hora.mp3', 'x')
     const copy = dir.file('b/hora.mp3', 'x')
     const first = saveImportedFile(db, facts(original), fromFiles)
     const second = saveImportedFile(db, facts(copy), fromFiles)
     expect(second.outcome).toBe('added')
     expect(second.fileId).not.toBe(first.fileId)
+    expect(count('dances')).toBe(2)
   })
 
   test('clears the missing flag when a missing file is found at its path again', () => {
@@ -1396,7 +2187,7 @@ Expected: FAIL — `Cannot find module '../../../src/main/import/save-file'`.
 import { existsSync } from 'fs'
 import { randomUUID } from 'crypto'
 import type { DatabaseSync } from 'node:sqlite'
-import { mapTagsToSong, type ImportMapping, type MappedSong } from './mapping'
+import { mapTags, type ImportMapping, type MappedTags } from './mapping'
 import type { FileFacts } from './read-file'
 
 export type SaveOutcome = 'added' | 'updated' | 'relinked' | 'unchanged'
@@ -1421,10 +2212,6 @@ interface FileRow {
   apple_persistent_id: string | null
   is_missing: number
 }
-
-type SongFields = Record<keyof MappedSong, string | null>
-
-const SONG_FIELDS: (keyof MappedSong)[] = ['title', 'artist', 'teacher', 'choreographer', 'country']
 
 // The file columns an import writes, keyed by column name.
 function fileColumns(facts: FileFacts): Record<string, string | number | null> {
@@ -1481,25 +2268,69 @@ function updateFile(db: DatabaseSync, row: FileRow, facts: FileFacts, ctx: SaveC
   return true
 }
 
-// Re-imports never overwrite fields the user has edited; they only fill empty ones (spec §5.4).
-function fillEmptySongFields(db: DatabaseSync, fileId: number, mapped: MappedSong): boolean {
-  const song = db
-    .prepare(`SELECT ${SONG_FIELDS.join(', ')} FROM songs WHERE file_id = ?`)
-    .get(fileId) as SongFields
-  const empty = SONG_FIELDS.filter((f) => (song[f] ?? '') === '' && mapped[f] !== null)
+// Fills the empty columns of one row with mapped values; returns whether anything changed.
+function fillEmpty(
+  db: DatabaseSync,
+  table: string,
+  where: string,
+  id: number,
+  values: Record<string, string | null>
+): boolean {
+  const cols = Object.keys(values)
+  const row = db.prepare(`SELECT ${cols.join(', ')} FROM ${table} WHERE ${where} = ?`).get(id) as
+    Record<string, string | null> | undefined
+  if (!row) return false
+  const empty = cols.filter((c) => (row[c] ?? '') === '' && values[c] !== null)
   if (empty.length === 0) return false
-  db.prepare(`UPDATE songs SET ${empty.map((f) => `${f} = ?`).join(', ')} WHERE file_id = ?`).run(
-    ...empty.map((f) => mapped[f]),
-    fileId
-  )
+  db.prepare(
+    `UPDATE ${table} SET ${empty.map((c) => `${c} = ?`).join(', ')} WHERE ${where} = ?`
+  ).run(...empty.map((c) => values[c]), id)
   return true
 }
 
+// The song's default dance (spec §4): song_prefs.default_dance_id, else its earliest-linked dance.
+function defaultPairing(
+  db: DatabaseSync,
+  songId: number
+): { id: number; danceId: number } | undefined {
+  return db
+    .prepare(
+      `SELECT ds.id, ds.dance_id AS danceId FROM dance_songs ds
+       LEFT JOIN song_prefs sp ON sp.song_id = ds.song_id
+       WHERE ds.song_id = ?
+       ORDER BY (ds.dance_id = sp.default_dance_id) DESC, ds.id
+       LIMIT 1`
+    )
+    .get(songId) as { id: number; danceId: number } | undefined
+}
+
+// Re-imports never overwrite fields the user has edited; they only fill empty ones (spec §5.4):
+// the song, its default dance, and that pairing's teacher. A song whose dances were all unlinked
+// is left without one.
+function fillEmptyFields(db: DatabaseSync, fileId: number, mapped: MappedTags): boolean {
+  const { id: songId } = db.prepare('SELECT id FROM songs WHERE file_id = ?').get(fileId) as {
+    id: number
+  }
+  let changed = fillEmpty(db, 'songs', 'id', songId, mapped.song)
+  const pairing = defaultPairing(db, songId)
+  if (!pairing) return changed
+  changed = fillEmpty(db, 'dances', 'id', pairing.danceId, mapped.dance) || changed
+  if (mapped.teacher !== null) {
+    db.prepare('INSERT OR IGNORE INTO dance_song_prefs (dance_song_id) VALUES (?)').run(pairing.id)
+    changed =
+      fillEmpty(db, 'dance_song_prefs', 'dance_song_id', pairing.id, { teacher: mapped.teacher }) ||
+      changed
+  }
+  return changed
+}
+
+// A new file gets its song, an automatic dance with the song's title, the pairing between them,
+// and that dance as the song's default (spec §4). Never linked to an existing dance by name.
 function insertFile(
   db: DatabaseSync,
   facts: FileFacts,
   ctx: SaveContext,
-  mapped: MappedSong
+  mapped: MappedTags
 ): number {
   const cols = {
     ...fileColumns(facts),
@@ -1507,16 +2338,40 @@ function insertFile(
     apple_persistent_id: ctx.applePersistentId
   }
   const names = Object.keys(cols)
-  const fileId = Number(
-    db
-      .prepare(
-        `INSERT INTO files (${names.join(', ')}) VALUES (${names.map(() => '?').join(', ')})`
-      )
-      .run(...Object.values(cols)).lastInsertRowid
+  const insert = (sql: string, ...values: (string | number | null)[]): number =>
+    Number(db.prepare(sql).run(...values).lastInsertRowid)
+
+  const fileId = insert(
+    `INSERT INTO files (${names.join(', ')}) VALUES (${names.map(() => '?').join(', ')})`,
+    ...Object.values(cols)
   )
-  db.prepare(
-    `INSERT INTO songs (file_id, uuid, ${SONG_FIELDS.join(', ')}) VALUES (?, ?, ?, ?, ?, ?, ?)`
-  ).run(fileId, randomUUID(), ...SONG_FIELDS.map((f) => mapped[f]))
+  const songId = insert(
+    'INSERT INTO songs (file_id, uuid, title, artist) VALUES (?, ?, ?, ?)',
+    fileId,
+    randomUUID(),
+    mapped.song.title,
+    mapped.song.artist
+  )
+  const danceId = insert(
+    'INSERT INTO dances (uuid, name, country, choreographer) VALUES (?, ?, ?, ?)',
+    randomUUID(),
+    mapped.dance.name,
+    mapped.dance.country,
+    mapped.dance.choreographer
+  )
+  const pairingId = insert(
+    'INSERT INTO dance_songs (dance_id, song_id) VALUES (?, ?)',
+    danceId,
+    songId
+  )
+  if (mapped.teacher !== null) {
+    insert(
+      'INSERT INTO dance_song_prefs (dance_song_id, teacher) VALUES (?, ?)',
+      pairingId,
+      mapped.teacher
+    )
+  }
+  insert('INSERT INTO song_prefs (song_id, default_dance_id) VALUES (?, ?)', songId, danceId)
   return fileId
 }
 
@@ -1525,19 +2380,19 @@ export function saveImportedFile(
   facts: FileFacts,
   ctx: SaveContext
 ): { outcome: SaveOutcome; fileId: number } {
-  const mapped = mapTagsToSong(facts.tags, facts.path, ctx.mapping)
+  const mapped = mapTags(facts.tags, facts.path, ctx.mapping)
 
   const existing = findExisting(db, facts, ctx)
   if (existing) {
     const fileChanged = updateFile(db, existing, facts, ctx)
-    const songChanged = fillEmptySongFields(db, existing.id, mapped)
+    const songChanged = fillEmptyFields(db, existing.id, mapped)
     return { outcome: fileChanged || songChanged ? 'updated' : 'unchanged', fileId: existing.id }
   }
 
   const moved = findMoved(db, facts)
   if (moved) {
     updateFile(db, moved, facts, ctx)
-    fillEmptySongFields(db, moved.id, mapped)
+    fillEmptyFields(db, moved.id, mapped)
     return { outcome: 'relinked', fileId: moved.id }
   }
 
@@ -1548,25 +2403,25 @@ export function saveImportedFile(
 - [ ] **Step 4: Run the tests, typecheck and commit**
 
 Run: `npx vitest run tests/main/import && npm run typecheck && npx prettier --check .`
-Expected: 57 tests pass; typecheck and formatting are clean.
+Expected: 60 tests pass; typecheck and formatting are clean.
 
 ```bash
 git add src/main/import/save-file.ts tests/main/import/save-file.test.ts
-git commit -m "feat(import): save imported files, keeping user edits and relinking moved files
+git commit -m "feat(import): save imported files with an automatic dance, keeping user edits and relinking moved files
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
 
 ---
 
-### Task 6: Saving Apple Music playlists
+### Task 7: Saving Apple Music playlists
 
 **Files:**
 - Create: `src/main/import/save-playlists.ts`
 - Test: `tests/main/import/save-playlists.test.ts`
 
 **Interfaces:**
-- Consumes: `ApplePlaylist` (Task 4); `ApplePlaylistConflict`, `ImportSummary`, `PlaylistDecision` (Task 1).
+- Consumes: `ApplePlaylist` (Task 5); `ApplePlaylistConflict`, `ImportSummary`, `PlaylistDecision` (Task 2).
 - Produces:
   - `findEditedApplePlaylists(db, persistentIds: string[]): ApplePlaylistConflict[]`
   - `saveApplePlaylists(db, playlists, fileIdByTrackId: Map<number, number>, decisions: Record<string, PlaylistDecision>, now: string): ImportSummary['playlists']`
@@ -1827,7 +2682,7 @@ export function saveApplePlaylists(
 - [ ] **Step 4: Run the tests, typecheck and commit**
 
 Run: `npx vitest run tests/main/import && npm run typecheck && npx prettier --check .`
-Expected: 64 tests pass; typecheck and formatting are clean.
+Expected: 67 tests pass; typecheck and formatting are clean.
 
 ```bash
 git add src/main/import/save-playlists.ts tests/main/import/save-playlists.test.ts
@@ -1838,14 +2693,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 7: The import worker and ImportService
+### Task 8: The import worker and ImportService
 
 **Files:**
 - Create: `src/main/import/worker-protocol.ts`, `src/main/import/worker-core.ts`, `src/main/import/in-process-worker.ts`, `src/main/import/import-service.ts`
 - Test: `tests/main/import/import-service.test.ts`
 
 **Interfaces:**
-- Consumes: everything from Tasks 1–6; `SettingsStore` (Plan 1).
+- Consumes: everything from Tasks 2–7; `SettingsStore` (Plan 1).
 - Produces:
   - **`worker-protocol.ts`:** `WorkerJob`, `ParentMessage`, `WorkerMessage`, `WorkerHandle { start(job); cancel(); onMessage(l); onExit(l); dispose() }`, `StartWorker`.
   - **`worker-core.ts`:** `runWorkerJob(job, post, isCancelled): Promise<void>`.
@@ -1880,6 +2735,7 @@ import { startInProcessWorker } from '../../../src/main/import/in-process-worker
 import { SettingsStore } from '../../../src/main/settings/settings-store'
 import { appleLibraryXml } from '../helpers/apple-xml'
 import { mp3Bytes, tempDir, type TempDir } from '../helpers/audio-fixtures'
+import { songView } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 
 let db: DatabaseSync
@@ -1898,6 +2754,10 @@ function makeService(
     now: () => '2026-10-13T12:00:00.000Z'
   })
 }
+
+const fileIdOf = (title: string): number =>
+  (db.prepare('SELECT file_id FROM songs WHERE title = ?').get(title) as { file_id: number })
+    .file_id
 
 const rel = (items: { path: string }[]): string[] =>
   items.map((i) => i.path.slice(dir.path.length + 1)).sort()
@@ -1933,10 +2793,9 @@ describe('ImportService: files and folders', () => {
   test('maps tags using the current import settings', async () => {
     new SettingsStore(db).set('import.albumArtistTagTarget', 'teacher')
     await service.run({ kind: 'paths', paths: [dir.path] })
-    expect(
-      db.prepare("SELECT title, teacher, country FROM songs WHERE title = 'Ajde Jano'").get()
-    ).toEqual({
+    expect(songView(db, fileIdOf('Ajde Jano'))).toMatchObject({
       title: 'Ajde Jano',
+      dance: 'Ajde Jano',
       teacher: 'Bora Özkök',
       country: 'Serbia'
     })
@@ -2018,8 +2877,9 @@ describe('ImportService: Apple Music', () => {
     expect(rel(summary.added)).toEqual(['Music/Ajde Jano.mp3', 'Music/Kolo.mp3'])
     expect(rel(summary.notFound)).toEqual(['Music/Gone.mp3'])
     expect(summary.playlists.created).toEqual(['Balkan'])
-    expect(db.prepare("SELECT title, country FROM songs WHERE title = 'Ajde Jano'").get()).toEqual({
+    expect(songView(db, fileIdOf('Ajde Jano'))).toMatchObject({
       title: 'Ajde Jano',
+      dance: 'Ajde Jano',
       country: 'Serbia'
     })
     const order = db
@@ -2403,7 +3263,7 @@ export class ImportService {
 - [ ] **Step 5: Run the tests, typecheck and commit**
 
 Run: `npx vitest run tests/main/import && npm run typecheck && npx prettier --check .`
-Expected: 74 tests pass; typecheck and formatting are clean.
+Expected: 77 tests pass; typecheck and formatting are clean.
 
 ```bash
 git add src/main/import tests/main/import/import-service.test.ts
@@ -2414,14 +3274,14 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 8: IPC channels, progress events, file pickers and the utility process
+### Task 9: IPC channels, progress events, file pickers and the utility process
 
 **Files:**
 - Modify: `src/shared/contract.ts`, `src/main/ipc/handlers.ts`, `src/preload/index.ts`, `src/main/index.ts`, `tests/main/ipc/handlers.test.ts`, `tests/renderer/settings-page.test.tsx`
 - Create: `src/main/library/stats.ts`, `src/main/import/worker-entry.ts`, `src/main/import/utility-worker.ts`, `src/main/import/dialogs.ts`, `tests/renderer/fake-api.ts`
 
 **Interfaces:**
-- Consumes: `ImportService` (Task 7).
+- Consumes: `ImportService` (Task 8).
 - Produces:
   - **New invoke channels:**
     - `import:pickMusic`: `[]` → `string[]`
@@ -3057,7 +3917,7 @@ npx prettier --check .
 ```
 
 Expected:
-- All tests pass (170).
+- All tests pass (182).
 - The build output has a separate `out/main/worker-entry-*.js` chunk next to `index.js`.
 - Formatting is clean.
 
@@ -3070,7 +3930,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ---
 
-### Task 9: Import on the Music page
+### Task 10: Import on the Music page
 
 **Files:**
 - Create: `src/renderer/src/ipc-error.ts`
@@ -3079,7 +3939,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - Test: `tests/renderer/music-import.test.tsx`
 
 **Interfaces:**
-- Consumes: the Task 8 contract; `createFakeApi` (Task 8); `renderWithMantine` (Plan 1).
+- Consumes: the Task 9 contract; `createFakeApi` (Task 9); `renderWithMantine` (Plan 1).
 - Produces:
   - `MusicPage({ api }: { api: RendererApi })`
   - `useImportFlow(api, onFinished)`, with the steps `closed → mapping | loading → apple → conflicts → running → summary | error`
@@ -4042,7 +4902,7 @@ to:
 Run: `npx vitest run tests/renderer && npm test && npm run typecheck && npx prettier --check .`
 Expected:
 - The renderer tests pass (14).
-- The whole suite passes (180), with no React `act(...)` warnings in the output.
+- The whole suite passes (192), with no React `act(...)` warnings in the output.
 - Typecheck and formatting are clean.
 
 - [ ] **Step 7: Release notes and decision log**
@@ -4053,6 +4913,7 @@ Append to the existing `### Added` list under `## [Unreleased]` in `CHANGELOG.md
 - Import music with **Add Music…** (files and folders, including folders inside folders) or by dragging them onto the Music page.
 - Import from Apple Music: choose the `Library.xml` you exported from Music and import the whole library or just the playlists you pick. Playlists are recreated in the same order.
 - Before each import, choose whether the Artist and Album Artist tags become the Artist, Teacher or Choreographer, and whether Genre is the Country. Your choice is remembered.
+- Each imported song gets its own dance with the same name, ready for its country, choreographer and teacher.
 - Importing again keeps your edits, recognizes files you moved or renamed, and asks before replacing an Apple Music playlist you've changed.
 - After each import, a summary lists what was added or updated, and any files that were missing, unreadable, or in a format the player can't play yet (such as AIFF or Apple Lossless).
 ```
@@ -4062,7 +4923,7 @@ Add these entries to the top of the Decisions list in `AGENTS.md` (newest first)
 ```markdown
 - **2026-10-13 — Imports run in a utility process (one per job), and the main process writes the results.** The worker scans folders, reads tags and fingerprints files. `ImportService` saves each file in its own transaction as results arrive, streams `import:progress` events, and runs one import at a time. `worker-core.ts` has no Electron imports, so tests run the real pipeline in-process against generated MP3s and Apple XML. A cancelled Apple import leaves playlists untouched, because they'd be incomplete. _Rejected:_ importing on the main process (blocks the UI on large libraries); worker threads (a crash in a parser would take down the main process).
 - **2026-10-13 — `music-metadata` and `plist` are devDependencies, so Vite bundles them.** Both are ESM-only, and `plist` exports only an `import` condition. Left external, the utility process crashed with an ES-module resolution error; bundled, both work in the built app. Import `plist` as `import { parse } from 'plist'`.
-- **2026-10-13 — Re-import matching order: same path, then Apple persistent ID, then fingerprint (only when the old copy is missing or gone).** A fingerprint match keeps the file row, so songs, prefs, playlists and history follow a moved file. A copy whose original still exists is a new file. Existing songs only get empty fields filled.
+- **2026-10-13 — Re-import matching order: same path, then Apple persistent ID, then fingerprint (only when the old copy is missing or gone).** A fingerprint match keeps the file row, so songs, prefs, playlists and history follow a moved file. A copy whose original still exists is a new file. Existing songs only get empty fields filled, on the song, its default dance and that pairing; a dance the user unlinked is never recreated.
 - **2026-10-13 — An edited Apple playlist defaults to "keep" on re-import.** "Keep both" turns the edited copy into a `local` playlist, and the Apple copy ("Name (Apple Music)") takes over the persistent ID.
 - **2026-10-13 — Renderer error messages go through `errorMessage()`,** which strips Electron's "Error invoking remote method…" prefix before organizers see them.
 ```
@@ -4103,6 +4964,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## Done when
 
-- `npm test` passes: 180 tests, including the full import pipeline against real generated MP3s and Apple XML.
+- `npm test` passes: 192 tests, including the dances-and-songs schema, the library search index, and the full import pipeline against real generated MP3s and Apple XML.
 - `npm run typecheck`, `npx prettier --check .` and `npm run build` are clean, and the build includes the `worker-entry` chunk.
 - In the running app: you can add files and folders (picker or drag and drop), import from an exported Apple Music `Library.xml` with chosen playlists, cancel a running import, and read the summary.
