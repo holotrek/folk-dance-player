@@ -456,11 +456,25 @@ The throwaway spike is in `spikes/display-canva/`; delete it once this spec is a
 - **Converting AIFF/ALAC** so those files can be imported.
 - **Windows build and testing.**
 - **Import from MITPlayer:** read MITPlayer's metadata file and map its fields into `songs` (and its lists into playlists or programs, if it has them), through the same mapping step and summary as other imports (§5). The file format still needs to be examined from a real sample before this can be designed.
+- **First-run tour:** a guided tutorial the first time the app opens. It steps through each area (sidebar, library and search, building a program, the player bar with auto-continue, the projector toggle, the Music page and importing, Settings) and explains how to use each one. It can be skipped and replayed later from Help.
 - **About screen:** if an "About this app" screen is added, it includes a thank-you crediting MITPlayer as the inspiration for this app.
 
 ## 13. Project and release routines
 
 These are kept in the repo from the first commit of code, and every task maintains them.
+
+
+### 13.0 `README.md`
+
+The front page for anyone who finds the repo. It is written for this app, not the Electron/React template. It covers:
+
+- What Folk Dance Player is and who it's for (folk dance organizers), with the MITPlayer credit.
+- The main features: importing, organizing, programs, playback, the projector view and Canva slides.
+- Status, and the macOS-first platform note.
+- A short quick start for developers.
+- Links to the spec, `CHANGELOG.md`, `CONTRIBUTING.md` and `AGENTS.md`.
+
+It is updated when a release changes what the app can do.
 
 ### 13.1 `CHANGELOG.md`: official release notes
 
