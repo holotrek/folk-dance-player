@@ -457,3 +457,61 @@ The throwaway spike is in `spikes/display-canva/`; delete it once this spec is a
 - **Windows build and testing.**
 - **Import from MITPlayer:** read MITPlayer's metadata file and map its fields into `songs` (and its lists into playlists or programs, if it has them), through the same mapping step and summary as other imports (§5). The file format still needs to be examined from a real sample before this can be designed.
 - **About screen:** if an "About this app" screen is added, it includes a thank-you crediting MITPlayer as the inspiration for this app.
+
+## 13. Project and release routines
+
+These are kept in the repo from the first commit of code, and every task maintains them.
+
+### 13.1 `CHANGELOG.md`: official release notes
+
+- **Format:** [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/), with [Semantic Versioning](https://semver.org/). The app version lives in `package.json`, starting at `0.1.0`. The minor version goes up for each release until v1 is feature-complete, at which point it becomes `1.0.0`.
+- **What goes in it:** a line under `## [Unreleased]` for every change a user would notice, in the right group (`Added`, `Changed`, `Fixed`, `Removed`, `Security`). Lines are written for organizers, not developers ("Search now ignores accents: 'pasa' finds 'Paşa'"). Internal-only changes (refactors, tests, tooling) are left out.
+- **Same commit:** the changelog line is added in the same commit as the change.
+- **On release,** the `Unreleased` entries move under `## [x.y.z] - YYYY-MM-DD` and the release commit is tagged `vx.y.z`. That version section is the official release note. The same text is used for a GitHub release and, later, an in-app "What's new".
+
+### 13.2 `CONTRIBUTING.md`
+
+How to work on the project:
+
+- **Prerequisites:** macOS, Node 24, npm 12.
+- **Setup:** `npm install`, then `npm install-scripts approve esbuild`.
+- **Scripts:** `dev`, `start`, `build`, `typecheck`, `test`, `format`.
+- **Known gotchas:**
+  - VS Code sets `ELECTRON_RUN_AS_NODE`. The scripts unset it.
+  - Electron downloads its binary on first launch.
+- **Workflow:** spec, then plan, then test-first implementation, with conventional commits that each end with the co-author line when an AI assisted.
+- **Code conventions:**
+  - Prettier settings
+  - Mantine components first; custom CSS only in co-located CSS Modules
+  - Renderers reach main only through the typed IPC contract
+- **Rules for common changes:**
+  - **Adding a dependency:** pin the exact version, at least two weeks old, and say why in the commit.
+  - **Changing the database:** add a new numbered migration. A migration that has been released is never edited.
+  - **Adding an IPC channel:** add it to the contract, to `INVOKE_CHANNELS`, and to the handlers.
+- **Release checklist:**
+  1. All tests and the manual hardware checklist (§10.2) pass.
+  2. Bump the version.
+  3. Move `Unreleased` into a version section in `CHANGELOG.md`.
+  4. Tag the commit.
+  5. Build the signed `.dmg` (plan 7).
+
+### 13.3 `AGENTS.md`: decision log and agent guide
+
+- **For** any AI agent, or any person, picking up the work. `CLAUDE.md` contains just `@AGENTS.md`, so Claude Code loads it automatically.
+- **What it contains:**
+  - A short orientation: what the app is, and where the spec, plans, changelog and contributing guide live.
+  - The project's non-negotiable conventions, in one line each.
+  - A **Decisions** log, newest first. Each entry gives the date, the decision, why, and the alternatives rejected.
+- **Seeded with the decisions made during design,** for example:
+  - Electron over Flutter (projector display)
+  - main process owns all state
+  - `node:sqlite`
+  - Mantine with CSS Modules
+  - the borderless projector window settings
+  - Canva `/view` in a `WebContentsView` with a mouse pass, plus saved slide images
+  - one song record per file, in three data layers
+  - playlists are separate from programs
+  - played items hidden but kept
+  - double-click preview rules
+  - exact, two-week-old dependency pins
+- **Kept current:** when a task makes a decision a future contributor would otherwise have to rediscover, it adds an entry in the same commit. If a decision changes the spec, the spec is updated too.
