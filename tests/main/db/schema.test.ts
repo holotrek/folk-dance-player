@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, test } from 'vitest'
+import { FOLD_MAP, toFtsQuery } from '../../../src/main/db/fts'
 import { createTestDb } from '../helpers/test-db'
 
 let db: DatabaseSync
@@ -150,13 +151,37 @@ describe('songs full-text index', () => {
     expect(search('"turk"*')).toEqual(['Ali Paşa'])
   })
 
-  test('indexes values containing punctuation', () => {
-    addSong(addFile('/1.mp3'), {
-      title: 'Hasapiko',
-      dance_type: '4-Wall',
-      country: "Côte d'Ivoire"
-    })
-    expect(search('"ivoire"')).toEqual(['Hasapiko'])
+  test.each([
+    ['kirmizi', 'Kırmızı Gül'],
+    ['cicek dagi', 'Çiçek Dağı'],
+    ['lodz', 'Łódź'],
+    ['oland', 'Øland'],
+    ['aevintyri', 'Ævintýri'],
+    ['strassenpolka', 'Straßenpolka'],
+    ['Kırmızı', 'Kırmızı Gül']
+  ])('search %j finds %j (letters that are not combining accents)', (query, title) => {
+    addSong(addFile('/1.mp3'), { title })
+    expect(search(toFtsQuery(query)!)).toEqual([title])
+  })
+
+  // Migration 001 has its own frozen copy of the fold map; it must cover every FOLD_MAP entry.
+  test.each(FOLD_MAP.map(([from, to]) => [from, to]))(
+    'index folds %j like the query does (%j)',
+    (from, to) => {
+      addSong(addFile('/1.mp3'), { title: `x${from}y` })
+      expect(search(toFtsQuery(`x${to}y`)!)).toEqual([`x${from}y`])
+    }
+  )
+
+  // Review Focus 4: punctuation typed into the search box must not break MATCH.
+  test('finds values containing punctuation through toFtsQuery', () => {
+    addSong(addFile('/1.mp3'), { title: 'Ajde 4-Wall', country: "Côte d'Ivoire" })
+    expect(search(toFtsQuery('4-Wall')!)).toEqual(['Ajde 4-Wall'])
+    expect(search(toFtsQuery("d'Ivoire")!)).toEqual(['Ajde 4-Wall'])
+  })
+
+  test('raw search-box text is not safe to pass to MATCH', () => {
+    expect(() => search('4-Wall')).toThrow()
   })
 
   test('stays in sync when a song is edited', () => {

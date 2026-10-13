@@ -2,6 +2,38 @@ import type { Migration } from '../migrate'
 
 const now = "(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))"
 
+// Frozen copy of FOLD_MAP (src/main/db/fts.ts) as of this migration: letters the FTS tokenizer
+// doesn't fold. Released migrations never change; a later migration must rebuild songs_fts to
+// change folding. schema.test.ts checks this list covers FOLD_MAP.
+const FOLD: readonly (readonly [string, string])[] = [
+  ['ı', 'i'],
+  ['ł', 'l'],
+  ['Ł', 'L'],
+  ['ø', 'o'],
+  ['Ø', 'O'],
+  ['æ', 'ae'],
+  ['Æ', 'AE'],
+  ['œ', 'oe'],
+  ['Œ', 'OE'],
+  ['ß', 'ss'],
+  ['ẞ', 'SS'],
+  ['đ', 'd'],
+  ['Đ', 'D'],
+  ['ð', 'd'],
+  ['Ð', 'D'],
+  ['þ', 'th'],
+  ['Þ', 'TH']
+]
+
+const fold = (expr: string): string =>
+  FOLD.reduce((sql, [from, to]) => `replace(${sql}, '${from}', '${to}')`, expr)
+
+const ftsValues = (row: 'new'): string =>
+  [
+    `${row}.id`,
+    ...['title', 'teacher', 'choreographer', 'country', 'artist'].map((c) => fold(`${row}.${c}`))
+  ].join(', ')
+
 // Full v1 schema — spec §4. Three layers: local file facts (files), shareable song facts (songs),
 // personal/local data (file_prefs, playlists, slide_cache).
 export const initial: Migration = {
@@ -45,22 +77,20 @@ export const initial: Migration = {
 
     CREATE VIRTUAL TABLE songs_fts USING fts5 (
       title, teacher, choreographer, country, artist,
-      content = 'songs', content_rowid = 'id',
+      content = '', contentless_delete = 1,
       tokenize = 'unicode61 remove_diacritics 2'
     );
     CREATE TRIGGER songs_fts_insert AFTER INSERT ON songs BEGIN
       INSERT INTO songs_fts (rowid, title, teacher, choreographer, country, artist)
-      VALUES (new.id, new.title, new.teacher, new.choreographer, new.country, new.artist);
+      VALUES (${ftsValues('new')});
     END;
     CREATE TRIGGER songs_fts_delete AFTER DELETE ON songs BEGIN
-      INSERT INTO songs_fts (songs_fts, rowid, title, teacher, choreographer, country, artist)
-      VALUES ('delete', old.id, old.title, old.teacher, old.choreographer, old.country, old.artist);
+      DELETE FROM songs_fts WHERE rowid = old.id;
     END;
     CREATE TRIGGER songs_fts_update AFTER UPDATE ON songs BEGIN
-      INSERT INTO songs_fts (songs_fts, rowid, title, teacher, choreographer, country, artist)
-      VALUES ('delete', old.id, old.title, old.teacher, old.choreographer, old.country, old.artist);
+      DELETE FROM songs_fts WHERE rowid = old.id;
       INSERT INTO songs_fts (rowid, title, teacher, choreographer, country, artist)
-      VALUES (new.id, new.title, new.teacher, new.choreographer, new.country, new.artist);
+      VALUES (${ftsValues('new')});
     END;
 
     CREATE TABLE file_prefs (
