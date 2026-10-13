@@ -260,7 +260,7 @@ PROGRAMS                  [+]
   3. Plays the song, setting `played_at` and writing `play_log`.
 - **⏭** stops the current song and starts the next item.
 - **When a program song ends:**
-  - **Auto-continue on:** the projector shows "Next: <title> in N…", then the next item plays. ⏹ during the countdown cancels it.
+  - **Auto-continue on:** the projector shows `Next: <title> in N…`, then the next item plays. ⏹ during the countdown cancels it.
   - **Auto-continue off:** playback stops, and Next up is queued.
 - **Reaching a STOP marker** always halts, regardless of auto-continue. The marker is marked played. While halted, the projector shows the **next** dance and its slide. ▶ resumes.
 - **Speed** ranges from 0.5× to 1.5× using `playbackRate` with `preservesPitch = true`. It resets to 1.0× for each new song unless the 🔒 toggle next to the speed slider is on. **Volume** is global.
