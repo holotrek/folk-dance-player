@@ -6416,3 +6416,28 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `npm test` passes: 399 tests (307 from Plans 1–3, plus 92 new).
 - `npm run typecheck`, `npx prettier --check .` and `npm run build` are clean.
 - In the running app the player bar is on every page, and you can build and run a program: create, load, reorder, add STOPs, and choose the dance per item; play with auto-continue, the countdown and STOP halts; preview and replay; change the speed without changing the pitch; and hold songs. Missing files are flagged and skipped, and a restart resumes at the next unplayed item without playing.
+
+---
+
+## Changes after execution
+
+The final whole-branch review found nothing Critical. Six findings were fixed on the branch, each with a test that failed first; the suite grew from 399 to 408.
+
+- **Previewing a missing file during a countdown froze it.** Previews and replays now check the file before interrupting anything (`startNow`), so a missing file only warns.
+- **⏹ then ▶ skipped the interrupted dance.** ⏹, a preview or a replay that cuts off a program song now puts it back as next up (`markUnplayed` in `programs.ts`, a new `SessionPorts.markUnplayed`). ⏭ still counts it as played. Two Task 4 tests were updated to expect the interrupted song back.
+- **▶ did nothing, silently, when only missing songs were left.** `pick()` now always returns the skipped songs, and `advance()` and `advanceToStop()` warn about them.
+- **Unticking auto-continue during the countdown didn't halt.** `finishCountdown()` re-reads the setting.
+- **Clicking another program mid-song redirected auto-continue.** The Programs section asks first ("Load another program?").
+- **A double-click on ▶ played and then paused.** The second click of a double-click is ignored on ▶ and ⏸.
+
+**Deferred minors from the final review** (for later plans):
+- With auto-continue off, a STOP at the head isn't marked played (matters for the projector, plan 5).
+- Next up and the countdown can name a missing song that will be skipped.
+- The playing song's label doesn't update after a dance edit.
+- Program items whose file was deleted would break reordering (latent: nothing deletes files yet).
+- A drag just as a song starts can fail with "The program changed".
+- Two quick drops with no program loaded can create two programs.
+- Speed and volume aren't validated (`Number.isFinite`) in main.
+- `fdp-media` is served on the default session; restrict it before Canva content loads (plan 6).
+- Errors from a program's Duplicate and Delete are swallowed.
+

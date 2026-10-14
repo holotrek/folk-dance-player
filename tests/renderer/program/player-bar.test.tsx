@@ -61,6 +61,17 @@ describe('player bar', () => {
     expect(screen.getByText('0:00 / 3:05')).toBeInTheDocument()
   })
 
+  test('a double-click on ▶ or ⏸ counts as one press', async () => {
+    const fake = setup(playerState({ nextUp: item(1, hora) }))
+    const play = await screen.findByRole('button', { name: 'Play' })
+    fireEvent.click(play, { detail: 1 })
+    fireEvent.click(play, { detail: 2 })
+    expect(fake.callsTo('player:play')).toHaveLength(1)
+    act(() => fake.emit('player:state', playing(hora)))
+    fireEvent.click(screen.getByRole('button', { name: 'Pause' }), { detail: 2 })
+    expect(fake.callsTo('player:pause')).toEqual([])
+  })
+
   test('transport buttons send pause, stop and next', async () => {
     const fake = setup(playing(hora))
     await userEvent.click(await screen.findByRole('button', { name: 'Pause' }))

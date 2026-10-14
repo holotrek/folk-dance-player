@@ -235,7 +235,8 @@ describe('operator commands', () => {
     expect(state().current).toMatchObject({ source: 'preview', itemId: null })
     expect(playing()).toBe('C')
     finish()
-    expect(state()).toMatchObject({ status: 'idle', nextUp: { title: 'B' } })
+    // A, interrupted by the preview, is next up again.
+    expect(state()).toMatchObject({ status: 'idle', nextUp: { title: 'A' } })
     expect(log()).toEqual([
       ['preview', 'C'],
       ['program', 'A']
@@ -252,7 +253,8 @@ describe('operator commands', () => {
     expect(state().current?.source).toBe('replay')
     expect(playing()).toBe('A')
     finish()
-    expect(state()).toMatchObject({ status: 'idle', nextUp: { title: 'B' } })
+    // ⏹ put A back as next up; the replay doesn't change that.
+    expect(state()).toMatchObject({ status: 'idle', nextUp: { title: 'A' } })
   })
 })
 
@@ -287,6 +289,82 @@ describe('missing and unreadable files', () => {
     session.preview(songs.c.fileId)
     expect(playing()).toBe('A')
     expect(state().warning).toContain('the file is missing')
+  })
+})
+
+describe('review fixes', () => {
+  test('previewing a missing file during the countdown warns and keeps counting down', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    missing.add('/music/C.mp3')
+    setup({ seconds: 3 })
+    session.play()
+    finish()
+    session.preview(songs.c.fileId)
+    expect(state().warning).toContain('the file is missing')
+    expect(state().status).toBe('countdown')
+    vi.advanceTimersByTime(3000)
+    expect(playing()).toBe('B')
+  })
+
+  test('⏹ mid-song puts the song back as next up; ▶ plays it again', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    setup()
+    session.play()
+    session.stop()
+    expect(unplayed()).toEqual(['A', 'B'])
+    expect(state().nextUp).toMatchObject({ title: 'A' })
+    session.play()
+    expect(playing()).toBe('A')
+    expect(log()).toEqual([
+      ['program', 'A'],
+      ['program', 'A']
+    ])
+  })
+
+  test('a preview that interrupts a program song puts that song back as next up', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    setup()
+    session.play()
+    session.preview(songs.c.fileId)
+    finish()
+    expect(state()).toMatchObject({ status: 'idle', nextUp: { title: 'A' } })
+  })
+
+  test('⏭ still counts the skipped song as played', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    setup()
+    session.play()
+    session.next()
+    expect(unplayed()).toEqual([])
+  })
+
+  test('▶ with only missing songs left warns instead of doing nothing', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    missing.add('/music/A.mp3')
+    missing.add('/music/B.mp3')
+    setup()
+    session.play()
+    expect(state()).toMatchObject({ status: 'idle', warning: 'Skipped missing file: A, B' })
+  })
+
+  test('auto-continue into only missing songs warns', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    missing.add('/music/B.mp3')
+    setup({ seconds: 0 })
+    session.play()
+    finish()
+    expect(state()).toMatchObject({ status: 'idle', warning: 'Skipped missing file: B' })
+  })
+
+  test('unticking auto-continue during the countdown halts before the next song', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    setup({ seconds: 3 })
+    session.play()
+    finish()
+    settings.set('autoContinue.enabled', false)
+    session.refresh()
+    vi.advanceTimersByTime(3000)
+    expect(state()).toMatchObject({ status: 'idle', current: null, nextUp: { title: 'B' } })
   })
 })
 

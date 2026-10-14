@@ -245,3 +245,15 @@ export function markPlayed(db: DatabaseSync, itemId: number): void {
     touch(db, item.programId)
   })
 }
+
+// Puts an interrupted item back as unplayed: ⏹, a preview or a replay stopped it before it ended.
+export function markUnplayed(db: DatabaseSync, itemId: number): void {
+  inTransaction(db, () => {
+    const item = db
+      .prepare('SELECT program_id AS programId FROM program_items WHERE id = ?')
+      .get(itemId) as { programId: number } | undefined
+    if (!item) return
+    db.prepare('UPDATE program_items SET played_at = NULL WHERE id = ?').run(itemId)
+    touch(db, item.programId)
+  })
+}

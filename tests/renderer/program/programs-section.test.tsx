@@ -52,6 +52,25 @@ describe('Programs in the sidebar', () => {
     expect(fake.callsTo('programs:setCurrent')).toEqual([[2]])
   })
 
+  test('while a song plays, loading another program asks first', async () => {
+    const fake = setup({
+      'player:getState': { ...IDLE_PLAYER_STATE, programId: 1, status: 'playing' }
+    })
+    await userEvent.click(await within(group()).findByText('Beginner night'))
+    const confirm = await screen.findByRole('dialog', { name: 'Load another program?' })
+    expect(confirm).toHaveTextContent('the next song will come from “Beginner night”')
+    await userEvent.click(within(confirm).getByRole('button', { name: 'Cancel' }))
+    expect(fake.callsTo('programs:setCurrent')).toEqual([])
+    await userEvent.click(within(group()).getByText('Beginner night'))
+    await userEvent.click(
+      within(await screen.findByRole('dialog', { name: 'Load another program?' })).getByRole(
+        'button',
+        { name: 'Load' }
+      )
+    )
+    expect(fake.callsTo('programs:setCurrent')).toEqual([[2]])
+  })
+
   test('the search box filters the list by name', async () => {
     setup()
     await within(group()).findByText('Beginner night')

@@ -256,6 +256,7 @@ PROGRAMS                  [+]
 - **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
 - **Programs** are loaded only from the sidebar; there is no dropdown.
   - Each entry shows how many songs are left to play.
+  - Loading another program while a song plays or counts down asks first ("Load another program?"), because the next song will come from it.
   - The search box filters by name as you type.
   - `[+]` asks for a name, prefilled with today's date ("Tue Oct 14"), creates the program and loads it.
   - Adding songs with no program loaded creates one named for today and loads it.
@@ -359,13 +360,15 @@ PROGRAMS                  [+]
   2. If `countdown.seconds > 0`, the projector shows "Starting in N…".
   3. Plays the song, setting `played_at` and writing `play_log`.
 - **⏭** stops the current song and starts the next item at once, without a countdown.
+- **⏹ mid-song, or a preview or replay that interrupts a program song,** puts that song back as next up (unplayed), so ▶ plays it again; its play stays in the log. ⏭ counts the song as played. Unticking auto-continue during the countdown halts before the next song.
 - **Operator commands pass STOP markers.** When ▶ or ⏭ finds a STOP marker next, it is marked played and the song after it starts: pressing a button means "go". Only automatic continuation halts at a STOP.
 - **When a program song ends:**
   - **Auto-continue on:** the projector shows `Next: <title> in N…`, then the next item plays. ⏹ during the countdown cancels it.
   - **Auto-continue off:** playback stops, and Next up is queued.
 - **Reaching a STOP marker** always halts, regardless of auto-continue. The marker is marked played. While halted, the projector shows the **next** dance and its slide. ▶ resumes.
 - **Speed** ranges from 0.5× to 1.5× using `playbackRate` with `preservesPitch = true`. It resets to 1.0× for each new song unless the 🔒 toggle next to the speed slider is on. **Volume** is global, and starts at 100% each time the app opens.
-- **Missing file at play time:** when the next song's file isn't on disk, it is skipped: left in the program, unplayed and flagged ⚠, while the song after it plays. A control-window warning names it. A preview or replay of a missing file only shows the warning.
+- **Missing file at play time:** when the next song's file isn't on disk, it is skipped: left in the program, unplayed and flagged ⚠, while the song after it plays. A control-window warning names it, also when no playable song is left. A preview or replay of a missing file only shows the warning; whatever was playing or counting down carries on.
+- **A double-click on ▶ or ⏸** counts as one press, since ▶ turns into ⏸ under the pointer.
 - **Unreadable file at play time** (the file is there but can't be played): a warning is shown, and the program continues as if the song had ended. With auto-continue on, the next item plays; with it off, playback halts.
 
 ### 7.3 Laptop-mode auto-fullscreen

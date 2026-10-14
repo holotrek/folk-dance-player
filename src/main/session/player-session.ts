@@ -12,6 +12,7 @@ export interface SessionPorts {
   programId(): number | null
   unplayedItems(programId: number): ProgramItem[]
   markPlayed(itemId: number): void
+  markUnplayed(itemId: number): void
   getTrack(fileId: number, danceId: number | null): Track | null
   getLoggedPlay(logId: number): { fileId: number; danceId: number | null } | null
   logPlay(entry: {
@@ -76,9 +77,10 @@ export class PlayerSession {
     if (this.state.status === 'playing') this.update({ status: 'paused' })
   }
 
-  // ⏹: stops the song or cancels the countdown. Nothing is marked played.
+  // ⏹: stops the song or cancels the countdown. A program song stopped before its end goes back
+  // to being next up, so ▶ plays it again (its play stays in the log).
   stop(): void {
-    this.cancelCountdown()
+    this.interrupt()
     this.update({ status: 'idle', current: null, countdown: null })
   }
 
@@ -93,18 +95,34 @@ export class PlayerSession {
   // preview of the song's default dance. Afterwards playback halts.
   preview(fileId: number): void {
     const track = this.ports.getTrack(fileId, null)
-    if (!track) return
-    this.cancelCountdown()
-    this.start('preview', null, track)
+    if (track) this.startNow('preview', track)
   }
 
   // Double-click in "Previously played": plays that entry again, as the dance it was logged with.
   replay(logId: number): void {
     const logged = this.ports.getLoggedPlay(logId)
     const track = logged && this.ports.getTrack(logged.fileId, logged.danceId)
-    if (!track) return
+    if (track) this.startNow('replay', track)
+  }
+
+  // A preview or replay: plays now, interrupting what's playing. A missing file only warns, and
+  // whatever was playing or counting down carries on.
+  private startNow(source: 'preview' | 'replay', track: Track): void {
+    if (!this.ports.checkFile(track.fileId)) {
+      this.update({ warning: `Couldn't play “${track.label}”: the file is missing` })
+      return
+    }
+    this.interrupt()
+    this.start(source, null, track)
+  }
+
+  // Cancels the countdown, and puts a program song that hasn't ended back as unplayed.
+  private interrupt(): void {
     this.cancelCountdown()
-    this.start('replay', null, track)
+    const current = this.state.current
+    if (current?.source === 'program' && current.itemId !== null) {
+      this.ports.markUnplayed(current.itemId)
+    }
   }
 
   // The control window's <audio> reached the end of play `playId`.
@@ -150,10 +168,11 @@ export class PlayerSession {
   }
 
   // Auto-continue found a STOP marker (or nothing playable) before the next song: a STOP at the
-  // head is marked played and playback halts there.
+  // head is marked played and playback halts there. Missing songs it ran into are named.
   private advanceToStop(): void {
     const programId = this.ports.programId()
     if (programId === null) return this.sync()
+    this.warnSkipped(this.pick(false, false).skipped)
     const head = this.ports.unplayedItems(programId)[0]
     if (head?.kind === 'stop' && this.ports.autoContinue().enabled) {
       this.ports.markPlayed(head.id)
@@ -181,9 +200,11 @@ export class PlayerSession {
     const reason = this.state.countdown?.reason ?? 'start'
     this.cancelCountdown()
     this.update({ status: 'idle', countdown: null })
-    // Between songs, the program may have changed during the countdown: a STOP now at the head
-    // still halts.
-    if (reason === 'continue' && !this.hasPlayable(false)) return this.advanceToStop()
+    // Between songs, the program or the setting may have changed during the countdown: a STOP now
+    // at the head still halts, and so does auto-continue turned off.
+    if (reason === 'continue' && (!this.ports.autoContinue().enabled || !this.hasPlayable(false))) {
+      return this.advanceToStop()
+    }
     this.advance(reason === 'start')
   }
 
@@ -194,47 +215,45 @@ export class PlayerSession {
 
   // Whether the program has a song to play next: passing STOP markers, or stopping at one.
   private hasPlayable(passStops: boolean): boolean {
-    return this.pick(passStops, false) !== null
+    return this.pick(passStops, false).item !== null
   }
 
   // Finds the next song to play. STOP markers are passed (and, when `consume`, marked played)
   // or end the search; songs whose file is missing are skipped and left in the program, flagged.
+  // `skipped` names them, whether or not a song was found.
   private pick(
     passStops: boolean,
     consume: boolean
-  ): { item: Extract<ProgramItem, { kind: 'track' }>; skipped: string[] } | null {
-    const programId = this.ports.programId()
-    if (programId === null) return null
+  ): { item: Extract<ProgramItem, { kind: 'track' }> | null; skipped: string[] } {
     const skipped: string[] = []
+    const programId = this.ports.programId()
+    if (programId === null) return { item: null, skipped }
     for (const item of this.ports.unplayedItems(programId)) {
       if (item.kind === 'stop') {
-        if (!passStops) return null
+        if (!passStops) return { item: null, skipped }
         if (consume) this.ports.markPlayed(item.id)
         continue
       }
       if (this.ports.checkFile(item.fileId)) return { item, skipped }
       skipped.push(item.label)
     }
-    return null
+    return { item: null, skipped }
+  }
+
+  private warnSkipped(skipped: string[]): void {
+    if (skipped.length) this.update({ warning: `Skipped missing file: ${skipped.join(', ')}` })
   }
 
   // Starts the program's next song now.
   private advance(passStops: boolean): void {
-    const picked = this.pick(passStops, true)
-    if (!picked) return this.sync()
-    if (picked.skipped.length) {
-      this.update({ warning: `Skipped missing file: ${picked.skipped.join(', ')}` })
-    }
-    const { item } = picked
+    const { item, skipped } = this.pick(passStops, true)
+    this.warnSkipped(skipped)
+    if (!item) return this.sync()
     this.ports.markPlayed(item.id)
     this.start('program', item.id, item)
   }
 
   private start(source: PlayKind, itemId: number | null, track: Track): void {
-    if (source !== 'program' && !this.ports.checkFile(track.fileId)) {
-      this.update({ warning: `Couldn't play “${track.label}”: the file is missing` })
-      return
-    }
     this.ports.logPlay({
       fileId: track.fileId,
       danceId: track.danceId,

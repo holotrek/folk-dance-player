@@ -16,11 +16,11 @@ const songs = (n: number): string => `${n} ${n === 1 ? 'song' : 'songs'} to play
 function ProgramEntry(props: {
   program: ProgramSummary
   current: boolean
+  onLoad: () => void
   onRename: () => void
   onDelete: () => void
 }): React.JSX.Element {
   const api = useLibraryApi()
-  const load = useProgram((s) => s.load)
   const options = useRef<HTMLButtonElement>(null)
   const p = props.program
   return (
@@ -36,7 +36,7 @@ function ProgramEntry(props: {
         description={songs(p.unplayedCount)}
         active={props.current}
         aria-current={props.current ? 'page' : undefined}
-        onClick={() => void load(p.id)}
+        onClick={props.onLoad}
       />
       <Menu position="right-start" withinPortal>
         <Menu.Target>
@@ -78,6 +78,13 @@ export default function ProgramsSection(): React.JSX.Element {
     { mode: 'create' } | { mode: 'rename'; program: ProgramSummary } | null
   >(null)
   const [deleting, setDeleting] = useState<ProgramSummary | null>(null)
+  const [switching, setSwitching] = useState<ProgramSummary | null>(null)
+  const busy = useProgram((s) => s.player.status !== 'idle')
+  // Auto-continue follows the loaded program, so switching while a song plays asks first.
+  const choose = (p: ProgramSummary): void => {
+    if (busy && p.id !== currentId) setSwitching(p)
+    else void load(p.id)
+  }
   useEffect(() => {
     void setSearch(debounced)
   }, [debounced, setSearch])
@@ -116,6 +123,7 @@ export default function ProgramsSection(): React.JSX.Element {
               key={p.id}
               program={p}
               current={p.id === currentId}
+              onLoad={() => choose(p)}
               onRename={() => setPrompt({ mode: 'rename', program: p })}
               onDelete={() => setDeleting(p)}
             />
@@ -133,6 +141,16 @@ export default function ProgramsSection(): React.JSX.Element {
           await load(await api.invoke('programs:create', name))
         }}
         onClose={() => setPrompt(null)}
+      />
+      <ConfirmDialog
+        opened={switching !== null}
+        title="Load another program?"
+        message={`A song is playing. When it ends, the next song will come from “${switching?.name}”.`}
+        confirmLabel="Load"
+        onConfirm={() => {
+          if (switching) void load(switching.id)
+        }}
+        onClose={() => setSwitching(null)}
       />
       <ConfirmDialog
         opened={deleting !== null}

@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import type { DatabaseSync } from 'node:sqlite'
 import type { SettingsStore } from '../settings/settings-store'
 import { getLoggedPlay, logPlay } from '../programs/history'
-import { getProgram, markPlayed } from '../programs/programs'
+import { getProgram, markPlayed, markUnplayed } from '../programs/programs'
 import { getTrack, trackPath } from '../programs/tracks'
 import type { SessionPorts } from './player-session'
 
@@ -25,6 +25,10 @@ export function createSessionPorts(
     unplayedItems: (programId) => getProgram(db, programId)?.items ?? [],
     markPlayed: (itemId) => {
       markPlayed(db, itemId)
+      notices.programsChanged()
+    },
+    markUnplayed: (itemId) => {
+      markUnplayed(db, itemId)
       notices.programsChanged()
     },
     getTrack: (fileId, danceId) => getTrack(db, fileId, danceId),

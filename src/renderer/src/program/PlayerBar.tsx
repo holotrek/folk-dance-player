@@ -43,6 +43,8 @@ function status(player: PlayerState): { title: string; detail: string | null } {
     : { title: 'Nothing left to play', detail: null }
 }
 
+// ▶ turns into ⏸ under the pointer, so the second click of a habitual double-click is ignored
+// (it would pause the song that just started).
 // Spec §6.2 player bar: transport, the current song, a seek bar, speed (with 🔒) and volume,
 // and auto-continue. Owns the <audio> element, so it's mounted once, above the tabs (App).
 export default function PlayerBar(): React.JSX.Element {
@@ -73,7 +75,11 @@ export default function PlayerBar(): React.JSX.Element {
           ◀◀
         </ActionIcon>
         {playing ? (
-          <ActionIcon size="lg" aria-label="Pause" onClick={() => void api.invoke('player:pause')}>
+          <ActionIcon
+            size="lg"
+            aria-label="Pause"
+            onClick={(e) => e.detail < 2 && void api.invoke('player:pause')}
+          >
             ⏸
           </ActionIcon>
         ) : (
@@ -81,7 +87,7 @@ export default function PlayerBar(): React.JSX.Element {
             size="lg"
             aria-label="Play"
             disabled={!canStart}
-            onClick={() => void api.invoke('player:play')}
+            onClick={(e) => e.detail < 2 && void api.invoke('player:play')}
           >
             ▶
           </ActionIcon>
