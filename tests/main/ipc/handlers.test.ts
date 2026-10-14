@@ -25,6 +25,7 @@ function makeDeps(overrides: Partial<HandlerDeps> = {}): HandlerDeps {
       checkPlaylistConflicts: () => []
     },
     dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
+    onLibraryChanged: () => undefined,
     ...overrides
   }
 }
