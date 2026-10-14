@@ -32,7 +32,7 @@ export default function App(): React.JSX.Element {
         </AppShell.Navbar>
         <AppShell.Main className={classes.main}>
           {page === 'program' && <ProgramPage />}
-          {page === 'music' && <MusicPage api={window.api} />}
+          {page === 'music' && <MusicPage />}
           {page === 'settings' && <SettingsPage api={window.api} />}
         </AppShell.Main>
       </AppShell>
