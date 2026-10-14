@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { ImportMapping } from '@shared/import'
 import { getSongDetail } from '../../../src/main/library/edit'
-import { getSuggestions, reapplyMapping } from '../../../src/main/library/mapping'
+import { getSongTags, getSuggestions, reapplyMapping } from '../../../src/main/library/mapping'
 import { addDance, addLibrarySong, link } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 
@@ -21,6 +21,24 @@ const mapping: ImportMapping = {
 
 beforeEach(() => {
   db = createTestDb()
+})
+
+describe('getSongTags', () => {
+  test('returns each song’s raw file tags, in the order asked', () => {
+    const a = addLibrarySong(db, { title: 'Hora' })
+    const b = addLibrarySong(db, { title: 'Arap' })
+    tag(a.fileId, { artist: 'Taraf', albumArtist: 'Sonia Dion', genre: 'Romania' })
+    expect(getSongTags(db, [b.songId, a.songId])).toEqual([
+      { songId: b.songId, title: 'Arap', artist: null, albumArtist: null, genre: null },
+      {
+        songId: a.songId,
+        title: 'Hora',
+        artist: 'Taraf',
+        albumArtist: 'Sonia Dion',
+        genre: 'Romania'
+      }
+    ])
+  })
 })
 
 describe('reapplyMapping', () => {

@@ -2,12 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { Alert, Button, Group, Text, TextInput, Title } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import type { ReapplyResult } from '@shared/library'
-import ConfirmDialog from '../components/ConfirmDialog'
 import DropZone from '../import/DropZone'
 import ImportDialog from '../import/ImportDialog'
 import { useImportFlow } from '../import/useImportFlow'
 import { errorMessage } from '../ipc-error'
 import LibraryTable from '../library/LibraryTable'
+import ReapplyDialog from '../library/ReapplyDialog'
 import SongEditor from '../library/SongEditor'
 import { useLibrary, useLibraryApi, useLibraryStore } from '../library/LibraryProvider'
 import classes from './MusicPage.module.css'
@@ -34,6 +34,8 @@ export default function MusicPage(): React.JSX.Element {
   const [search, setSearchText] = useState('')
   const [debounced] = useDebouncedValue(search, 150)
   const [confirmReapply, setConfirmReapply] = useState(false)
+  // The selection when the dialog opened, so a refresh behind the dialog can't change it.
+  const [reapplyIds, setReapplyIds] = useState<number[]>([])
   const [notice, setNotice] = useState<{ color: string; text: string } | null>(null)
 
   const refresh = useCallback(() => {
@@ -97,7 +99,18 @@ export default function MusicPage(): React.JSX.Element {
             >
               {allFavorite ? 'Unfavorite' : 'Favorite'}
             </Button>
-            <Button variant="default" onClick={() => setConfirmReapply(true)}>
+            <Button
+              variant="default"
+              onClick={() => {
+                setReapplyIds(
+                  store
+                    .getState()
+                    .selectedRows()
+                    .map((r) => r.songId)
+                )
+                setConfirmReapply(true)
+              }}
+            >
               Re-apply mapping…
             </Button>
             {filter.kind === 'playlist' && (
@@ -134,20 +147,12 @@ export default function MusicPage(): React.JSX.Element {
         )}
       </div>
       <ImportDialog flow={flow} />
-      <ConfirmDialog
+      <ReapplyDialog
         opened={confirmReapply}
-        title="Re-apply mapping?"
-        message={`Re-apply the import mapping to ${selected.length} ${
-          selected.length === 1 ? 'song' : 'songs'
-        }? Their artist, teacher, choreographer and country are replaced from the files' tags, using the mapping in Settings.`}
-        confirmLabel="Re-apply"
-        onConfirm={() =>
+        songIds={reapplyIds}
+        onConfirm={(mapping) =>
           act(async () => {
-            const ids = store
-              .getState()
-              .selectedRows()
-              .map((r) => r.songId)
-            const result = await api.invoke('library:reapplyMapping', ids)
+            const result = await api.invoke('library:reapplyMapping', reapplyIds, mapping)
             setNotice({ color: 'blue', text: reapplyMessage(result) })
           })
         }

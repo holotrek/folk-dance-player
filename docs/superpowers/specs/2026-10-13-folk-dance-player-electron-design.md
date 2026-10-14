@@ -304,8 +304,8 @@ PROGRAMS                  [+]
   - **Same dance:** links this song to that dance and removes the automatic duplicate, if nothing else uses it.
   - **Different dance:** dismisses the suggestion for that pair, permanently (`distinct_dances`).
   - **Merge dances:** a general action for combining any two dances.
-- **Actions:** Add Music…, Import from Apple Music…, Favorite/Unfavorite (selection), Re-apply mapping… (selection, after a confirmation), Refresh slides (plan 6).
-- **Re-apply mapping** overwrites only the fields the current mapping targets: the song's artist, the default pairing's teacher, and the default dance's choreographer and country. If Genre → Country is off, countries are left alone. A default dance shared with other songs is left unchanged (it would change every song using it), and the result reports how many were skipped.
+- **Actions:** Add Music…, Import from Apple Music…, Favorite/Unfavorite (selection), Re-apply mapping… (selection), Refresh slides (plan 6).
+- **Re-apply mapping** opens a dialog that shows the selected songs' Artist, Album Artist and Genre tags, with the mapping fields from the import step. They start from the import mapping in Settings, and the choice applies to this run only. It overwrites only the fields the chosen mapping targets: the song's artist, the default pairing's teacher, and the default dance's choreographer and country. If Genre → Country is off, countries are left alone. A default dance shared with other songs is left unchanged (it would change every song using it), and the result reports how many were skipped.
 - **Missing and unsupported files** are visibly flagged.
 
 ### 6.4 Settings page

@@ -14,7 +14,7 @@ import {
   updateSong
 } from '../library/edit'
 import { listLibrary } from '../library/list'
-import { getSuggestions, reapplyMapping } from '../library/mapping'
+import { getSongTags, getSuggestions, reapplyMapping } from '../library/mapping'
 import {
   addToPlaylist,
   createPlaylist,
@@ -42,11 +42,6 @@ export function libraryHandlers(
       deps.onLibraryChanged()
       return result
     }
-  const mapping = () => ({
-    artistTagTarget: deps.settings.get('import.artistTagTarget'),
-    albumArtistTagTarget: deps.settings.get('import.albumArtistTagTarget'),
-    genreIsCountry: deps.settings.get('import.genreIsCountry')
-  })
 
   return {
     'library:list': (query) => listLibrary(db, query),
@@ -64,7 +59,8 @@ export function libraryHandlers(
     'library:sameDance': edit((songId, ownId, otherId) => sameDance(db, songId, ownId, otherId)),
     'library:markDifferent': edit((a, b) => markDifferentDances(db, a, b)),
     'library:setFavorite': edit((fileIds, favorite) => setFavorite(db, fileIds, favorite)),
-    'library:reapplyMapping': edit((songIds) => reapplyMapping(db, songIds, mapping())),
+    'library:songTags': (songIds) => getSongTags(db, songIds),
+    'library:reapplyMapping': edit((songIds, mapping) => reapplyMapping(db, songIds, mapping)),
     'playlists:list': () => listPlaylists(db),
     'playlists:create': edit((name) => createPlaylist(db, name)),
     'playlists:rename': edit((id, name) => renamePlaylist(db, id, name)),

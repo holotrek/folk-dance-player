@@ -1,11 +1,12 @@
 import type { DatabaseSync } from 'node:sqlite'
 import type { ImportMapping } from '@shared/import'
-import type { ReapplyResult, Suggestions } from '@shared/library'
+import type { ReapplyResult, SongTags, Suggestions } from '@shared/library'
 import { inTransaction } from '../db/transaction'
 import { mapTags } from '../import/mapping'
 import { shownPairingSql } from './list'
 
-interface SongTags {
+// One song's tags plus the pairing re-apply writes to.
+interface ReapplySource {
   songId: number
   path: string
   title: string | null
@@ -15,6 +16,19 @@ interface SongTags {
   pairingId: number | null
   danceId: number | null
   danceSongs: number
+}
+
+// The raw tags of each song's file, in the order asked (spec §6.3, re-apply mapping).
+export function getSongTags(db: DatabaseSync, songIds: number[]): SongTags[] {
+  const read = db.prepare(
+    `SELECT s.id AS songId, s.title, f.tag_artist AS artist, f.tag_album_artist AS albumArtist,
+       f.tag_genre AS genre
+     FROM songs s JOIN files f ON f.id = s.file_id WHERE s.id = ?`
+  )
+  return songIds.flatMap((id) => {
+    const row = read.get(id) as SongTags | undefined
+    return row ? [{ ...row }] : []
+  })
 }
 
 // "Re-apply mapping to selected" (spec §5.2): deliberately overwrites the fields the current
@@ -37,7 +51,7 @@ export function reapplyMapping(
   const result: ReapplyResult = { songs: 0, skippedSharedDances: 0 }
   inTransaction(db, () => {
     for (const songId of songIds) {
-      const row = read.get(songId) as SongTags | undefined
+      const row = read.get(songId) as ReapplySource | undefined
       if (!row) continue
       const mapped = mapTags(row, row.path, mapping)
       result.songs += 1

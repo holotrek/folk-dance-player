@@ -1,6 +1,7 @@
 import type {
   ApplePlaylistConflict,
   ApplePreview,
+  ImportMapping,
   ImportProgress,
   ImportRequest,
   ImportSummary
@@ -13,6 +14,7 @@ import type {
   PlaylistSummary,
   ReapplyResult,
   SongDetail,
+  SongTags,
   SongPatch,
   Suggestions
 } from './library'
@@ -57,7 +59,11 @@ export interface InvokeContract {
   'library:markDifferent': { args: [danceA: number, danceB: number]; result: void }
   'library:searchDances': { args: [text: string]; result: DanceSearchResult[] }
   'library:setFavorite': { args: [fileIds: number[], favorite: boolean]; result: void }
-  'library:reapplyMapping': { args: [songIds: number[]]; result: ReapplyResult }
+  'library:songTags': { args: [songIds: number[]]; result: SongTags[] }
+  'library:reapplyMapping': {
+    args: [songIds: number[], mapping: ImportMapping]
+    result: ReapplyResult
+  }
   'library:suggestions': { args: []; result: Suggestions }
   'playlists:list': { args: []; result: PlaylistSummary[] }
   'playlists:create': { args: [name: string]; result: number }
@@ -98,6 +104,7 @@ export const INVOKE_CHANNELS = [
   'library:markDifferent',
   'library:searchDances',
   'library:setFavorite',
+  'library:songTags',
   'library:reapplyMapping',
   'library:suggestions',
   'playlists:list',

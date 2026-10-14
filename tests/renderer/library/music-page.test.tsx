@@ -154,16 +154,50 @@ describe('Music page library table', () => {
     expect(fake.callsTo('library:setFavorite')).toEqual([[[101], true]])
   })
 
-  test('re-applies the mapping to the selection after confirming, and reports skipped dances', async () => {
-    const fake = setup()
+  test('re-applies the mapping chosen in the dialog, showing the songs’ tags', async () => {
+    const fake = setup({
+      'library:songTags': [
+        {
+          songId: 1,
+          title: 'Pusteno Ludo',
+          artist: 'Yves Moreau',
+          albumArtist: null,
+          genre: 'Bulgaria'
+        },
+        {
+          songId: 2,
+          title: 'Hora Fetelor',
+          artist: 'Taraf',
+          albumArtist: 'Sonia Dion',
+          genre: null
+        }
+      ]
+    })
     await screen.findByText('Gone')
     fireEvent.click(rowFor('Pusteno Ludo | Pravo Rhodopsko Oro'))
     fireEvent.click(rowFor('Hora Fetelor'), { metaKey: true })
     await userEvent.click(screen.getByRole('button', { name: 'Re-apply mapping…' }))
     const dialog = await screen.findByRole('dialog', { name: 'Re-apply mapping?' })
     expect(dialog).toHaveTextContent('2 songs')
+    expect(fake.callsTo('library:songTags')).toEqual([[[1, 2]]])
+    const tags = within(dialog).getByRole('table', { name: 'File tags' })
+    expect(await within(tags).findByText('Yves Moreau')).toBeInTheDocument()
+    expect(within(tags).getByText('Sonia Dion')).toBeInTheDocument()
+    // Starts from the saved import mapping; changing it here applies to this run only.
+    expect(within(dialog).getByRole('radio', { name: 'Artist → Artist' })).toBeChecked()
+    await userEvent.click(within(dialog).getByRole('radio', { name: 'Artist → Choreographer' }))
     await userEvent.click(within(dialog).getByRole('button', { name: 'Re-apply' }))
-    expect(fake.callsTo('library:reapplyMapping')).toEqual([[[1, 2]]])
+    expect(fake.callsTo('library:reapplyMapping')).toEqual([
+      [
+        [1, 2],
+        {
+          artistTagTarget: 'choreographer',
+          albumArtistTagTarget: fake.settings['import.albumArtistTagTarget'],
+          genreIsCountry: fake.settings['import.genreIsCountry']
+        }
+      ]
+    ])
+    expect(fake.callsTo('settings:set')).toEqual([])
     expect(await screen.findByText(/Updated 2 songs/)).toHaveTextContent(
       '1 dance used by other songs was left unchanged'
     )

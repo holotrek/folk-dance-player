@@ -125,6 +125,15 @@ export interface Suggestions {
   danceTypes: string[]
 }
 
+// A song's raw file tags, shown when choosing a mapping to re-apply.
+export interface SongTags {
+  songId: number
+  title: string
+  artist: string | null
+  albumArtist: string | null
+  genre: string | null
+}
+
 export interface ReapplyResult {
   songs: number
   skippedSharedDances: number // dances used by other songs too, left unchanged

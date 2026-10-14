@@ -59,12 +59,17 @@ describe('library handlers', () => {
     expect((await h['playlists:list']()).map((x) => [x.name, x.itemCount])).toEqual([['Mine', 1]])
   })
 
-  test('re-apply mapping uses the saved import mapping', async () => {
-    const { db, h, settings } = setup()
+  test('re-apply mapping uses the mapping chosen for it, and tags are readable', async () => {
+    const { db, h } = setup()
     const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
     db.prepare("UPDATE files SET tag_artist = 'Yves Moreau' WHERE id = ?").run(s.fileId)
-    settings.set('import.artistTagTarget', 'choreographer')
-    expect(await h['library:reapplyMapping']([s.songId])).toEqual({
+    expect((await h['library:songTags']([s.songId]))[0].artist).toBe('Yves Moreau')
+    const mapping = {
+      artistTagTarget: 'choreographer' as const,
+      albumArtistTagTarget: 'ignore' as const,
+      genreIsCountry: false
+    }
+    expect(await h['library:reapplyMapping']([s.songId], mapping)).toEqual({
       songs: 1,
       skippedSharedDances: 0
     })
