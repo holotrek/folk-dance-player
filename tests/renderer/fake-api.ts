@@ -34,6 +34,10 @@ export function createFakeApi(
             ? (handler as Handler)(...(args as never[]))
             : handler
         }
+        // The library starts empty unless a test says otherwise.
+        if (channel === 'library:list' || channel === 'playlists:list') return []
+        if (channel === 'library:stats') return { fileCount: 0 }
+        if (channel === 'library:suggestions') return { people: [], countries: [], danceTypes: [] }
         if (channel === 'settings:getAll') return fake.settings
         if (channel === 'settings:set') {
           const [key, value] = args as [keyof Settings, unknown]
