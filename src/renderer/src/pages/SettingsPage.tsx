@@ -1,10 +1,23 @@
 import { useEffect, useState } from 'react'
-import { Alert, Code, Loader, NumberInput, Stack, Switch, Text, Title } from '@mantine/core'
+import {
+  Alert,
+  Code,
+  Loader,
+  NumberInput,
+  Stack,
+  Switch,
+  TagsInput,
+  Text,
+  Title
+} from '@mantine/core'
 import type { AppInfo, RendererApi } from '@shared/contract'
+import type { ImportMapping } from '@shared/import'
 import type { SettingKey, Settings } from '@shared/settings'
+import ImportMappingFields from '../import/ImportMappingFields'
+import { errorMessage } from '../ipc-error'
 
 type NumberKey = 'autoContinue.seconds' | 'countdown.seconds' | 'autoFullscreen.seconds'
-type BooleanKey = 'import.genreIsCountry' | 'autoContinue.enabled' | 'autoFullscreen.enabled'
+type BooleanKey = 'autoContinue.enabled' | 'autoFullscreen.enabled'
 
 export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.Element {
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -23,12 +36,27 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
       setSettings(await api.invoke('settings:set', key, value))
       setError(null)
     } catch (e) {
-      setError(`Couldn't save setting: ${(e as Error).message}`)
+      setError(`Couldn't save setting: ${errorMessage(e)}`)
       setRevision((r) => r + 1)
     }
   }
 
   if (!settings) return <Loader m="md" />
+
+  const mapping: ImportMapping = {
+    artistTagTarget: settings['import.artistTagTarget'],
+    albumArtistTagTarget: settings['import.albumArtistTagTarget'],
+    genreIsCountry: settings['import.genreIsCountry']
+  }
+  // Saves whichever mapping setting changed.
+  const saveMapping = (next: ImportMapping): void => {
+    if (next.artistTagTarget !== mapping.artistTagTarget)
+      void save('import.artistTagTarget', next.artistTagTarget)
+    if (next.albumArtistTagTarget !== mapping.albumArtistTagTarget)
+      void save('import.albumArtistTagTarget', next.albumArtistTagTarget)
+    if (next.genreIsCountry !== mapping.genreIsCountry)
+      void save('import.genreIsCountry', next.genreIsCountry)
+  }
 
   const toggle = (key: BooleanKey, label: string): React.JSX.Element => (
     <Switch
@@ -66,7 +94,20 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
       )}
       <Stack gap="xs">
         <Title order={4}>Import</Title>
-        {toggle('import.genreIsCountry', 'Genre is Country')}
+        <Text size="sm" c="dimmed">
+          The defaults for the mapping step shown before every import.
+        </Text>
+        <ImportMappingFields value={mapping} onChange={saveMapping} />
+      </Stack>
+      <Stack gap="xs">
+        <Title order={4}>Library</Title>
+        <TagsInput
+          label="Dance type suggestions"
+          placeholder="Add a dance type"
+          description="Offered when you edit a dance's type. Press Enter after each one."
+          value={settings.danceTypeSuggestions}
+          onChange={(types) => save('danceTypeSuggestions', types)}
+        />
       </Stack>
       <Stack gap="xs">
         <Title order={4}>Playback</Title>

@@ -90,6 +90,7 @@ file_prefs       (personal)   file_id PK, is_favorite, in_holding
 canva_decks      (local)      id, view_url UNIQUE, design_id, title, pages (JSON: ordered [{id, title}]),
                               synced_at, last_error
 slide_cache      (local)      deck_id, page_id, image_path, captured_at, last_error  PK (deck_id, page_id)
+distinct_dances  (personal)   dance_a, dance_b (dance_a < dance_b): same-named dances the user said are different
 playlists        (personal)   id, name, source ('local'|'apple_xml'), apple_persistent_id,
                               imported_at, modified_at, created_at
 playlist_items                playlist_id, position, file_id
@@ -248,7 +249,7 @@ PROGRAMS                  [+]
 ```
 
 - **Library and playlist entries** filter the library list. Songs can be dropped onto a playlist (or Favorites) to add them.
-- **Right-clicking a playlist** offers rename, duplicate and delete.
+- **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
 - **Programs** are loaded only from the sidebar; there is no dropdown.
   - The search box filters by name as you type.
   - Right-clicking a program offers rename, duplicate and delete. `[+]` creates a new program.
@@ -285,9 +286,11 @@ PROGRAMS                  [+]
 
 ### 6.3 Music page
 
-- **Table:** full-width and editable, one row per song.
+- **Table:** one row per song, for browsing, sorting, searching and selecting. It is virtualized, so it stays fast with large libraries. Editing happens in the side editor, not in the table. Click selects, ⌘-click adds to the selection, and Shift-click selects a range. Selected rows can be dragged onto a playlist or Favorites.
   - **Columns:** song title, artist, dance (the default dance's name), country, teacher, choreographer, dance type, difficulty, favorite, slide, duration, path and status.
-  - **Dance columns** edit the default dance. If that dance is linked to other songs too, the editor says so ("also used by 3 songs"), because the change applies to all of them.
+  - **Song / Dance** shows the label (§4), with a "+N" badge when the song has more than one dance.
+  - **In a playlist** (shown in its own order), dropping rows onto another row moves them there, and **Remove from playlist** removes the selection.
+  - **When one song is selected,** the side editor opens beside the table. A dance shared with other songs says so ("Also used by 2 other songs"), because edits apply to all of them.
 - **Selected song:** a side editor with two sections.
   - **Song:** title and artist.
   - **Dances:** every dance linked to the song, with the default marked.
@@ -299,9 +302,10 @@ PROGRAMS                  [+]
   3. Optionally, paste a page link copied from Canva's share menu instead.
 - **Same-name suggestions:** when a dance shares its name with another dance, the editor asks "Another dance called Lesnoto exists — same dance?".
   - **Same dance:** links this song to that dance and removes the automatic duplicate, if nothing else uses it.
-  - **Different dance:** dismisses the suggestion for that pair.
+  - **Different dance:** dismisses the suggestion for that pair, permanently (`distinct_dances`).
   - **Merge dances:** a general action for combining any two dances.
-- **Actions:** Add Music…, Import from Apple Music…, Re-apply mapping to selected, Refresh slides.
+- **Actions:** Add Music…, Import from Apple Music…, Favorite/Unfavorite (selection), Re-apply mapping… (selection, after a confirmation), Refresh slides (plan 6).
+- **Re-apply mapping** overwrites only the fields the current mapping targets: the song's artist, the default pairing's teacher, and the default dance's choreographer and country. If Genre → Country is off, countries are left alone. A default dance shared with other songs is left unchanged (it would change every song using it), and the result reports how many were skipped.
 - **Missing and unsupported files** are visibly flagged.
 
 ### 6.4 Settings page
