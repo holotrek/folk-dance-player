@@ -24,11 +24,20 @@
   padding-right: 28px;
 }
 
+.playlists {
+  max-height: 40%;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* Centered with auto margins, not a transform: Mantine's pressed state sets its own transform,
+   which would replace a centering one and make the button jump down. */
 .options {
   position: absolute;
-  top: 50%;
+  top: 0;
+  bottom: 0;
   right: 4px;
-  transform: translateY(-50%);
+  margin-block: auto;
   opacity: 0;
 }
 

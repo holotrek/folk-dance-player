@@ -47,6 +47,14 @@ describe('Sidebar', () => {
     expect(screen.getByLabelText('From Apple Music')).toBeInTheDocument()
   })
 
+  test('playlists sit in their own group, which scrolls when the list is long', async () => {
+    setup()
+    const group = await screen.findByRole('group', { name: 'Playlists' })
+    expect(await within(group).findByText('Balkan')).toBeInTheDocument()
+    expect(within(group).getByText('Couple dances')).toBeInTheDocument()
+    expect(within(group).queryByText('Programs')).toBeNull()
+  })
+
   test('choosing an entry filters the library and marks it as current', async () => {
     const fake = setup()
     await userEvent.click(await screen.findByText('★ Favorites'))

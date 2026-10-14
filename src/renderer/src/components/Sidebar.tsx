@@ -127,34 +127,36 @@ export default function Sidebar(): React.JSX.Element {
           +
         </ActionIcon>
       </Group>
-      {playlists.length === 0 && (
-        <Text size="sm" c="dimmed">
-          No playlists yet
-        </Text>
-      )}
-      {playlists.map((p) => (
-        <PlaylistEntry
-          key={p.id}
-          playlist={p}
-          link={entry(
-            p.name,
-            { kind: 'playlist', playlistId: p.id },
-            p.source === 'apple_xml' ? (
-              <Text
-                span
-                size="xs"
-                c="dimmed"
-                aria-label="From Apple Music"
-                title="Imported from Apple Music"
-              ></Text>
-            ) : undefined
-          )}
-          onDropFiles={(ids) => void api.invoke('playlists:add', p.id, ids)}
-          onRename={() => setPrompt({ mode: 'rename', playlist: p })}
-          onDuplicate={() => void api.invoke('playlists:duplicate', p.id)}
-          onDelete={() => setDeleting(p)}
-        />
-      ))}
+      <div className={classes.playlists} role="group" aria-label="Playlists">
+        {playlists.length === 0 && (
+          <Text size="sm" c="dimmed">
+            No playlists yet
+          </Text>
+        )}
+        {playlists.map((p) => (
+          <PlaylistEntry
+            key={p.id}
+            playlist={p}
+            link={entry(
+              p.name,
+              { kind: 'playlist', playlistId: p.id },
+              p.source === 'apple_xml' ? (
+                <Text
+                  span
+                  size="xs"
+                  c="dimmed"
+                  aria-label="From Apple Music"
+                  title="Imported from Apple Music"
+                ></Text>
+              ) : undefined
+            )}
+            onDropFiles={(ids) => void api.invoke('playlists:add', p.id, ids)}
+            onRename={() => setPrompt({ mode: 'rename', playlist: p })}
+            onDuplicate={() => void api.invoke('playlists:duplicate', p.id)}
+            onDelete={() => setDeleting(p)}
+          />
+        ))}
+      </div>
 
       {heading('Programs')}
       <TextInput size="xs" placeholder="Search programs…" aria-label="Search programs" my="xs" />
