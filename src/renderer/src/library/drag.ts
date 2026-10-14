@@ -18,3 +18,24 @@ export function getDraggedFiles(dataTransfer: DataTransfer | null): number[] {
     return []
   }
 }
+
+// Dragging program items within the program list, to reorder them.
+export const ITEMS_MIME = 'application/x-fdp-program-items'
+
+export function setDraggedItems(dataTransfer: DataTransfer, itemIds: number[]): void {
+  dataTransfer.setData(ITEMS_MIME, JSON.stringify(itemIds))
+  dataTransfer.effectAllowed = 'move'
+}
+
+export const carriesItems = (dataTransfer: DataTransfer | null): boolean =>
+  !!dataTransfer && Array.from(dataTransfer.types ?? []).includes(ITEMS_MIME)
+
+export function getDraggedItems(dataTransfer: DataTransfer | null): number[] {
+  if (!carriesItems(dataTransfer)) return []
+  try {
+    const ids: unknown = JSON.parse(dataTransfer!.getData(ITEMS_MIME))
+    return Array.isArray(ids) ? ids.filter((id): id is number => Number.isInteger(id)) : []
+  } catch {
+    return []
+  }
+}

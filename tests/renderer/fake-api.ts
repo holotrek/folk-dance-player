@@ -1,4 +1,5 @@
 import type { EventChannel, EventContract, InvokeChannel, RendererApi } from '@shared/contract'
+import { IDLE_PLAYER_STATE, NO_REMOTE } from '@shared/program'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 
 type Handler = (...args: never[]) => unknown
@@ -38,6 +39,11 @@ export function createFakeApi(
         if (channel === 'library:list' || channel === 'playlists:list') return []
         if (channel === 'library:stats') return { fileCount: 0 }
         if (channel === 'library:suggestions') return { people: [], countries: [], danceTypes: [] }
+        // No program is loaded unless a test says otherwise.
+        if (channel === 'programs:list' || channel === 'programs:played') return []
+        if (channel === 'programs:get') return null
+        if (channel === 'player:getState') return IDLE_PLAYER_STATE
+        if (channel === 'remote:status') return NO_REMOTE
         if (channel === 'settings:getAll') return fake.settings
         if (channel === 'settings:set') {
           const [key, value] = args as [keyof Settings, unknown]

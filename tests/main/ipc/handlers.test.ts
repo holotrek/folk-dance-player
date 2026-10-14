@@ -7,6 +7,7 @@ import { createHandlers, type HandlerDeps } from '../../../src/main/ipc/handlers
 import { registerHandlers } from '../../../src/main/ipc/register'
 import { InvalidSettingError, SettingsStore } from '../../../src/main/settings/settings-store'
 import { createTestDb } from '../helpers/test-db'
+import { testPlayer } from '../helpers/test-player'
 
 const appInfo = { version: '0.1.0', dbPath: '/tmp/test.sqlite', schemaVersion: 1 }
 
@@ -14,9 +15,10 @@ const summary = emptySummary()
 
 function makeDeps(overrides: Partial<HandlerDeps> = {}): HandlerDeps {
   const db = createTestDb()
+  const settings = new SettingsStore(db)
   return {
     db,
-    settings: new SettingsStore(db),
+    settings,
     appInfo: () => appInfo,
     importer: {
       run: async () => summary,
@@ -25,7 +27,9 @@ function makeDeps(overrides: Partial<HandlerDeps> = {}): HandlerDeps {
       checkPlaylistConflicts: () => []
     },
     dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
+    player: testPlayer(db, settings),
     onLibraryChanged: () => undefined,
+    onProgramsChanged: () => undefined,
     ...overrides
   }
 }

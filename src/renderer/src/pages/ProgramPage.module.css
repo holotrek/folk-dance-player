@@ -3,13 +3,21 @@
   flex-direction: column;
   gap: var(--mantine-spacing-sm);
   height: 100%;
+  min-height: 0;
 }
 
 .grid {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 3fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) minmax(0, 2fr);
   gap: var(--mantine-spacing-sm);
+}
+
+.library {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+  min-height: 0;
 }

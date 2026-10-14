@@ -1,0 +1,72 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Remote spike</title>
+    <style>
+      body { font: 15px -apple-system, sans-serif; background: #1e1e1e; color: #eee; margin: 16px; }
+      button { font-size: 15px; margin: 4px 6px 4px 0; padding: 6px 12px; }
+      .on { background: #c33; color: #fff; }
+      #log { font: 13px Menlo, monospace; white-space: pre; background: #111; padding: 8px; height: 420px; overflow: auto; }
+      #state { font-size: 18px; margin: 8px 0; }
+    </style>
+  </head>
+  <body>
+    <div><b>Mode:</b>
+      <button id="m-default">A: browser defaults</button>
+      <button id="m-handlers">B: our Media Session handlers</button>
+      <button id="m-global">C: Electron global shortcuts</button>
+    </div>
+    <div>
+      <button id="play">▶ start audio</button>
+      <button id="clear">clear log</button>
+    </div>
+    <div id="state">audio: not started</div>
+    <audio id="audio"></audio>
+    <div id="log"></div>
+    <script>
+      const audio = document.getElementById('audio')
+      const song = new URLSearchParams(location.search).get('song')
+      audio.src = 'file://' + song.split('/').map(encodeURIComponent).join('/')
+      audio.volume = 0.25
+      const out = document.getElementById('log')
+      spike.onLog((line) => { out.textContent += line + '\n'; out.scrollTop = out.scrollHeight })
+      const log = (source, detail) => spike.log(source, detail)
+      const state = () => {
+        document.getElementById('state').textContent =
+          `audio: ${audio.paused ? 'PAUSED' : 'playing'} at ${audio.currentTime.toFixed(1)} s`
+      }
+      setInterval(state, 250)
+
+      // What the page sees as keys (only while the window is focused).
+      window.addEventListener('keydown', (e) => log('page:keydown', `key=${e.key} code=${e.code}`))
+      // Changes to the <audio> element, whoever made them (a default media-key action pauses it directly).
+      for (const type of ['play', 'pause', 'seeked', 'ended'])
+        audio.addEventListener(type, () => log('audio', `${type} (at ${audio.currentTime.toFixed(1)} s)`))
+
+      const ACTIONS = ['play', 'pause', 'stop', 'previoustrack', 'nexttrack', 'seekbackward', 'seekforward', 'seekto']
+      function setMode(mode) {
+        for (const id of ['m-default', 'm-handlers', 'm-global'])
+          document.getElementById(id).classList.toggle('on', id === 'm-' + mode)
+        for (const action of ACTIONS) {
+          try {
+            navigator.mediaSession.setActionHandler(action, mode === 'handlers' ? (details) => {
+              log('mediaSession', `${action}${details.seekTime !== undefined ? ' to ' + details.seekTime : ''}`)
+              if (action === 'play') audio.play()
+              if (action === 'pause') audio.pause()
+            } : null)
+          } catch (err) { log('mediaSession', `${action}: not supported (${err.message})`) }
+        }
+        spike.global(mode === 'global')
+        log('mode', mode === 'default' ? 'A: browser defaults (no handlers)' : mode === 'handlers' ? 'B: Media Session handlers' : 'C: global shortcuts (no handlers)')
+      }
+      navigator.mediaSession.metadata = new MediaMetadata({ title: 'A heymisher bulgar', artist: 'Remote spike' })
+      document.getElementById('m-default').onclick = () => setMode('default')
+      document.getElementById('m-handlers').onclick = () => setMode('handlers')
+      document.getElementById('m-global').onclick = () => setMode('global')
+      document.getElementById('play').onclick = () => audio.play()
+      document.getElementById('clear').onclick = () => { out.textContent = '' }
+      setMode('default')
+    </script>
+  </body>
+</html>

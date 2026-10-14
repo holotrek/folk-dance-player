@@ -1,23 +1,23 @@
-import { Paper, Text } from '@mantine/core'
+import LibrarySearch from '../library/LibrarySearch'
+import LibraryTable from '../library/LibraryTable'
+import HoldingPanel from '../program/HoldingPanel'
+import PlayedList from '../program/PlayedList'
+import ProgramList from '../program/ProgramList'
 import classes from './ProgramPage.module.css'
 
-// Layout per spec §6.2. Filled in by plan 4.
+// Spec §6.2: previously played above the program on the left; holding above the library list on
+// the right. The player bar is above the tabs (App), on every page.
 export default function ProgramPage(): React.JSX.Element {
-  const panel = (label: string): React.JSX.Element => (
-    <Paper withBorder p="sm">
-      <Text fw={600}>{label}</Text>
-    </Paper>
-  )
   return (
     <div className={classes.root}>
-      <Paper withBorder p="sm">
-        <Text fw={600}>Player</Text>
-      </Paper>
       <div className={classes.grid}>
-        {panel('Previously played')}
-        {panel('Holding')}
-        {panel('Program')}
-        {panel('Library')}
+        <PlayedList />
+        <HoldingPanel />
+        <ProgramList />
+        <section className={classes.library} aria-label="Library">
+          <LibrarySearch />
+          <LibraryTable compact />
+        </section>
       </div>
     </div>
   )

@@ -1,8 +1,11 @@
 import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
+import type { RemoteStatus } from '@shared/program'
 import type { ImportService } from '../import/import-service'
 import { getLibraryStats } from '../library/stats'
+import type { PlayerSession } from '../session/player-session'
 import { libraryHandlers } from './library-handlers'
+import { programHandlers } from './program-handlers'
 import type { SettingsStore } from '../settings/settings-store'
 
 export interface Dialogs {
@@ -16,8 +19,15 @@ export interface HandlerDeps {
   appInfo: () => AppInfo
   importer: Pick<ImportService, 'run' | 'cancel' | 'previewApple' | 'checkPlaylistConflicts'>
   dialogs: Dialogs
-  // Called after every change to songs, dances, playlists or favorites.
+  player: PlayerSession
+  // Whether a file is on disk (the program pre-check); defaults to the real file system.
+  fileExists?: (path: string) => boolean
+  // The remote's media keys (spec §7.4); reported off when absent.
+  remote?: { status(): RemoteStatus; requestAccess(): RemoteStatus }
+  // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void
+  // Called after every change to programs or their items.
+  onProgramsChanged: () => void
 }
 
 export function createHandlers(deps: HandlerDeps): InvokeHandlers {
@@ -35,6 +45,7 @@ export function createHandlers(deps: HandlerDeps): InvokeHandlers {
     'import:start': (request) => deps.importer.run(request),
     'import:cancel': () => deps.importer.cancel(),
     'library:stats': () => getLibraryStats(deps.db),
-    ...libraryHandlers(deps)
+    ...libraryHandlers(deps),
+    ...programHandlers(deps)
   }
 }

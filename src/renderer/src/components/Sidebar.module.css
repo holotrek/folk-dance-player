@@ -16,11 +16,11 @@
   border-radius: var(--mantine-radius-sm);
 }
 
-.playlist {
+.entry {
   position: relative;
 }
 
-.playlist > div:first-child {
+.entry > div:first-child {
   padding-right: 28px;
 }
 
@@ -41,7 +41,7 @@
   opacity: 0;
 }
 
-.playlist:hover .options,
+.entry:hover .options,
 .options[aria-expanded='true'],
 .options:focus-visible {
   opacity: 1;

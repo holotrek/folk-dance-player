@@ -18,6 +18,13 @@ import type {
   SongPatch,
   Suggestions
 } from './library'
+import type {
+  PlayedEntry,
+  PlayerState,
+  ProgramDetail,
+  ProgramSummary,
+  RemoteStatus
+} from './program'
 import type { SettingKey, Settings } from './settings'
 
 export interface AppInfo {
@@ -73,6 +80,50 @@ export interface InvokeContract {
   'playlists:add': { args: [playlistId: number, fileIds: number[]]; result: void }
   'playlists:remove': { args: [playlistId: number, itemIds: number[]]; result: void }
   'playlists:reorder': { args: [playlistId: number, itemIds: number[]]; result: void }
+  // Holding places songs before `beforeFileId` (a held song) or at the end; held songs move.
+  'library:setHolding': {
+    args: [fileIds: number[], held: boolean, beforeFileId?: number | null]
+    result: void
+  }
+  'programs:list': { args: [search: string]; result: ProgramSummary[] }
+  'programs:get': { args: [programId: number]; result: ProgramDetail | null }
+  'programs:create': { args: [name: string]; result: number }
+  'programs:rename': { args: [programId: number, name: string]; result: void }
+  'programs:duplicate': { args: [programId: number]; result: number }
+  'programs:delete': { args: [programId: number]; result: void }
+  // Loads a program (spec §6.1): it becomes current, and its files are checked (§10.1).
+  'programs:setCurrent': { args: [programId: number | null]; result: void }
+  'programs:addTracks': {
+    args: [programId: number, fileIds: number[], beforeItemId: number | null]
+    result: number[]
+  }
+  'programs:addStop': { args: [programId: number, beforeItemId: number | null]; result: number }
+  'programs:reorder': { args: [programId: number, itemIds: number[]]; result: void }
+  'programs:removeItems': { args: [programId: number, itemIds: number[]]; result: void }
+  'programs:setItemDance': { args: [itemId: number, danceId: number]; result: void }
+  'programs:played': { args: [programId: number]; result: PlayedEntry[] }
+  'player:getState': { args: []; result: PlayerState }
+  'player:play': { args: []; result: void }
+  'player:pause': { args: []; result: void }
+  'player:stop': { args: []; result: void }
+  'player:next': { args: []; result: void }
+  'player:preview': { args: [fileId: number]; result: void }
+  'player:replay': { args: [logId: number]; result: void }
+  // Reports from the control window's <audio> element, for play `playId`.
+  'player:ended': { args: [playId: number]; result: void }
+  'player:failed': { args: [playId: number, message: string]; result: void }
+  'player:setSpeed': { args: [speed: number]; result: void }
+  'player:setSpeedLocked': { args: [locked: boolean]; result: void }
+  'player:setVolume': { args: [volume: number]; result: void }
+  'player:setAutoContinue': {
+    args: [change: { enabled?: boolean; seconds?: number }]
+    result: void
+  }
+  'player:dismissWarning': { args: []; result: void }
+  'player:restart': { args: []; result: void }
+  'remote:status': { args: []; result: RemoteStatus }
+  // Asks macOS for Accessibility permission (its own dialog), then reports the status.
+  'remote:requestAccess': { args: []; result: RemoteStatus }
 }
 
 export type InvokeChannel = keyof InvokeContract
@@ -114,7 +165,38 @@ export const INVOKE_CHANNELS = [
   'playlists:delete',
   'playlists:add',
   'playlists:remove',
-  'playlists:reorder'
+  'playlists:reorder',
+  'library:setHolding',
+  'programs:list',
+  'programs:get',
+  'programs:create',
+  'programs:rename',
+  'programs:duplicate',
+  'programs:delete',
+  'programs:setCurrent',
+  'programs:addTracks',
+  'programs:addStop',
+  'programs:reorder',
+  'programs:removeItems',
+  'programs:setItemDance',
+  'programs:played',
+  'player:getState',
+  'player:play',
+  'player:pause',
+  'player:stop',
+  'player:next',
+  'player:preview',
+  'player:replay',
+  'player:ended',
+  'player:failed',
+  'player:setSpeed',
+  'player:setSpeedLocked',
+  'player:setVolume',
+  'player:setAutoContinue',
+  'player:dismissWarning',
+  'player:restart',
+  'remote:status',
+  'remote:requestAccess'
 ] as const satisfies readonly InvokeChannel[]
 
 // Compile error if a channel in InvokeContract is missing from INVOKE_CHANNELS.
@@ -127,13 +209,19 @@ export interface EventContract {
   'import:progress': ImportProgress
   // Songs, dances, playlists or favorites changed (an edit or a finished import): refetch.
   'library:changed': null
+  // Programs, their items or the play log changed: refetch.
+  'programs:changed': null
+  // The player's state after every change (spec §9).
+  'player:state': PlayerState
 }
 
 export type EventChannel = keyof EventContract
 
 export const EVENT_CHANNELS = [
   'import:progress',
-  'library:changed'
+  'library:changed',
+  'programs:changed',
+  'player:state'
 ] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>

@@ -10,7 +10,7 @@ describe('migration 002: distinct dances', () => {
     const db = openDatabase(':memory:')
     migrate(db, MIGRATIONS.slice(0, 1))
     const d = addDance(db, { name: 'Svornato' })
-    expect(migrate(db, MIGRATIONS)).toEqual({ from: 1, to: 2 })
+    expect(migrate(db, MIGRATIONS.slice(0, 2))).toEqual({ from: 1, to: 2 })
     expect(getSchemaVersion(db)).toBe(2)
     expect(db.prepare('SELECT name FROM dances WHERE id = ?').get(d)).toEqual({ name: 'Svornato' })
   })
