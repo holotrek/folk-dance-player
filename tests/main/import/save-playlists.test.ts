@@ -121,6 +121,32 @@ describe('saveApplePlaylists', () => {
     })
   })
 
+  describe('after Keep both', () => {
+    beforeEach(() => {
+      saveApplePlaylists(db, [balkan([101])], fileIds, {}, T1)
+      db.prepare('UPDATE playlists SET modified_at = ?').run(T2)
+      saveApplePlaylists(db, [balkan([102])], fileIds, { BAL: 'both' }, T3)
+    })
+
+    test('the next re-import keeps the Apple copy’s "(Apple Music)" name', () => {
+      saveApplePlaylists(db, [balkan([103])], fileIds, {}, '2026-10-04T10:00:00.000Z')
+      expect(playlists().map((p) => p.name)).toEqual(['Balkan', 'Balkan (Apple Music)'])
+      expect(items('Balkan')).toEqual(['/a.mp3'])
+      expect(items('Balkan (Apple Music)')).toEqual(['/c.mp3'])
+    })
+
+    test('a rename in Apple Music carries over, still marked "(Apple Music)"', () => {
+      saveApplePlaylists(
+        db,
+        [balkan([103], 'Balkan Dances')],
+        fileIds,
+        {},
+        '2026-10-04T10:00:00.000Z'
+      )
+      expect(playlists().map((p) => p.name)).toEqual(['Balkan', 'Balkan Dances (Apple Music)'])
+    })
+  })
+
   test('playlists never imported or not edited are not conflicts', () => {
     saveApplePlaylists(db, [balkan([101])], fileIds, {}, T1)
     expect(findEditedApplePlaylists(db, ['BAL', 'NEW'])).toEqual([])

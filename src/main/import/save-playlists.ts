@@ -11,6 +11,8 @@ interface PlaylistRow {
 
 type PlaylistResult = ImportSummary['playlists']
 
+const APPLE_SUFFIX = ' (Apple Music)'
+
 // Any local edit bumps playlists.modified_at; an import sets imported_at = modified_at.
 const isEdited = (row: PlaylistRow): boolean =>
   row.imported_at === null || row.modified_at > row.imported_at
@@ -79,17 +81,21 @@ export function saveApplePlaylists(
     if (decision === 'keep') {
       result.kept.push(existing.name)
     } else if (decision === 'replace') {
+      // A copy made by "Keep both" keeps its suffix, so it never takes the user's playlist's name.
+      const name = existing.name.endsWith(APPLE_SUFFIX)
+        ? `${playlist.name}${APPLE_SUFFIX}`
+        : playlist.name
       db.prepare(
         'UPDATE playlists SET name = ?, imported_at = ?, modified_at = ? WHERE id = ?'
-      ).run(playlist.name, now, now, existing.id)
+      ).run(name, now, now, existing.id)
       writeItems(db, existing.id, fileIds)
-      result.replaced.push(playlist.name)
+      result.replaced.push(name)
     } else {
       // Keep both: the edited copy becomes the user's own playlist; the Apple copy is new.
       db.prepare(
         "UPDATE playlists SET source = 'local', apple_persistent_id = NULL WHERE id = ?"
       ).run(existing.id)
-      const name = `${playlist.name} (Apple Music)`
+      const name = `${playlist.name}${APPLE_SUFFIX}`
       writeItems(db, createPlaylist(db, name, playlist.persistentId, now), fileIds)
       result.duplicated.push(name)
     }
