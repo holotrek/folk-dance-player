@@ -42,7 +42,7 @@ describe('projector snapshot', () => {
     const snap = buildProjectorSnapshot(
       state({
         status: 'playing',
-        current: { playId: 7, source: 'program', itemId: 1, track: hora, restarts: 0 }
+        current: { playId: 7, source: 'program', itemId: 1, track: hora, restarts: 0, logId: null }
       }),
       [item(2, kolo), item(3, tfilati)],
       [played(1, hora)]
@@ -63,12 +63,31 @@ describe('projector snapshot', () => {
     })
   })
 
+  test('the song playing now isn’t repeated under previously played', () => {
+    const snap = buildProjectorSnapshot(
+      state({
+        status: 'playing',
+        current: { playId: 7, source: 'program', itemId: 1, track: hora, restarts: 0, logId: 5 }
+      }),
+      [],
+      [played(5, hora), played(4, kolo)]
+    )
+    expect(snap.played.map((e) => e.parts.dance)).toEqual(['Kolo'])
+  })
+
   test('paused or stopped still show the loaded song', () => {
     for (const status of ['paused', 'stopped'] as const) {
       const snap = buildProjectorSnapshot(
         state({
           status,
-          current: { playId: 7, source: 'preview', itemId: null, track: kolo, restarts: 0 }
+          current: {
+            playId: 7,
+            source: 'preview',
+            itemId: null,
+            track: kolo,
+            restarts: 0,
+            logId: null
+          }
         }),
         [],
         []
@@ -98,7 +117,7 @@ describe('projector snapshot', () => {
     const snap = buildProjectorSnapshot(
       state({
         status: 'playing',
-        current: { playId: 7, source: 'program', itemId: 1, track: hora, restarts: 0 }
+        current: { playId: 7, source: 'program', itemId: 1, track: hora, restarts: 0, logId: null }
       }),
       [item(2, kolo), stop(9), stop(10), item(3, tfilati), stop(11)],
       []

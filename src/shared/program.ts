@@ -50,6 +50,7 @@ export interface NowPlaying {
   itemId: number | null // the program item, for program plays
   track: Track
   restarts: number // bumped by ◀◀ (restart); the control window rewinds when it changes
+  logId: number | null // its play_log entry (the projector leaves it out of previously played)
 }
 
 export interface PlayerState {

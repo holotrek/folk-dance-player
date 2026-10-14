@@ -171,6 +171,27 @@ describe('projector window', () => {
     expect(controller.status()).toMatchObject({ open: true, mode: 'projector' })
   })
 
+  test('a control window dragged onto the projector is moved back off it', () => {
+    const { controller, state } = setup([laptop, hdmi])
+    controller.setEnabled(true)
+    state.control = 2 // the operator dragged it, or used "Move to…"
+    controller.keepControlReachable()
+    expect(state.movedControlTo).toEqual([1])
+  })
+
+  test('projector mode never sits on the operator’s only display; it reopens when a second one appears', () => {
+    const { controller, state, open } = setup([laptop, hdmi])
+    controller.setEnabled(true)
+    state.displays = [hdmi] // clamshell: the laptop's own screen went away
+    state.control = 2
+    controller.displaysChanged()
+    expect(open()).toHaveLength(0)
+    expect(controller.status()).toMatchObject({ enabled: true, open: false })
+    state.displays = [laptop, hdmi]
+    controller.displaysChanged()
+    expect(open()).toHaveLength(1)
+  })
+
   test('a display that changes size gets the window resized', () => {
     const { controller, state, open } = setup([laptop, hdmi])
     controller.setEnabled(true)

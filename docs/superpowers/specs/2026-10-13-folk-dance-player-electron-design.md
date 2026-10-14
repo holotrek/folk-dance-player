@@ -378,7 +378,7 @@ PROGRAMS                  [+]
 
 ### 7.3 Laptop-mode auto-fullscreen
 
-- **When:** only when projector mode is off, and only while music plays or a countdown runs. If `autoFullscreen.enabled` is on and there has been no input for `autoFullscreen.seconds` (keys in the control window, or mouse movement anywhere), the projector view opens over the laptop display.
+- **When:** only when projector mode is off, and only while music plays or a countdown runs. If `autoFullscreen.enabled` is on and there has been no input for `autoFullscreen.seconds` (keys in the control window, mouse movement, or any input on the Mac, such as scrolling or clicking: the system idle time), the projector view opens over the laptop display.
 - **Closing:** mouse movement or Esc closes it, after a 1 s grace period.
 
 ### 7.4 Remote control
@@ -412,7 +412,7 @@ The keys are registered as global shortcuts in the main process and go to `Playe
   - **`display-added`:** if projector mode is on, the window reopens on the saved display, or the first non-primary one.
   - **`display-metrics-changed`:** bounds are reapplied.
 - **At startup,** projector mode left on from last time reopens only when a separate display is connected; otherwise nothing covers the laptop until one is plugged in.
-- **The control window is kept off the projector's display** after any display change, including sleep and wake, which renumber displays and can move windows.
+- **The control window is kept off the projector's display** after any display change, including sleep and wake (which renumber displays and can move windows), and whenever the operator moves it there. If no other display is left (clamshell, mirroring), projector mode closes rather than cover the operator's only screen; the switch stays on and a second display reopens it.
 - **macOS specifics:** `setVisibleOnAllWorkspaces` is called with `skipTransformProcessType`, or macOS briefly turns the whole app into a background app (no Dock icon, no ⌘-Tab, the control window hidden) and after sleep it can stay that way. On wake, the app re-checks the displays and shows the control window if it's hidden.
 - **Keeping the Mac awake:** while the projector view shows, or music plays or counts down, the app blocks display sleep (`powerSaveBlocker`).
 - **Closing the control window quits the app,** so the projector view is never left on its own.
@@ -481,7 +481,8 @@ UP NEXT
 - **Up next** is a vertical list showing as many entries as fit in its area.
 - **STOP markers** show in the list as a row reading `⌄ —— Teaching —— ⌄`, the arrows pointing down at the dance that will be taught. Several STOPs in a row show once, and a STOP with no song after it isn't shown. Halted at a STOP, the next dance in the middle row carries the same Teaching row.
 - **The middle row's heading:** "Now playing" (with "Paused" when paused or stopped), or, when nothing is loaded, "Up next", "Starting in N…" or "Next in N…". The list below is then headed "After that".
-- **Previews and replays** show as Now Playing and are listed in previously played, like any play.
+- **Previews and replays** show as Now Playing and are listed in previously played, like any play. The song playing now is not repeated under previously played.
+- **The Teaching marker on the next dance** lasts only while the halted program's next item is the dance after the STOP; loading another program or removing that dance clears it.
 - **Songs whose file is missing** are left out of the lists, since they will be skipped.
 - **With no program loaded and nothing playing,** the view shows only the app's name.
 - **Previously played** shows titles only when a slide is beside it, because the column is narrow. With no slide it shows the country too. Newest is at the top.

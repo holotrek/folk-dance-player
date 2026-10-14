@@ -279,8 +279,11 @@ app.whenReady().then(() => {
     screen.on(event as 'display-added', () => controller.displaysChanged())
   }
 
+  mainWindow.on('moved', () => controller.keepControlReachable())
+
   const activity = new ActivityWatcher({
     cursor: () => screen.getCursorScreenPoint(),
+    systemIdleSeconds: () => powerMonitor.getSystemIdleTime(),
     playing: () => ['playing', 'countdown'].includes(player.getState().status),
     autoFullscreen: () => ({
       enabled: settings.get('autoFullscreen.enabled'),

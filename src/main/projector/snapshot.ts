@@ -28,9 +28,13 @@ export function buildProjectorSnapshot(
   unplayed: ProgramItem[],
   played: PlayedEntry[]
 ): ProjectorSnapshot {
-  const history = played.flatMap((p) => (p.track ? [entry(p.track)] : []))
   const { current } = player
-  if (current && player.status !== 'idle' && player.status !== 'countdown') {
+  const loaded = current && player.status !== 'idle' && player.status !== 'countdown'
+  // The song playing now is the newest log entry; it shows in the middle, not twice.
+  const history = played.flatMap((p) =>
+    p.track && !(loaded && p.logId === current.logId) ? [entry(p.track)] : []
+  )
+  if (loaded) {
     return {
       hasProgram: player.programId !== null,
       middle: {

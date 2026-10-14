@@ -58,7 +58,7 @@ describe('projector feed', () => {
     const snap = feed.snapshot()
     expect(snap.middle).toMatchObject({ kind: 'now', entry: { parts: { dance: 'Hora' } } })
     expect(snap.upcoming.map((r) => r.kind)).toEqual(['teaching', 'dance'])
-    expect(snap.played.map((e) => e.parts.dance)).toEqual(['Hora'])
+    expect(snap.played).toEqual([]) // Hora is playing: shown in the middle, not twice
   })
 
   test('update sends the snapshot to an open projector only', () => {

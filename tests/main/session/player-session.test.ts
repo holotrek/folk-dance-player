@@ -2,7 +2,13 @@ import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { PlayerState } from '@shared/program'
 import { listPlayed } from '../../../src/main/programs/history'
-import { addStop, addTracks, createProgram, getProgram } from '../../../src/main/programs/programs'
+import {
+  addStop,
+  addTracks,
+  createProgram,
+  getProgram,
+  removeItems
+} from '../../../src/main/programs/programs'
 import { PlayerSession } from '../../../src/main/session/player-session'
 import { createSessionPorts } from '../../../src/main/session/session-ports'
 import { SettingsStore } from '../../../src/main/settings/settings-store'
@@ -395,6 +401,39 @@ describe('what the projector shows', () => {
     expect(state()).toMatchObject({ status: 'idle', atStop: true })
     session.play()
     expect(state()).toMatchObject({ status: 'playing', atStop: false })
+  })
+
+  test('the playing song carries the id of its play-log entry', () => {
+    addTracks(db, program, [songs.a.fileId])
+    setup()
+    session.play()
+    expect(state().current!.logId).toBe(listPlayed(db, program)[0].logId)
+  })
+
+  test('Teaching clears when another program is loaded, or the taught dance is removed', () => {
+    addTracks(db, program, [songs.a.fileId])
+    addStop(db, program)
+    const [b] = addTracks(db, program, [songs.b.fileId])
+    setup({ seconds: 0 })
+    session.play()
+    finish()
+    expect(state().atStop).toBe(true)
+    removeItems(db, program, [b])
+    session.refresh()
+    expect(state().atStop).toBe(false)
+
+    const other = createProgram(db, 'Other')
+    addTracks(db, other, [songs.a.fileId])
+    addStop(db, other)
+    addTracks(db, other, [songs.c.fileId])
+    settings.set('currentProgramId', other)
+    session.refresh()
+    session.play()
+    finish()
+    expect(state().atStop).toBe(true)
+    settings.set('currentProgramId', program)
+    session.refresh()
+    expect(state().atStop).toBe(false)
   })
 
   test('refresh relabels the playing song after its dance is edited', () => {

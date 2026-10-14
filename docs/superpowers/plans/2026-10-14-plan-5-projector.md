@@ -5241,3 +5241,31 @@ npm run build && FDP_USER_DATA=/tmp/fdp-check npm start
 - `npm test` passes: 481 tests (430 from Plans 1–4, plus 51 new).
 - `npm run typecheck`, `npx prettier --check .` and `npm run build` are clean, and the build has both pages and both preloads.
 - On real hardware, the view runs on a projector and on the laptop, laptop mode closes with Esc or the mouse, the idle view appears while music plays, sleep and wake keep the control window reachable, and the Mac stays awake during an event.
+
+---
+
+## Changes after execution
+
+The final whole-branch review found nothing Critical. Five Important findings were fixed on the branch, each with a test that failed first; the suite grew from 481 to 487.
+
+- **A control window dragged onto the projector was hidden under it.** `ProjectorController.keepControlReachable()` runs on the control window's `moved` event.
+- **Projector mode could cover the operator's only display** (clamshell, mirroring). `displaysChanged()` closes it when no other display is left; the switch stays on.
+- **Idle auto-fullscreen covered an operator scrolling or clicking.** `ActivityWatcher` also requires `powerMonitor.getSystemIdleTime()` to reach the idle time.
+- **The playing song appeared twice on the projector.** `NowPlaying.logId` (from `logPlay`) keeps it out of previously played; the Task 2 and Task 5 tests now expect that.
+- **The Teaching marker went stale.** `atStop` holds only while the halted program's next item is the one after the STOP.
+
+**Deferred minors from the final review:**
+- The switch looks on with no projector connected (show "Waiting for a projector", and the unplug workaround as a tooltip).
+- Settings offers the built-in display as the projector display.
+- `moveControlTo` does nothing on a fullscreen control window.
+- A crashed projector renderer stays black (reload on `render-process-gone`).
+- Turning the switch on while the idle laptop view is open leaves it in laptop mode.
+- Esc right after opening laptop mode from the switch skips the grace period.
+- Progress is sent with `invoke` 4 times a second and isn't validated in main.
+- The projector window receives every broadcast.
+- The projector bundle is 644 kB.
+- Settings' display list isn't refreshed on hotplug.
+- The `coalesced()` comment says "task" where it means microtask.
+
+The real-hardware check (Task 8, Step 4) is still to do with the user.
+

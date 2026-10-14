@@ -8,6 +8,7 @@ let settings = { enabled: true, seconds: 10 }
 let status: ProjectorStatus
 let calls: string[]
 let watcher: ActivityWatcher
+let systemIdle = 0 // seconds since any input on the Mac
 
 const closed: ProjectorStatus = {
   enabled: false,
@@ -24,7 +25,9 @@ beforeEach(() => {
   settings = { enabled: true, seconds: 10 }
   status = closed
   calls = []
+  systemIdle = Infinity
   watcher = new ActivityWatcher({
+    systemIdleSeconds: () => systemIdle,
     cursor: () => cursor,
     playing: () => playing,
     autoFullscreen: () => settings,
@@ -64,6 +67,15 @@ describe('laptop-mode auto-fullscreen (spec §7.3)', () => {
     vi.advanceTimersByTime(8_000)
     expect(calls).toEqual([])
     vi.advanceTimersByTime(3_000)
+    expect(calls).toEqual(['show'])
+  })
+
+  test('scrolling, clicking or typing elsewhere (no pointer movement) counts as input', () => {
+    systemIdle = 2 // the Mac saw input 2 s ago, though the cursor didn't move
+    vi.advanceTimersByTime(20_000)
+    expect(calls).toEqual([])
+    systemIdle = Infinity
+    vi.advanceTimersByTime(500)
     expect(calls).toEqual(['show'])
   })
 

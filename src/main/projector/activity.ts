@@ -5,6 +5,8 @@ const GRACE_MS = 1000 // laptop mode ignores input this soon after opening
 
 export interface ActivityDeps {
   cursor(): { x: number; y: number } // the mouse position on screen
+  // Seconds since any input on the Mac (scrolling and clicking don't move the cursor).
+  systemIdleSeconds?(): number
   playing(): boolean // a song plays or a countdown runs
   autoFullscreen(): { enabled: boolean; seconds: number }
   projector: Pick<ProjectorController, 'status' | 'showOnLaptop' | 'dismiss'>
@@ -55,7 +57,14 @@ export class ActivityWatcher {
     }
 
     const { enabled, seconds } = this.deps.autoFullscreen()
-    if (enabled && !status.open && this.deps.playing() && now - this.last >= seconds * 1000) {
+    const systemIdle = this.deps.systemIdleSeconds?.() ?? Infinity
+    if (
+      enabled &&
+      !status.open &&
+      this.deps.playing() &&
+      now - this.last >= seconds * 1000 &&
+      systemIdle >= seconds
+    ) {
       this.deps.projector.showOnLaptop()
       this.openedAt = now
     }

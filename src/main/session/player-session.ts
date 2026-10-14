@@ -20,7 +20,7 @@ export interface SessionPorts {
     danceId: number | null
     programId: number | null
     kind: PlayKind
-  }): void
+  }): number
   // Checks the file is on disk, flagging or unflagging it in the library.
   checkFile(fileId: number): boolean
   autoContinue(): { enabled: boolean; seconds: number }
@@ -42,6 +42,8 @@ export class PlayerSession {
   private state: PlayerState
   private nextPlayId = 1
   private timer: unknown = null
+  private stopProgram: number | null = null
+  private stopHead: number | null = null
 
   constructor(
     private readonly ports: SessionPorts,
@@ -197,6 +199,9 @@ export class PlayerSession {
     const head = this.ports.unplayedItems(programId)[0]
     if (head?.kind === 'stop') {
       this.ports.markPlayed(head.id)
+      // Teaching applies to the dance after the STOP, in this program, until it changes.
+      this.stopProgram = programId
+      this.stopHead = this.ports.unplayedItems(programId)[0]?.id ?? null
       return this.update({ atStop: true })
     }
     this.sync()
@@ -276,7 +281,7 @@ export class PlayerSession {
   }
 
   private start(source: PlayKind, itemId: number | null, track: Track): void {
-    this.ports.logPlay({
+    const logId = this.ports.logPlay({
       fileId: track.fileId,
       danceId: track.danceId,
       programId: this.ports.programId(),
@@ -293,6 +298,7 @@ export class PlayerSession {
         source,
         itemId,
         restarts: 0,
+        logId,
         track: {
           fileId,
           songId,
@@ -314,9 +320,15 @@ export class PlayerSession {
   private update(change: Partial<PlayerState>): void {
     const programId = this.ports.programId()
     const items = programId === null ? [] : this.ports.unplayedItems(programId)
+    // Halted at a STOP stays true only while the same program's next item is still the one after it.
+    const atStop =
+      (change.atStop ?? this.state.atStop) &&
+      programId === this.stopProgram &&
+      (items[0]?.id ?? null) === this.stopHead
     this.state = {
       ...this.state,
       ...change,
+      atStop,
       programId,
       nextUp: items[0] ?? null,
       autoContinue: this.ports.autoContinue()

@@ -159,7 +159,14 @@ describe('player bar', () => {
     act(() =>
       fake.emit('player:state', {
         ...playing(hora, { speed: 0.75 }, 2),
-        current: { playId: 2, source: 'preview', itemId: null, track: hora, restarts: 0 }
+        current: {
+          playId: 2,
+          source: 'preview',
+          itemId: null,
+          track: hora,
+          restarts: 0,
+          logId: null
+        }
       })
     )
     expect(screen.getByText('Preview')).toBeInTheDocument()

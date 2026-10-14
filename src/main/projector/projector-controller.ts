@@ -122,13 +122,23 @@ export class ProjectorController {
         this.openProjector()
       }
     }
-    if (this.window && this.mode === 'projector' && this.display) this.keepControlOff(this.display)
+    if (this.window && this.mode === 'projector' && this.display) {
+      this.keepControlOff(this.display)
+      // No other display to put the control window on (clamshell, mirroring): never cover the
+      // operator's only screen with projector mode. The switch stays on; a second display reopens it.
+      if (this.display.id === this.deps.controlDisplayId()) this.close()
+    }
     if (this.window && this.mode === 'laptop') {
       const own = this.controlDisplay()
       this.display = own
       this.window.setBounds(own.bounds)
     }
     this.announce()
+  }
+
+  // The control window moved (dragged, or "Move to…"): never leave it under the projector window.
+  keepControlReachable(): void {
+    if (this.mode === 'projector' && this.display) this.keepControlOff(this.display)
   }
 
   // Settings chose another display: an open projector moves there.
