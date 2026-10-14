@@ -90,6 +90,7 @@ file_prefs       (personal)   file_id PK, is_favorite, in_holding
 canva_decks      (local)      id, view_url UNIQUE, design_id, title, pages (JSON: ordered [{id, title}]),
                               synced_at, last_error
 slide_cache      (local)      deck_id, page_id, image_path, captured_at, last_error  PK (deck_id, page_id)
+distinct_dances  (personal)   dance_a, dance_b (dance_a < dance_b): same-named dances the user said are different
 playlists        (personal)   id, name, source ('local'|'apple_xml'), apple_persistent_id,
                               imported_at, modified_at, created_at
 playlist_items                playlist_id, position, file_id
@@ -190,10 +191,11 @@ The step shows the current values, which can be changed for this import and are 
 - **"Artist" tag goes to:** Artist (the song's artist) | Teacher (the pairing's teacher) | Choreographer (the dance's choreographer) | ignore
 - **"Album Artist" tag goes to:** the same choices
 - **Genre → Country:** on or off. If on, the genre becomes the new dance's country.
+- **Tag preview (Apple Music imports):** a scrolling table (its header stays in place) of up to 50 tracks' Name, Artist, Album Artist and Genre, read from the XML. When the library has more tracks, the 50 are chosen at random, so the organizer can see which tag holds teachers or choreographers. A file import has no preview, because tags are read only after the mapping is chosen.
 
 Mapping is applied once, when a song and its automatic dance are created. It is not stored per song.
 
-The Music page has **Re-apply mapping to selected**. After a confirmation, it deliberately overwrites the mapped fields from the raw tags using the current settings: the song's artist, its default dance's choreographer and country, and that pairing's teacher. All fields remain freely editable afterwards.
+The Music page has **Re-apply mapping to selected**. Its dialog shows the selected songs' tags (the same table, up to 50 songs) and the mapping choices, which start from the import settings and apply to that run only. It deliberately overwrites the mapped fields from the raw tags: the song's artist, its default dance's choreographer and country, and that pairing's teacher. All fields remain freely editable afterwards.
 
 ### 5.3 Apple Music XML
 
@@ -235,7 +237,7 @@ LIBRARY
   ♪ All Music
   ★ Favorites
 PLAYLISTS                 [+]
-  Couple dances
+  Couple dances           ← own scroll container, at most 40% of the sidebar
   Beginner night
    Balkan                ← Apple-imported, marked with an icon
 PROGRAMS                  [+]
@@ -248,7 +250,8 @@ PROGRAMS                  [+]
 ```
 
 - **Library and playlist entries** filter the library list. Songs can be dropped onto a playlist (or Favorites) to add them.
-- **Right-clicking a playlist** offers rename, duplicate and delete.
+- **The playlist list** scrolls on its own once it fills 40% of the sidebar, so a large Apple Music library's playlists never push Programs off screen.
+- **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
 - **Programs** are loaded only from the sidebar; there is no dropdown.
   - The search box filters by name as you type.
   - Right-clicking a program offers rename, duplicate and delete. `[+]` creates a new program.
@@ -285,9 +288,11 @@ PROGRAMS                  [+]
 
 ### 6.3 Music page
 
-- **Table:** full-width and editable, one row per song.
+- **Table:** one row per song, for browsing, sorting, searching and selecting. It is virtualized, so it stays fast with large libraries. Editing happens in the side editor, not in the table. Click selects, ⌘-click adds to the selection, Shift-click selects a range, and ⌘A (Ctrl+A on Windows) selects every song shown while the table has focus. Selected rows can be dragged onto a playlist or Favorites.
   - **Columns:** song title, artist, dance (the default dance's name), country, teacher, choreographer, dance type, difficulty, favorite, slide, duration, path and status.
-  - **Dance columns** edit the default dance. If that dance is linked to other songs too, the editor says so ("also used by 3 songs"), because the change applies to all of them.
+  - **Song / Dance** shows the label (§4), with a "+N" badge when the song has more than one dance.
+  - **In a playlist** (shown in its own order), dropping rows onto another row moves them there, and **Remove from playlist** removes the selection. Reordering is off while a search is active, because the search hides part of the playlist.
+  - **When one song is selected,** the side editor opens beside the table. A dance shared with other songs says so ("Also used by 2 other songs"), because edits apply to all of them.
 - **Selected song:** a side editor with two sections.
   - **Song:** title and artist.
   - **Dances:** every dance linked to the song, with the default marked.
@@ -297,11 +302,16 @@ PROGRAMS                  [+]
   1. Choose a deck from a dropdown that lists decks by title (for example "Dance n' Jam Tunes"), or "+ Add a deck…" to paste a deck's view link once.
   2. Enter a slide number. The app immediately converts it to the slide's page ID and shows a preview with the slide's title, if it has one, to confirm.
   3. Optionally, paste a page link copied from Canva's share menu instead.
-- **Same-name suggestions:** when a dance shares its name with another dance, the editor asks "Another dance called Lesnoto exists — same dance?".
+- **Same-name suggestions:** when a dance shares its name with another dance that at least one song uses, the editor asks "Another dance called Lesnoto exists — same dance?". Dances no song uses (left over after unlinking) are never suggested.
   - **Same dance:** links this song to that dance and removes the automatic duplicate, if nothing else uses it.
-  - **Different dance:** dismisses the suggestion for that pair.
+  - **Different dance:** dismisses the suggestion for that pair, permanently (`distinct_dances`).
   - **Merge dances:** a general action for combining any two dances.
-- **Actions:** Add Music…, Import from Apple Music…, Re-apply mapping to selected, Refresh slides.
+- **A merge** (including Same dance) moves songs, teachers, song defaults, program items and play history to the kept dance, and fills its empty fields from the removed one. Nothing personal is lost:
+  - **Notes:** when both dances have notes, the removed dance's notes are added after the kept dance's.
+  - **"Different dance" answers** about the removed dance carry over to the kept dance, so dismissed suggestions stay dismissed.
+  - **Difficulty and the Canva slide:** the kept dance's values win when both are set.
+- **Actions:** Add Music…, Import from Apple Music…, Favorite/Unfavorite (selection), Re-apply mapping… (selection), Refresh slides (plan 6).
+- **Re-apply mapping** opens a dialog that shows the selected songs' Artist, Album Artist and Genre tags, with the mapping fields from the import step. They start from the import mapping in Settings, and the choice applies to this run only. It overwrites only the fields the chosen mapping targets: the song's artist, the default pairing's teacher, and the default dance's choreographer and country. If Genre → Country is off, countries are left alone. A default dance shared with other songs is left unchanged (it would change every song using it), and the result reports how many were skipped.
 - **Missing and unsupported files** are visibly flagged.
 
 ### 6.4 Settings page
@@ -572,6 +582,14 @@ The throwaway spike was deleted after this spec was approved; only its display h
 - **Windows build and testing.**
 - **Import from MITPlayer:** read MITPlayer's metadata file and map its fields into `songs` (and its lists into playlists or programs, if it has them), through the same mapping step and summary as other imports (§5). The file format still needs to be examined from a real sample before this can be designed.
 - **First-run tour:** a guided tutorial the first time the app opens. It steps through each area (sidebar, library and search, building a program, the player bar with auto-continue, the projector toggle, the Music page and importing, Settings) and explains how to use each one. It can be skipped and replayed later from Help.
+- **Bulk editing, like Apple Music's "Get Info" on several songs:** select several songs in the Music page table and edit their fields together.
+  - **Fields that agree** across the selection show the shared value.
+  - **Fields that differ** show a `Mixed` placeholder; a field left as `Mixed` isn't changed.
+  - **Only fields the user actually edits are applied,** to every selected song (or to its default dance, for dance fields).
+  - **Clear warnings, because bulk edits are easy to get wrong and hard to undo:**
+    - when the bulk editor opens: how many songs are selected, and that changes will apply to all of them
+    - again before saving: a confirmation listing each field that will change, the new value, and how many songs (and shared dances) it affects
+  - **Shared dances:** if a change would affect dances shared with songs outside the selection, the confirmation says so explicitly.
 - **About screen:** if an "About this app" screen is added, it includes a thank-you crediting MITPlayer as the inspiration for this app.
 
 ## 13. Project and release routines

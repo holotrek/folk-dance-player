@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
 import type { ImportService } from '../import/import-service'
 import { getLibraryStats } from '../library/stats'
+import { libraryHandlers } from './library-handlers'
 import type { SettingsStore } from '../settings/settings-store'
 
 export interface Dialogs {
@@ -15,6 +16,8 @@ export interface HandlerDeps {
   appInfo: () => AppInfo
   importer: Pick<ImportService, 'run' | 'cancel' | 'previewApple' | 'checkPlaylistConflicts'>
   dialogs: Dialogs
+  // Called after every change to songs, dances, playlists or favorites.
+  onLibraryChanged: () => void
 }
 
 export function createHandlers(deps: HandlerDeps): InvokeHandlers {
@@ -31,6 +34,7 @@ export function createHandlers(deps: HandlerDeps): InvokeHandlers {
     'import:checkPlaylistConflicts': (ids) => deps.importer.checkPlaylistConflicts(ids),
     'import:start': (request) => deps.importer.run(request),
     'import:cancel': () => deps.importer.cancel(),
-    'library:stats': () => getLibraryStats(deps.db)
+    'library:stats': () => getLibraryStats(deps.db),
+    ...libraryHandlers(deps)
   }
 }

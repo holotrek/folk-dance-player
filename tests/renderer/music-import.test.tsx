@@ -5,13 +5,17 @@ import { emptySummary, type ImportSummary } from '@shared/import'
 import { DEFAULT_SETTINGS } from '@shared/settings'
 import MusicPage from '@renderer/pages/MusicPage'
 import { createFakeApi } from './fake-api'
-import { renderWithMantine } from './render'
+import { renderWithLibrary } from './library/render-library'
 
 const preview = {
   trackCount: 3,
   playlists: [
     { persistentId: 'BAL', name: 'Balkan', trackCount: 2 },
     { persistentId: 'CPL', name: 'Couple dances', trackCount: 1 }
+  ],
+  tagSample: [
+    { title: 'Ajde Jano', artist: 'Ensemble', albumArtist: 'Bora Özkök', genre: 'Serbia' },
+    { title: 'Ali Paşa', artist: null, albumArtist: null, genre: 'Turkey' }
   ]
 }
 
@@ -22,7 +26,7 @@ function summary(overrides: Partial<ImportSummary> = {}): ImportSummary {
 describe('Music page import', () => {
   test('shows how many songs are in the library', async () => {
     const fake = createFakeApi({ 'library:stats': { fileCount: 42 } })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     expect(await screen.findByText('42 songs in your library')).toBeInTheDocument()
   })
 
@@ -35,7 +39,7 @@ describe('Music page import', () => {
         unsupported: [{ path: '/Music/Balkan/Old.aiff', detail: 'Format not supported' }]
       })
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
 
     await userEvent.click(await screen.findByRole('button', { name: 'Add Music…' }))
     const dialog = await screen.findByRole('dialog', { name: 'Import music' })
@@ -53,7 +57,7 @@ describe('Music page import', () => {
       'import:pickMusic': ['/Music'],
       'import:start': summary()
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     await userEvent.click(await screen.findByRole('button', { name: 'Add Music…' }))
     const dialog = await screen.findByRole('dialog', { name: 'Import music' })
 
@@ -68,7 +72,7 @@ describe('Music page import', () => {
 
   test('does nothing when the picker is cancelled', async () => {
     const fake = createFakeApi({ 'library:stats': { fileCount: 0 }, 'import:pickMusic': [] })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     await userEvent.click(await screen.findByRole('button', { name: 'Add Music…' }))
     await waitFor(() => expect(fake.callsTo('import:pickMusic')).toHaveLength(1))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
@@ -82,7 +86,7 @@ describe('Music page import', () => {
       'import:start': () => new Promise<ImportSummary>((resolve) => (finish = resolve)),
       'import:cancel': undefined
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     await userEvent.click(await screen.findByRole('button', { name: 'Add Music…' }))
     await userEvent.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import' })
@@ -112,7 +116,7 @@ describe('Music page import', () => {
     const fake = createFakeApi({ 'library:stats': { fileCount: 0 }, 'import:start': summary() }, [
       '/Users/me/Desktop/Hora.mp3'
     ])
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     const zone = await screen.findByText(/Drop music files or folders here/)
     const file = new File(['x'], 'Hora.mp3')
     fireEvent.drop(zone, { dataTransfer: { files: [file], types: ['Files'] } })
@@ -134,7 +138,7 @@ describe('Music page import', () => {
         return summary({ added: [{ path: '/Music/a.mp3' }] })
       }
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     await userEvent.click(await screen.findByRole('button', { name: 'Add Music…' }))
     await userEvent.click(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import' })
@@ -157,7 +161,7 @@ describe('import dialog robustness', () => {
       'settings:set': slowSet,
       'import:start': summary()
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     await userEvent.click(await screen.findByRole('button', { name: 'Add Music…' }))
     await userEvent.dblClick(
       within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import' })
@@ -174,7 +178,7 @@ describe('import dialog robustness', () => {
       'import:pickAppleLibrary': '/Users/me/Library.xml',
       'import:previewApple': () => new Promise((resolve) => (resolvePreview = resolve))
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     await userEvent.click(await screen.findByRole('button', { name: 'Import from Apple Music…' }))
     await screen.findByText('Reading your Apple Music library…')
     await userEvent.keyboard('{Escape}')
@@ -197,11 +201,15 @@ describe('Apple Music import', () => {
         playlists: { created: [], replaced: [], kept: [], duplicated: ['Balkan (Apple Music)'] }
       })
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
 
     await userEvent.click(await screen.findByRole('button', { name: 'Import from Apple Music…' }))
     const dialog = await screen.findByRole('dialog', { name: 'Import from Apple Music' })
     expect(await within(dialog).findByText('3 songs with files on this Mac')).toBeInTheDocument()
+    const tags = within(dialog).getByRole('table', { name: 'File tags' })
+    expect(within(tags).getByText('Bora Özkök')).toBeInTheDocument()
+    expect(within(tags).getByText('Turkey')).toBeInTheDocument()
+    expect(dialog).toHaveTextContent('Tags of 2 of the 3 songs, chosen at random')
 
     await userEvent.click(within(dialog).getByRole('radio', { name: 'Choose playlists' }))
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Balkan (2 songs)' }))
@@ -233,7 +241,7 @@ describe('Apple Music import', () => {
       'import:checkPlaylistConflicts': [],
       'import:start': summary()
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     await userEvent.click(await screen.findByRole('button', { name: 'Import from Apple Music…' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
 
@@ -262,7 +270,7 @@ describe('Apple Music import', () => {
         )
       }
     })
-    renderWithMantine(<MusicPage api={fake.api} />)
+    renderWithLibrary(<MusicPage />, fake.api)
     await userEvent.click(await screen.findByRole('button', { name: 'Import from Apple Music…' }))
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'This file is not an Apple Music library export (Library.xml).'

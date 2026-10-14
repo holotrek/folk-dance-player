@@ -135,7 +135,8 @@ describe('ImportService: Apple Music', () => {
       playlists: [
         { persistentId: 'BAL', name: 'Balkan', trackCount: 3 },
         { persistentId: 'OTH', name: 'Other', trackCount: 1 }
-      ]
+      ],
+      tagSample: expect.any(Array)
     })
   })
 

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
+import type { EventChannel, EventContract } from '@shared/contract'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { openDatabase } from './db/connection'
 import { getSchemaVersion, migrate, SchemaTooNewError } from './db/migrate'
@@ -34,6 +35,10 @@ function createMainWindow(): BrowserWindow {
     win.loadFile(join(__dirname, '../renderer/index.html'))
   }
   return win
+}
+
+function broadcast<C extends EventChannel>(channel: C, payload: EventContract[C]): void {
+  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(channel, payload)
 }
 
 function openLibraryDatabase(dbPath: string): DatabaseSync {
@@ -78,9 +83,8 @@ app.whenReady().then(() => {
     settings,
     startWorker: startUtilityWorker,
     onProgress: (progress) => {
-      for (const window of BrowserWindow.getAllWindows()) {
-        window.webContents.send('import:progress', progress)
-      }
+      broadcast('import:progress', progress)
+      if (progress.phase === 'done') broadcast('library:changed', null)
     }
   })
   registerHandlers(
@@ -90,7 +94,8 @@ app.whenReady().then(() => {
       settings,
       appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) }),
       importer,
-      dialogs: importDialogs
+      dialogs: importDialogs,
+      onLibraryChanged: () => broadcast('library:changed', null)
     })
   )
 

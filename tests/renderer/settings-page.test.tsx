@@ -69,4 +69,46 @@ describe('SettingsPage', () => {
     // The field re-mounts after a rejected save, so look it up again.
     expect(screen.getByLabelText('Auto-continue after (seconds)')).toHaveValue('5')
   })
+
+  test('saves the import mapping defaults', async () => {
+    const { api, calls } = fakeApi()
+    renderWithMantine(<SettingsPage api={api} />)
+    await userEvent.click(await screen.findByRole('radio', { name: 'Album Artist → Teacher' }))
+    expect(calls).toContainEqual(['settings:set', 'import.albumArtistTagTarget', 'teacher'])
+  })
+
+  test('edits the dance-type suggestions', async () => {
+    const { api, calls } = fakeApi()
+    renderWithMantine(<SettingsPage api={api} />)
+    // TagsInput labels both its visible and its hidden input, so find it by placeholder.
+    const input = await screen.findByPlaceholderText('Add a dance type')
+    await userEvent.type(input, 'Hora line{Enter}')
+    expect(calls).toContainEqual([
+      'settings:set',
+      'danceTypeSuggestions',
+      [...DEFAULT_SETTINGS.danceTypeSuggestions, 'Hora line']
+    ])
+  })
+
+  test('shows errors without Electron’s technical prefix', async () => {
+    const { api } = fakeApi()
+    const original = api.invoke
+    api.invoke = (async (channel: string, ...args: unknown[]) => {
+      if (channel === 'settings:set') {
+        throw new Error(
+          "Error invoking remote method 'settings:set': InvalidSettingError: Invalid value for autoContinue.seconds: -4"
+        )
+      }
+      return (original as (c: string, ...a: unknown[]) => unknown)(channel, ...args)
+    }) as RendererApi['invoke']
+    renderWithMantine(<SettingsPage api={api} />)
+    const input = await screen.findByLabelText('Auto-continue after (seconds)')
+    await userEvent.clear(input)
+    await userEvent.type(input, '-4')
+    await userEvent.tab()
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "Couldn't save setting: Invalid value for autoContinue.seconds: -4"
+    )
+    expect(screen.getByRole('alert')).not.toHaveTextContent('invoking remote method')
+  })
 })

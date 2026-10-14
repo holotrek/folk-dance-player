@@ -1,10 +1,23 @@
 import type {
   ApplePlaylistConflict,
   ApplePreview,
+  ImportMapping,
   ImportProgress,
   ImportRequest,
   ImportSummary
 } from './import'
+import type {
+  DancePatch,
+  DanceSearchResult,
+  LibraryQuery,
+  LibraryRow,
+  PlaylistSummary,
+  ReapplyResult,
+  SongDetail,
+  SongTags,
+  SongPatch,
+  Suggestions
+} from './library'
 import type { SettingKey, Settings } from './settings'
 
 export interface AppInfo {
@@ -32,6 +45,34 @@ export interface InvokeContract {
   'import:start': { args: [request: ImportRequest]; result: ImportSummary }
   'import:cancel': { args: []; result: void }
   'library:stats': { args: []; result: LibraryStats }
+  'library:list': { args: [query: LibraryQuery]; result: LibraryRow[] }
+  'library:song': { args: [songId: number]; result: SongDetail | null }
+  'library:updateSong': { args: [songId: number, patch: SongPatch]; result: void }
+  'library:updateDance': { args: [danceId: number, patch: DancePatch]; result: void }
+  'library:setTeacher': { args: [pairingId: number, teacher: string | null]; result: void }
+  'library:setDefaultDance': { args: [songId: number, danceId: number]; result: void }
+  'library:linkDance': { args: [songId: number, danceId: number]; result: void }
+  'library:createDance': { args: [songId: number, name: string]; result: number }
+  'library:unlinkDance': { args: [songId: number, danceId: number]; result: void }
+  'library:mergeDances': { args: [keepId: number, removeId: number]; result: void }
+  'library:sameDance': { args: [songId: number, ownId: number, otherId: number]; result: void }
+  'library:markDifferent': { args: [danceA: number, danceB: number]; result: void }
+  'library:searchDances': { args: [text: string]; result: DanceSearchResult[] }
+  'library:setFavorite': { args: [fileIds: number[], favorite: boolean]; result: void }
+  'library:songTags': { args: [songIds: number[]]; result: SongTags[] }
+  'library:reapplyMapping': {
+    args: [songIds: number[], mapping: ImportMapping]
+    result: ReapplyResult
+  }
+  'library:suggestions': { args: []; result: Suggestions }
+  'playlists:list': { args: []; result: PlaylistSummary[] }
+  'playlists:create': { args: [name: string]; result: number }
+  'playlists:rename': { args: [playlistId: number, name: string]; result: void }
+  'playlists:duplicate': { args: [playlistId: number]; result: number }
+  'playlists:delete': { args: [playlistId: number]; result: void }
+  'playlists:add': { args: [playlistId: number, fileIds: number[]]; result: void }
+  'playlists:remove': { args: [playlistId: number, itemIds: number[]]; result: void }
+  'playlists:reorder': { args: [playlistId: number, itemIds: number[]]; result: void }
 }
 
 export type InvokeChannel = keyof InvokeContract
@@ -48,7 +89,32 @@ export const INVOKE_CHANNELS = [
   'import:checkPlaylistConflicts',
   'import:start',
   'import:cancel',
-  'library:stats'
+  'library:stats',
+  'library:list',
+  'library:song',
+  'library:updateSong',
+  'library:updateDance',
+  'library:setTeacher',
+  'library:setDefaultDance',
+  'library:linkDance',
+  'library:createDance',
+  'library:unlinkDance',
+  'library:mergeDances',
+  'library:sameDance',
+  'library:markDifferent',
+  'library:searchDances',
+  'library:setFavorite',
+  'library:songTags',
+  'library:reapplyMapping',
+  'library:suggestions',
+  'playlists:list',
+  'playlists:create',
+  'playlists:rename',
+  'playlists:duplicate',
+  'playlists:delete',
+  'playlists:add',
+  'playlists:remove',
+  'playlists:reorder'
 ] as const satisfies readonly InvokeChannel[]
 
 // Compile error if a channel in InvokeContract is missing from INVOKE_CHANNELS.
@@ -59,11 +125,16 @@ void allChannelsListed
 // Every main → renderer event. Add a channel here and to EVENT_CHANNELS.
 export interface EventContract {
   'import:progress': ImportProgress
+  // Songs, dances, playlists or favorites changed (an edit or a finished import): refetch.
+  'library:changed': null
 }
 
 export type EventChannel = keyof EventContract
 
-export const EVENT_CHANNELS = ['import:progress'] as const satisfies readonly EventChannel[]
+export const EVENT_CHANNELS = [
+  'import:progress',
+  'library:changed'
+] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>
 const allEventsListed: [MissingEvents] extends [never] ? true : MissingEvents = true

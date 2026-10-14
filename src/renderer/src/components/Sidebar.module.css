@@ -9,3 +9,40 @@
   flex: 1;
   min-height: 0;
 }
+
+.dropActive {
+  outline: 2px dashed var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.playlist {
+  position: relative;
+}
+
+.playlist > div:first-child {
+  padding-right: 28px;
+}
+
+.playlists {
+  max-height: 40%;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+/* Centered with auto margins, not a transform: Mantine's pressed state sets its own transform,
+   which would replace a centering one and make the button jump down. */
+.options {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 4px;
+  margin-block: auto;
+  opacity: 0;
+}
+
+.playlist:hover .options,
+.options[aria-expanded='true'],
+.options:focus-visible {
+  opacity: 1;
+}

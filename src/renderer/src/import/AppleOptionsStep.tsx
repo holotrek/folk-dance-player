@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Button, Checkbox, Group, Radio, ScrollArea, Stack, Text } from '@mantine/core'
 import type { AppleSelection, ApplePreview, ImportMapping } from '@shared/import'
 import ImportMappingFields from './ImportMappingFields'
+import TagPreviewTable from './TagPreviewTable'
 
 const songs = (n: number): string => `${n} ${n === 1 ? 'song' : 'songs'}`
 
@@ -43,6 +44,16 @@ export default function AppleOptionsStep(props: {
             </Stack>
           </Checkbox.Group>
         </ScrollArea.Autosize>
+      )}
+      {preview.tagSample.length > 0 && (
+        <Stack gap={4}>
+          <Text size="sm" c="dimmed">
+            {preview.tagSample.length < preview.trackCount
+              ? `Tags of ${preview.tagSample.length} of the ${preview.trackCount} songs, chosen at random`
+              : 'Tags of every song'}
+          </Text>
+          <TagPreviewTable rows={preview.tagSample.map((t, i) => ({ ...t, key: i }))} />
+        </Stack>
       )}
       <ImportMappingFields value={props.mapping} onChange={props.onMappingChange} />
       <Group justify="flex-end">
