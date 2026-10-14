@@ -281,7 +281,7 @@ PROGRAMS                  [+]
 └──────────┴──────────────────────────────┴──────────────────────────────────┘
 ```
 
-- **Player bar** (above the tabs on every page; drawn above the Program page here): transport controls, the current item's label (§4 "Labels"), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the projector toggle (plan 5).
+- **Player bar** (above the tabs on every page; drawn above the Program page here): transport controls, the current item's label (§4 "Labels"), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the **Projector** switch: it shows where the view is ("On Epson Projector"), or the notice when there's no separate display.
   - **◀◀** restarts the current song. To go back to an earlier song, double-click it in previously played.
   - **▶** turns into **⏸** while a song plays.
   - When nothing is playing, the bar shows what's next ("Next up: …", "Starting in N…", or "Next: … in N…").
@@ -378,7 +378,7 @@ PROGRAMS                  [+]
 
 ### 7.3 Laptop-mode auto-fullscreen
 
-- **When:** only when projector mode is off. If `autoFullscreen.enabled` is on and there has been no input in the control window for `autoFullscreen.seconds`, the projector view opens over the laptop display.
+- **When:** only when projector mode is off, and only while music plays or a countdown runs. If `autoFullscreen.enabled` is on and there has been no input for `autoFullscreen.seconds` (keys in the control window, or mouse movement anywhere), the projector view opens over the laptop display.
 - **Closing:** mouse movement or Esc closes it, after a 1 s grace period.
 
 ### 7.4 Remote control
@@ -408,9 +408,14 @@ The keys are registered as global shortcuts in the main process and go to `Playe
   - The control window is always placed on the non-projector display, because macOS may make the projector the main display.
 - **Laptop mode** (the view covers the control window's own display, including mirror mode and "projector unplugged"): mouse movement or Esc closes it. Esc is captured from the app's own windows, not as a system-wide shortcut.
 - **Display changes:**
-  - **`display-removed` for the projector:** the window closes and audio continues.
+  - **`display-removed` for the projector:** the window closes and audio continues. It does not fall back to covering the laptop. **Known issue:** about one unplug in four leaves an orphaned grey window over the laptop until the app quits; turn the Projector switch off before unplugging (see `docs/spikes/projector-unplug.md`).
   - **`display-added`:** if projector mode is on, the window reopens on the saved display, or the first non-primary one.
   - **`display-metrics-changed`:** bounds are reapplied.
+- **At startup,** projector mode left on from last time reopens only when a separate display is connected; otherwise nothing covers the laptop until one is plugged in.
+- **The control window is kept off the projector's display** after any display change, including sleep and wake, which renumber displays and can move windows.
+- **macOS specifics:** `setVisibleOnAllWorkspaces` is called with `skipTransformProcessType`, or macOS briefly turns the whole app into a background app (no Dock icon, no ⌘-Tab, the control window hidden) and after sleep it can stay that way. On wake, the app re-checks the displays and shows the control window if it's hidden.
+- **Keeping the Mac awake:** while the projector view shows, or music plays or counts down, the app blocks display sleep (`powerSaveBlocker`).
+- **Closing the control window quits the app,** so the projector view is never left on its own.
 - **Turning on projector mode with only one display:** shows "No separate display — showing on this screen (move the mouse or press Esc to close)", which is laptop mode.
 
 ### 8.2 Layout
@@ -474,10 +479,16 @@ UP NEXT
 - **Dividers:** a subtle, low-contrast horizontal line separates list entries, so short titles and countries clearly pair up across the gap.
 - **Long titles** truncate with an ellipsis before they reach the country, so the country is never pushed off or overlapped. The smaller song title is truncated first, then the dance name.
 - **Up next** is a vertical list showing as many entries as fit in its area.
+- **STOP markers** show in the list as a row reading `⌄ —— Teaching —— ⌄`, the arrows pointing down at the dance that will be taught. Several STOPs in a row show once, and a STOP with no song after it isn't shown. Halted at a STOP, the next dance in the middle row carries the same Teaching row.
+- **The middle row's heading:** "Now playing" (with "Paused" when paused or stopped), or, when nothing is loaded, "Up next", "Starting in N…" or "Next in N…". The list below is then headed "After that".
+- **Previews and replays** show as Now Playing and are listed in previously played, like any play.
+- **Songs whose file is missing** are left out of the lists, since they will be skipped.
+- **With no program loaded and nothing playing,** the view shows only the app's name.
 - **Previously played** shows titles only when a slide is beside it, because the column is narrow. With no slide it shows the country too. Newest is at the top.
 - **A missing country** leaves the right side empty.
 
-- **Read-only.** The view renders state snapshots from main and sends nothing back except diagnostics.
+- **Read-only.** The view renders state snapshots from main (`projector:snapshot`, plus `projector:progress` about 4 times a second for the red line) and sends nothing back. Its own preload exposes only `getSnapshot`, `onSnapshot` and `onProgress`.
+- **Without Canva slides (until plan 6),** the view always uses the no-slide layout.
 - **Errors** are never shown on the projector, only in the control window.
 
 ### 8.3 Canva slides
