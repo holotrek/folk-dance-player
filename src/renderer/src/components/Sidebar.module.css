@@ -9,3 +9,31 @@
   flex: 1;
   min-height: 0;
 }
+
+.dropActive {
+  outline: 2px dashed var(--mantine-primary-color-filled);
+  outline-offset: -2px;
+  border-radius: var(--mantine-radius-sm);
+}
+
+.playlist {
+  position: relative;
+}
+
+.playlist > div:first-child {
+  padding-right: 28px;
+}
+
+.options {
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  opacity: 0;
+}
+
+.playlist:hover .options,
+.options[aria-expanded='true'],
+.options:focus-visible {
+  opacity: 1;
+}
