@@ -1,0 +1,11 @@
+.zone {
+  border-style: dashed;
+  border-width: 2px;
+  text-align: center;
+  transition: background-color 120ms ease;
+}
+
+.active {
+  background-color: var(--mantine-primary-color-light);
+  border-color: var(--mantine-primary-color-filled);
+}

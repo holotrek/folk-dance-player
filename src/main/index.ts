@@ -5,7 +5,11 @@ import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import { openDatabase } from './db/connection'
 import { getSchemaVersion, migrate, SchemaTooNewError } from './db/migrate'
 import { MIGRATIONS } from './db/migrations'
+import { importDialogs } from './import/dialogs'
+import { ImportService } from './import/import-service'
+import { startUtilityWorker } from './import/utility-worker'
 import { createHandlers } from './ipc/handlers'
+import { guardNavigation } from './navigation'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
 
@@ -23,6 +27,7 @@ function createMainWindow(): BrowserWindow {
     }
   })
   win.on('ready-to-show', () => win.show())
+  guardNavigation(win.webContents)
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
@@ -68,11 +73,24 @@ app.whenReady().then(() => {
   }
 
   const settings = new SettingsStore(db)
+  const importer = new ImportService({
+    db,
+    settings,
+    startWorker: startUtilityWorker,
+    onProgress: (progress) => {
+      for (const window of BrowserWindow.getAllWindows()) {
+        window.webContents.send('import:progress', progress)
+      }
+    }
+  })
   registerHandlers(
     ipcMain,
     createHandlers({
+      db,
       settings,
-      appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) })
+      appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) }),
+      importer,
+      dialogs: importDialogs
     })
   )
 

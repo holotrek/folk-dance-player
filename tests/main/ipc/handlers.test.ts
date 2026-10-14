@@ -2,15 +2,35 @@ import type { IpcMain, IpcMainInvokeEvent } from 'electron'
 import { describe, expect, test } from 'vitest'
 import { INVOKE_CHANNELS } from '@shared/contract'
 import { DEFAULT_SETTINGS } from '@shared/settings'
-import { createHandlers } from '../../../src/main/ipc/handlers'
+import { emptySummary, type ImportRequest } from '@shared/import'
+import { createHandlers, type HandlerDeps } from '../../../src/main/ipc/handlers'
 import { registerHandlers } from '../../../src/main/ipc/register'
 import { InvalidSettingError, SettingsStore } from '../../../src/main/settings/settings-store'
 import { createTestDb } from '../helpers/test-db'
 
 const appInfo = { version: '0.1.0', dbPath: '/tmp/test.sqlite', schemaVersion: 1 }
 
-function makeHandlers() {
-  return createHandlers({ settings: new SettingsStore(createTestDb()), appInfo: () => appInfo })
+const summary = emptySummary()
+
+function makeDeps(overrides: Partial<HandlerDeps> = {}): HandlerDeps {
+  const db = createTestDb()
+  return {
+    db,
+    settings: new SettingsStore(db),
+    appInfo: () => appInfo,
+    importer: {
+      run: async () => summary,
+      cancel: () => undefined,
+      previewApple: async () => ({ trackCount: 0, playlists: [] }),
+      checkPlaylistConflicts: () => []
+    },
+    dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
+    ...overrides
+  }
+}
+
+function makeHandlers(overrides: Partial<HandlerDeps> = {}) {
+  return createHandlers(makeDeps(overrides))
 }
 
 describe('createHandlers', () => {
@@ -32,6 +52,72 @@ describe('createHandlers', () => {
   test('settings:set rejects invalid values', async () => {
     const h = makeHandlers()
     expect(() => h['settings:set']('autoContinue.seconds', -3)).toThrow(InvalidSettingError)
+  })
+})
+
+describe('import and library handlers', () => {
+  test('import:pickMusic returns what the user picked', async () => {
+    const h = makeHandlers({
+      dialogs: { pickMusic: async () => ['/Music/Balkan'], pickAppleLibrary: async () => null }
+    })
+    expect(await h['import:pickMusic']()).toEqual(['/Music/Balkan'])
+  })
+
+  test('import:pickAppleLibrary returns the chosen file or null', async () => {
+    const h = makeHandlers({
+      dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => '/x/Library.xml' }
+    })
+    expect(await h['import:pickAppleLibrary']()).toBe('/x/Library.xml')
+  })
+
+  test('import:start runs the import and returns its summary', async () => {
+    const requests: ImportRequest[] = []
+    const deps = makeDeps()
+    deps.importer.run = async (request) => {
+      requests.push(request)
+      return summary
+    }
+    const result = await createHandlers(deps)['import:start']({ kind: 'paths', paths: ['/a.mp3'] })
+    expect(result).toBe(summary)
+    expect(requests).toEqual([{ kind: 'paths', paths: ['/a.mp3'] }])
+  })
+
+  test('import:cancel, previewApple and checkPlaylistConflicts delegate to the importer', async () => {
+    const calls: string[] = []
+    const deps = makeDeps()
+    deps.importer = {
+      run: async () => summary,
+      cancel: () => void calls.push('cancel'),
+      previewApple: async (path) => {
+        calls.push(`preview ${path}`)
+        return { trackCount: 1, playlists: [] }
+      },
+      checkPlaylistConflicts: (ids) => {
+        calls.push(`conflicts ${ids.join(',')}`)
+        return [{ persistentId: 'BAL', name: 'Balkan' }]
+      }
+    }
+    const h = createHandlers(deps)
+    await h['import:cancel']()
+    expect(await h['import:previewApple']('/x/Library.xml')).toEqual({
+      trackCount: 1,
+      playlists: []
+    })
+    expect(await h['import:checkPlaylistConflicts'](['BAL'])).toEqual([
+      { persistentId: 'BAL', name: 'Balkan' }
+    ])
+    expect(calls).toEqual(['cancel', 'preview /x/Library.xml', 'conflicts BAL'])
+  })
+
+  test('library:stats counts the files that are not missing', async () => {
+    const deps = makeDeps()
+    const add = deps.db.prepare(
+      "INSERT INTO files (path, file_size, mtime_ms, source, is_missing) VALUES (?, 1, 1, 'files', ?)"
+    )
+    add.run('/a.mp3', 0)
+    add.run('/b.mp3', 0)
+    add.run('/c.mp3', 1)
+    expect(await createHandlers(deps)['library:stats']()).toEqual({ fileCount: 2 })
   })
 })
 
