@@ -24,7 +24,9 @@ function fakeApi(initial: Settings = DEFAULT_SETTINGS) {
         return current
       }
       throw new Error(`unexpected channel ${channel}`)
-    }) as RendererApi['invoke']
+    }) as RendererApi['invoke'],
+    on: () => () => undefined,
+    getPathsForFiles: () => []
   }
   return { api, calls }
 }
