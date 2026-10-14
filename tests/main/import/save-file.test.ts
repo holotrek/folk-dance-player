@@ -137,6 +137,49 @@ describe('saveImportedFile', () => {
     })
   })
 
+  describe('never writes one song’s tags into a dance shared with other songs', () => {
+    let fileId: number
+    let shared: number
+    const bare = { title: 'Lesnoto Oro', artist: null, albumArtist: null, genre: null }
+
+    beforeEach(() => {
+      fileId = saveImportedFile(db, facts(dir.file('a.mp3', 'x'), { tags: bare }), fromFiles).fileId
+      const other = saveImportedFile(
+        db,
+        facts(dir.file('b.mp3', 'x'), { tags: bare, contentHash: 'hash-b' }),
+        fromFiles
+      ).fileId
+      shared = addDance(db, { name: 'Lesnoto' })
+      link(db, shared, songId(fileId))
+      link(db, shared, songId(other))
+    })
+
+    test('when the shared dance is the song’s default', () => {
+      db.prepare('UPDATE song_prefs SET default_dance_id = ? WHERE song_id = ?').run(
+        shared,
+        songId(fileId)
+      )
+      saveImportedFile(db, facts(dir.file('a.mp3', 'x')), fromFiles)
+      expect(
+        db.prepare('SELECT country, choreographer FROM dances WHERE id = ?').get(shared)
+      ).toEqual({
+        country: null,
+        choreographer: null
+      })
+    })
+
+    test('when the song’s own dance was unlinked and only the shared dance remains', () => {
+      db.prepare('DELETE FROM dance_songs WHERE song_id = ? AND dance_id <> ?').run(
+        songId(fileId),
+        shared
+      )
+      saveImportedFile(db, facts(dir.file('a.mp3', 'x')), fromFiles)
+      expect(db.prepare('SELECT country FROM dances WHERE id = ?').get(shared)).toEqual({
+        country: null
+      })
+    })
+  })
+
   test('does not recreate a dance the user unlinked', () => {
     const path = dir.file('hora.mp3', 'x')
     const { fileId } = saveImportedFile(db, facts(path), fromFiles)

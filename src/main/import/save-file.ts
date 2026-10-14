@@ -102,25 +102,27 @@ function fillEmpty(
   return true
 }
 
-// The song's default dance (spec §4): song_prefs.default_dance_id, else its earliest-linked dance.
+// The pairing for the song's default dance (song_prefs.default_dance_id), if it is still linked,
+// and how many songs that dance is linked to.
 function defaultPairing(
   db: DatabaseSync,
   songId: number
-): { id: number; danceId: number } | undefined {
+): { id: number; danceId: number; songCount: number } | undefined {
   return db
     .prepare(
-      `SELECT ds.id, ds.dance_id AS danceId FROM dance_songs ds
-       LEFT JOIN song_prefs sp ON sp.song_id = ds.song_id
-       WHERE ds.song_id = ?
-       ORDER BY (ds.dance_id = sp.default_dance_id) DESC, ds.id
-       LIMIT 1`
+      `SELECT ds.id, ds.dance_id AS danceId,
+         (SELECT COUNT(*) FROM dance_songs o WHERE o.dance_id = ds.dance_id) AS songCount
+       FROM song_prefs sp JOIN dance_songs ds
+         ON ds.song_id = sp.song_id AND ds.dance_id = sp.default_dance_id
+       WHERE sp.song_id = ?`
     )
-    .get(songId) as { id: number; danceId: number } | undefined
+    .get(songId) as { id: number; danceId: number; songCount: number } | undefined
 }
 
 // Re-imports never overwrite fields the user has edited; they only fill empty ones (spec §5.4):
-// the song, its default dance, and that pairing's teacher. A song whose dances were all unlinked
-// is left without one.
+// the song, its default dance, and that pairing's teacher. A dance shared with other songs is
+// never filled from one song's tags (it would change every song using it), and nothing is filled
+// when the song's default dance is no longer linked.
 function fillEmptyFields(db: DatabaseSync, fileId: number, mapped: MappedTags): boolean {
   const { id: songId } = db.prepare('SELECT id FROM songs WHERE file_id = ?').get(fileId) as {
     id: number
@@ -128,7 +130,9 @@ function fillEmptyFields(db: DatabaseSync, fileId: number, mapped: MappedTags): 
   let changed = fillEmpty(db, 'songs', 'id', songId, mapped.song)
   const pairing = defaultPairing(db, songId)
   if (!pairing) return changed
-  changed = fillEmpty(db, 'dances', 'id', pairing.danceId, mapped.dance) || changed
+  if (pairing.songCount === 1) {
+    changed = fillEmpty(db, 'dances', 'id', pairing.danceId, mapped.dance) || changed
+  }
   if (mapped.teacher !== null) {
     db.prepare('INSERT OR IGNORE INTO dance_song_prefs (dance_song_id) VALUES (?)').run(pairing.id)
     changed =
