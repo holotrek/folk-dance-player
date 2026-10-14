@@ -21,7 +21,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - After each import, a summary lists what was added or updated, and any files that were missing, unreadable, or in a format the player can't play yet (such as AIFF or Apple Lossless).
 - The Music page lists your whole library: search by song, dance, teacher, choreographer or country (accents don't matter), sort by any column, and select songs with click, ⌘-click or Shift-click, or all of them with ⌘A.
 - Edit a song and its dances in a side panel: dance name, country, choreographer, teacher, dance type, difficulty and notes, with suggestions from what you've entered before.
-- Link a song to more dances, make one its default, unlink one, or merge two dances that are really the same. When two dances share a name, the app asks whether they're the same dance.
+- Link a song to more dances, make one its default, unlink one, or merge two dances that are really the same (merging keeps both dances' notes). When two dances share a name, the app asks whether they're the same dance.
 - Make playlists: create, rename, duplicate and delete them, drag songs onto them, reorder them, and remove songs. Mark favorites, and drag songs onto Favorites.
 - Re-apply the import mapping to selected songs: the dialog shows their tags and lets you choose the mapping for that run.
 - Importing from Apple Music shows the tags of up to 50 songs (chosen at random in a larger library) beside the mapping choices, so you can see which tag holds teachers or choreographers.
