@@ -9,6 +9,7 @@ import { importDialogs } from './import/dialogs'
 import { ImportService } from './import/import-service'
 import { startUtilityWorker } from './import/utility-worker'
 import { createHandlers } from './ipc/handlers'
+import { guardNavigation } from './navigation'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
 
@@ -26,6 +27,7 @@ function createMainWindow(): BrowserWindow {
     }
   })
   win.on('ready-to-show', () => win.show())
+  guardNavigation(win.webContents)
   if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
     win.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
