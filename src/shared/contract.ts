@@ -74,7 +74,11 @@ export interface InvokeContract {
   'playlists:add': { args: [playlistId: number, fileIds: number[]]; result: void }
   'playlists:remove': { args: [playlistId: number, itemIds: number[]]; result: void }
   'playlists:reorder': { args: [playlistId: number, itemIds: number[]]; result: void }
-  'library:setHolding': { args: [fileIds: number[], held: boolean]; result: void }
+  // Holding places songs before `beforeFileId` (a held song) or at the end; held songs move.
+  'library:setHolding': {
+    args: [fileIds: number[], held: boolean, beforeFileId?: number | null]
+    result: void
+  }
   'programs:list': { args: [search: string]; result: ProgramSummary[] }
   'programs:get': { args: [programId: number]; result: ProgramDetail | null }
   'programs:create': { args: [name: string]; result: number }

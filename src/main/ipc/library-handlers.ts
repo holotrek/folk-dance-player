@@ -60,7 +60,9 @@ export function libraryHandlers(
     'library:sameDance': edit((songId, ownId, otherId) => sameDance(db, songId, ownId, otherId)),
     'library:markDifferent': edit((a, b) => markDifferentDances(db, a, b)),
     'library:setFavorite': edit((fileIds, favorite) => setFavorite(db, fileIds, favorite)),
-    'library:setHolding': edit((fileIds, held) => setHolding(db, fileIds, held)),
+    'library:setHolding': edit((fileIds, held, before) =>
+      setHolding(db, fileIds, held, before ?? null)
+    ),
     'library:songTags': (songIds) => getSongTags(db, songIds),
     'library:reapplyMapping': edit((songIds, mapping) => reapplyMapping(db, songIds, mapping)),
     'playlists:list': () => listPlaylists(db),

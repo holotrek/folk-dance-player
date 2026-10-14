@@ -110,5 +110,12 @@ describe('program handlers', () => {
     })
     expect(held.map((r) => r.title)).toEqual(['Kolo'])
     expect(counts.library).toBe(1)
+    await h['library:setHolding']([songs.hora.fileId], true, songs.kolo.fileId)
+    const ordered = await h['library:list']({
+      search: '',
+      filter: { kind: 'holding' },
+      sort: { column: 'title', direction: 'desc' }
+    })
+    expect(ordered.map((r) => r.title)).toEqual(['Hora', 'Kolo'])
   })
 })

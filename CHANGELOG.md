@@ -33,6 +33,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Remove a program item with the ✕ that appears on hover, and drop songs anywhere on the Program panel.
 - Double-click a song in the library, a playlist or holding to preview it; double-click an entry in Previously played to play it again. Previews and replays never continue on their own.
 - Slow a song down or speed it up (0.5×–1.5×) without changing its pitch, with a lock to keep the speed for the next song, and set the volume.
-- Holding: drop songs on the holding panel to keep them handy for the session.
+- Holding: drop songs on the holding panel to keep them handy for the session, slotting them in between held songs or at the end, and drag held songs to reorder them.
 - Previously played lists what was played in the program, newest first. Played items leave the program but are kept, so a saved program records what was danced.
 - When a program is loaded, its files are checked, and missing ones are flagged before the event. A missing file is skipped at play time with a warning.

@@ -86,7 +86,7 @@ song_prefs       (personal)   song_id PK, default_dance_id
 dance_prefs      (personal)   dance_id PK, difficulty (1–5, nullable), notes,
                               canva_deck_id, canva_page_id, canva_page_index (last known position)
 dance_song_prefs (personal)   dance_song_id PK, teacher
-file_prefs       (personal)   file_id PK, is_favorite, in_holding
+file_prefs       (personal)   file_id PK, is_favorite, in_holding, holding_position (order in holding)
 canva_decks      (local)      id, view_url UNIQUE, design_id, title, pages (JSON: ordered [{id, title}]),
                               synced_at, last_error
 slide_cache      (local)      deck_id, page_id, image_path, captured_at, last_error  PK (deck_id, page_id)
@@ -299,7 +299,7 @@ PROGRAMS                  [+]
   - **Dropping:** the whole Program panel accepts drops. Dropped on an item, songs go before it; anywhere else, at the end.
   - **The program's name** is shown above the list, with a ✎ button to rename it.
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
-- **Holding panel:** files with `in_holding`, above the library list. Drop songs on it to hold them, ✕ releases one, and held songs can be dragged into the program.
+- **Holding panel:** files with `in_holding`, above the library list, in the order they were placed (`holding_position`). Drag and drop works as in the program: the whole panel takes drops; dropped on a held song, songs go before it, and anywhere else at the end; held songs dragged within the panel move. ✕ releases one, and held songs can be dragged into the program.
 - **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection, and the search carries over between the Program and Music pages.
 
 ### 6.3 Music page

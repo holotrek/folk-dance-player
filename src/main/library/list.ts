@@ -68,9 +68,14 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
     : ''
   if (playlistId !== null) params.unshift(playlistId)
   // Sorting by playlist position outside a playlist falls back to title.
-  const sortExpr =
-    query.sort.column === 'position' && !playlist ? SORT_SQL.title : SORT_SQL[query.sort.column]
-  const direction = query.sort.direction === 'desc' ? 'DESC' : 'ASC'
+  // Holding keeps the order songs were placed in (spec §6.2), whatever sort is asked for.
+  const holding = query.filter.kind === 'holding'
+  const sortExpr = holding
+    ? 'fp.holding_position'
+    : query.sort.column === 'position' && !playlist
+      ? SORT_SQL.title
+      : SORT_SQL[query.sort.column]
+  const direction = !holding && query.sort.direction === 'desc' ? 'DESC' : 'ASC'
 
   const rows = db
     .prepare(
