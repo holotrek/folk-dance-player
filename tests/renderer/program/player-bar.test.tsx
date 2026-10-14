@@ -21,7 +21,8 @@ const COMMANDS = [
   'player:setVolume',
   'player:setAutoContinue',
   'player:dismissWarning',
-  'player:restart'
+  'player:restart',
+  'projector:setEnabled'
 ] as const
 
 function setup(state: PlayerState) {
@@ -158,7 +159,14 @@ describe('player bar', () => {
     act(() =>
       fake.emit('player:state', {
         ...playing(hora, { speed: 0.75 }, 2),
-        current: { playId: 2, source: 'preview', itemId: null, track: hora, restarts: 0 }
+        current: {
+          playId: 2,
+          source: 'preview',
+          itemId: null,
+          track: hora,
+          restarts: 0,
+          logId: null
+        }
       })
     )
     expect(screen.getByText('Preview')).toBeInTheDocument()
@@ -175,6 +183,42 @@ describe('player bar', () => {
     await userEvent.type(seconds, '8')
     await userEvent.tab()
     expect(fake.callsTo('player:setAutoContinue')).toEqual([[{ enabled: false }], [{ seconds: 8 }]])
+  })
+
+  test('reports the playing song’s position, for the projector’s red line', async () => {
+    const fake = setup(playing(hora, {}, 7))
+    await waitFor(() => expect(audio().src).toContain('101'))
+    audio().currentTime = 12
+    fireEvent(audio(), new Event('timeupdate'))
+    expect(fake.callsTo('projector:reportProgress').at(-1)).toEqual([7, 12_000, 185_000])
+  })
+
+  test('the projector switch turns projector mode on, and shows where it is and any notice', async () => {
+    const fake = setup(playerState())
+    await userEvent.click(await screen.findByRole('switch', { name: 'Projector' }))
+    expect(fake.callsTo('projector:setEnabled')).toEqual([[true]])
+    act(() =>
+      fake.emit('projector:status', {
+        enabled: true,
+        open: true,
+        mode: 'laptop',
+        display: 'Built-in Retina Display',
+        notice:
+          'No separate display — showing on this screen (move the mouse or press Esc to close)'
+      })
+    )
+    expect(screen.getByRole('switch', { name: 'Projector' })).toBeChecked()
+    expect(screen.getByText(/No separate display/)).toBeInTheDocument()
+    act(() =>
+      fake.emit('projector:status', {
+        enabled: true,
+        open: true,
+        mode: 'projector',
+        display: 'Epson',
+        notice: null
+      })
+    )
+    expect(screen.getByText('On Epson')).toBeInTheDocument()
   })
 
   test('shows a warning until it is dismissed', async () => {

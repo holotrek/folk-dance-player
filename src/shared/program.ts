@@ -50,6 +50,7 @@ export interface NowPlaying {
   itemId: number | null // the program item, for program plays
   track: Track
   restarts: number // bumped by ◀◀ (restart); the control window rewinds when it changes
+  logId: number | null // its play_log entry (the projector leaves it out of previously played)
 }
 
 export interface PlayerState {
@@ -65,6 +66,7 @@ export interface PlayerState {
   volume: number // 0–1
   autoContinue: { enabled: boolean; seconds: number }
   warning: string | null // shown in the control window only, never on the projector
+  atStop: boolean // playback halted at a STOP marker; the next dance is the one to be taught
 }
 
 // Before anything has played (and in the control window until main's state arrives).
@@ -78,7 +80,8 @@ export const IDLE_PLAYER_STATE: PlayerState = {
   speedLocked: false,
   volume: 1,
   autoContinue: { enabled: true, seconds: 5 },
-  warning: null
+  warning: null,
+  atStop: false
 }
 
 // Whether the remote works (spec §7.4): its media keys are global shortcuts, which macOS only

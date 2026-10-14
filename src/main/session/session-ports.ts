@@ -34,8 +34,9 @@ export function createSessionPorts(
     getTrack: (fileId, danceId) => getTrack(db, fileId, danceId),
     getLoggedPlay: (logId) => getLoggedPlay(db, logId),
     logPlay: (entry) => {
-      logPlay(db, entry)
+      const logId = logPlay(db, entry)
       notices.programsChanged()
+      return logId
     },
     checkFile: (fileId) => {
       const path = trackPath(db, fileId)

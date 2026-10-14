@@ -32,6 +32,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - ⏹ rewinds the song and keeps it ready; ▶ plays it again. A song interrupted by a preview comes back as the next song. Loading another program while a song plays asks first.
 - Remove a program item with the ✕ that appears on hover, and drop songs anywhere on the Program panel.
 - Double-click a song in the library, a playlist or holding to preview it; double-click an entry in Previously played to play it again. Previews and replays never continue on their own.
+- The projector view: on a second display, a large-font view of what was played, what's playing (with a red progress line) and what's coming up, including a "Teaching" marker before a dance that will be taught. Turn it on with the Projector switch in the player bar, and choose its display in Settings.
+- With no projector connected, the same view can cover the laptop screen: from the Projector switch, or automatically after an idle time while music plays. Move the mouse or press Esc to close it.
+- The Mac doesn't go to sleep while the projector view shows or music plays.
 - Control playback with a media remote (or a keyboard's media keys), even while the app is in the background: play/pause, next, and back to restart the song. Settings shows whether the remote works and asks macOS for the permission it needs.
 - Slow a song down or speed it up (0.5×–1.5×) without changing its pitch, with a lock to keep the speed for the next song, and set the volume.
 - Holding: drop songs on the holding panel to keep them handy for the session, slotting them in between held songs or at the end, and drag held songs to reorder them.

@@ -28,7 +28,7 @@ export function playerState(extra: Partial<PlayerState> = {}): PlayerState {
 export function playing(t: Track, extra: Partial<PlayerState> = {}, playId = 1): PlayerState {
   return playerState({
     status: 'playing',
-    current: { playId, source: 'program', itemId: 1, track: t, restarts: 0 },
+    current: { playId, source: 'program', itemId: 1, track: t, restarts: 0, logId: null },
     ...extra
   })
 }

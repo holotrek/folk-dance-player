@@ -43,3 +43,10 @@ export const NextIcon = (p: IconProps): React.JSX.Element => (
     <path d="M3 5v14l9-7zM12 5v14l9-7z" />
   </Icon>
 )
+
+// ⌄: points down at the dance that will be taught (the projector's Teaching row).
+export const ChevronDownIcon = (p: IconProps): React.JSX.Element => (
+  <Icon {...p}>
+    <path d="M4.5 8.5 12 16l7.5-7.5-1.8-1.8L12 12.4 6.3 6.7z" />
+  </Icon>
+)

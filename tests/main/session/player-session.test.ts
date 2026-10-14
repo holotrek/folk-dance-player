@@ -2,7 +2,13 @@ import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { PlayerState } from '@shared/program'
 import { listPlayed } from '../../../src/main/programs/history'
-import { addStop, addTracks, createProgram, getProgram } from '../../../src/main/programs/programs'
+import {
+  addStop,
+  addTracks,
+  createProgram,
+  getProgram,
+  removeItems
+} from '../../../src/main/programs/programs'
 import { PlayerSession } from '../../../src/main/session/player-session'
 import { createSessionPorts } from '../../../src/main/session/session-ports'
 import { SettingsStore } from '../../../src/main/settings/settings-store'
@@ -369,6 +375,75 @@ describe('review fixes', () => {
     session.refresh()
     vi.advanceTimersByTime(3000)
     expect(state()).toMatchObject({ status: 'idle', current: null, nextUp: { title: 'B' } })
+  })
+})
+
+describe('what the projector shows', () => {
+  test('with auto-continue off, a STOP reached after a song is marked played; the next dance is queued', () => {
+    addTracks(db, program, [songs.a.fileId])
+    addStop(db, program)
+    addTracks(db, program, [songs.b.fileId])
+    setup({ autoContinue: false })
+    session.play()
+    finish()
+    expect(state()).toMatchObject({ status: 'idle', nextUp: { title: 'B' } })
+    expect(unplayed()).toEqual(['B'])
+  })
+
+  test('says when playback halted at a STOP marker, until the next song starts', () => {
+    addTracks(db, program, [songs.a.fileId])
+    addStop(db, program)
+    addTracks(db, program, [songs.b.fileId])
+    setup({ seconds: 0 })
+    session.play()
+    expect(state().atStop).toBe(false)
+    finish()
+    expect(state()).toMatchObject({ status: 'idle', atStop: true })
+    session.play()
+    expect(state()).toMatchObject({ status: 'playing', atStop: false })
+  })
+
+  test('the playing song carries the id of its play-log entry', () => {
+    addTracks(db, program, [songs.a.fileId])
+    setup()
+    session.play()
+    expect(state().current!.logId).toBe(listPlayed(db, program)[0].logId)
+  })
+
+  test('Teaching clears when another program is loaded, or the taught dance is removed', () => {
+    addTracks(db, program, [songs.a.fileId])
+    addStop(db, program)
+    const [b] = addTracks(db, program, [songs.b.fileId])
+    setup({ seconds: 0 })
+    session.play()
+    finish()
+    expect(state().atStop).toBe(true)
+    removeItems(db, program, [b])
+    session.refresh()
+    expect(state().atStop).toBe(false)
+
+    const other = createProgram(db, 'Other')
+    addTracks(db, other, [songs.a.fileId])
+    addStop(db, other)
+    addTracks(db, other, [songs.c.fileId])
+    settings.set('currentProgramId', other)
+    session.refresh()
+    session.play()
+    finish()
+    expect(state().atStop).toBe(true)
+    settings.set('currentProgramId', program)
+    session.refresh()
+    expect(state().atStop).toBe(false)
+  })
+
+  test('refresh relabels the playing song after its dance is edited', () => {
+    addTracks(db, program, [songs.a.fileId])
+    setup()
+    session.play()
+    db.prepare("UPDATE dances SET name = 'Hora Mare' WHERE id = ?").run(songs.a.danceId)
+    session.refresh()
+    expect(state().current?.track.label).toBe('A | Hora Mare')
+    expect(state().status).toBe('playing')
   })
 })
 

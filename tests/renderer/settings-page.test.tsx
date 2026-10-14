@@ -18,6 +18,15 @@ function fakeApi(
       calls.push([channel, ...args])
       if (channel === 'settings:getAll') return current
       if (channel === 'remote:status' || channel === 'remote:requestAccess') return remote()
+      if (channel === 'projector:displays')
+        return [
+          { id: 1, label: 'Built-in Retina Display', primary: true, internal: true },
+          { id: 2, label: 'Epson Projector', primary: false, internal: false }
+        ]
+      if (channel === 'projector:setDisplay') {
+        current = { ...current, 'projector.displayId': args[0] as number | null }
+        return { enabled: false, open: false, mode: null, display: null, notice: null }
+      }
       if (channel === 'app:getInfo')
         return { version: '0.1.0', dbPath: '/data/folk-dance-player.sqlite', schemaVersion: 1 }
       if (channel === 'settings:set') {
@@ -140,5 +149,15 @@ describe('SettingsPage', () => {
     const { api } = fakeApi(DEFAULT_SETTINGS, () => ({ trusted: true, keys: ALL_KEYS.slice(1) }))
     renderWithMantine(<SettingsPage api={api} />)
     expect(await screen.findByText(/Another app is using: play\/pause/)).toBeInTheDocument()
+  })
+
+  test('chooses the projector display, or automatic', async () => {
+    const { api, calls } = fakeApi()
+    renderWithMantine(<SettingsPage api={api} />)
+    // Select labels a hidden input too (like TagsInput), so find it by the value it shows.
+    const select = await screen.findByDisplayValue('Automatic (the first external display)')
+    await userEvent.click(select)
+    await userEvent.click(await screen.findByRole('option', { name: 'Epson Projector' }))
+    expect(calls).toContainEqual(['projector:setDisplay', 2])
   })
 })
