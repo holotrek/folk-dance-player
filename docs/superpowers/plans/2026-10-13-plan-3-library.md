@@ -6407,3 +6407,37 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 - `npm test` passes: 298 tests (203 from Plans 1–2, plus 95 new).
 - `npm run typecheck`, `npx prettier --check .` and `npm run build` are clean.
 - In the running app you can search, sort and select songs, edit songs and dances, link, merge and answer same-name suggestions, manage playlists and favorites from the sidebar, and re-apply the mapping.
+
+---
+
+## Changes after execution
+
+These were made on the same branch after the tasks above, from the final review and from manual testing. The spec and AGENTS.md are updated to match. The suite grew from 298 to 307 tests.
+
+**Final review fixes** (each with a test that failed first):
+- A merge, including "Same dance", carries the removed dance's "Different dance" answers over to the kept dance. Before, the cascade on `distinct_dances` deleted them, and dismissed suggestions came back.
+- A merge adds the removed dance's notes after the kept dance's notes instead of dropping them. The merge dialog now mentions notes.
+- Same-name suggestions skip dances that no song uses.
+- Playlist rows can't be reordered while a search is active. Before, the drop sent only the visible rows, which main rejected, and nothing showed.
+
+**From manual testing:**
+- **Re-apply mapping…** opens `ReapplyDialog`: the selected songs' tags (up to 50) and the mapping fields. The fields start from the import settings, and the choice applies to that run only.
+  - `library:reapplyMapping` now takes `(songIds, mapping)`.
+  - A new channel, `library:songTags`, reads the tags (`getSongTags`).
+  - Step 7's check 5 becomes: select songs, choose Re-apply mapping…, pick a mapping in the dialog, and read the result.
+- **Apple Music import:** the mapping step shows `ApplePreview.tagSample`, up to 50 local tracks' tags from `Library.xml`. They're chosen at random by `previewAppleLibrary(lib, random)` when there are more, and sorted by title.
+- **Shared tag table:** `TagPreviewTable` serves both of the above, with a header that stays in place while the rows scroll.
+- **Sidebar:**
+  - The playlist list is its own scroll container (`role="group"`, "Playlists"), at most 40% of the sidebar.
+  - The "⋯" button is centered with auto margins instead of a transform, so it no longer jumps when pressed.
+- **Select all:** ⌘A or Ctrl+A in the table selects every song shown (`selectAll` in the library store). The table is focusable for this.
+
+**Deferred minors from the final review** (for later plans):
+- Sidebar and table actions fail silently.
+- A no-op drop marks an Apple playlist as edited.
+- A rejected field save leaves the field blank.
+- Editing the field you searched for closes the editor.
+- "Same dance" on a shared dance leaves two same-named dances linked to the song.
+- Duplicate React keys for repeated Apple playlist tracks.
+- Every field you leave refetches the whole list, and dance search runs in JavaScript.
+- The last field's edit is lost on window close.
