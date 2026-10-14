@@ -83,3 +83,35 @@ export function songView(db: DatabaseSync, fileId: number): SongView {
     )
     .get(fileId) as unknown as SongView
 }
+
+export interface LibrarySongSpec {
+  title: string
+  path?: string
+  artist?: string
+  durationMs?: number
+  dance?: { name: string; country?: string; choreographer?: string; teacher?: string }
+}
+
+// A file + song + (optionally) one dance linked to it as the song's default, as an import makes.
+export function addLibrarySong(
+  db: DatabaseSync,
+  spec: LibrarySongSpec
+): { fileId: number; songId: number; danceId: number | null } {
+  const fileId = addFile(db, spec.path ?? `/music/${spec.title}.mp3`)
+  if (spec.durationMs !== undefined) {
+    db.prepare('UPDATE files SET duration_ms = ? WHERE id = ?').run(spec.durationMs, fileId)
+  }
+  const songId = addSong(db, fileId, { title: spec.title, artist: spec.artist })
+  if (!spec.dance) return { fileId, songId, danceId: null }
+  const danceId = addDance(db, spec.dance)
+  link(db, danceId, songId, spec.dance.teacher)
+  setDefaultDance(db, songId, danceId)
+  return { fileId, songId, danceId }
+}
+
+export function setDefaultDance(db: DatabaseSync, songId: number, danceId: number): void {
+  db.prepare(
+    `INSERT INTO song_prefs (song_id, default_dance_id) VALUES (?, ?)
+     ON CONFLICT (song_id) DO UPDATE SET default_dance_id = excluded.default_dance_id`
+  ).run(songId, danceId)
+}
