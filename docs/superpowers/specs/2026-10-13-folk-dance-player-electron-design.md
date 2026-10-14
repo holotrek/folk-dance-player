@@ -230,6 +230,8 @@ The Music page has **Re-apply mapping to selected**. Its dialog shows the select
 
 Three pages: **Program**, **Music**, **Settings**. A left sidebar (styled like Apple Music) appears on Program and Music.
 
+The **player bar** (§6.2) sits above the page tabs and stays on every page. A song started anywhere, such as a preview double-clicked on the Music page, can be paused, stopped or skipped without going to the Program page. The control window's `<audio>` element lives in the player bar, which is mounted once, so changing pages never cuts the music.
+
 ### 6.1 Sidebar
 
 ```
@@ -253,8 +255,11 @@ PROGRAMS                  [+]
 - **The playlist list** scrolls on its own once it fills 40% of the sidebar, so a large Apple Music library's playlists never push Programs off screen.
 - **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
 - **Programs** are loaded only from the sidebar; there is no dropdown.
+  - Each entry shows how many songs are left to play.
   - The search box filters by name as you type.
-  - Right-clicking a program offers rename, duplicate and delete. `[+]` creates a new program.
+  - `[+]` asks for a name, prefilled with today's date ("Tue Oct 14"), creates the program and loads it.
+  - Adding songs with no program loaded creates one named for today and loads it.
+  - Each program's options are on a "⋯" button or a right-click: Rename…, Duplicate, and Delete… (with a confirmation). **Duplicate** makes a fresh copy to run again: every item, all unplayed. The original keeps its record of what was danced.
   - The list is expected to grow large, so it scrolls independently.
 - **Holding is not a sidebar entry.**
 
@@ -275,16 +280,24 @@ PROGRAMS                  [+]
 └──────────┴──────────────────────────────┴──────────────────────────────────┘
 ```
 
-- **Player bar:** transport controls, the current item's label (§4 "Labels"), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the projector toggle.
+- **Player bar** (above the tabs on every page; drawn above the Program page here): transport controls, the current item's label (§4 "Labels"), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the projector toggle (plan 5).
+  - **◀◀** restarts the current song. To go back to an earlier song, double-click it in previously played.
+  - **▶** turns into **⏸** while a song plays.
+  - When nothing is playing, the bar shows what's next ("Next up: …", "Starting in N…", or "Next: … in N…").
+  - Previews and replays are marked as such.
+  - A warning (a skipped missing file, a file that can't be played) appears under the bar until dismissed. It is never shown on the projector.
 - **Previously played:** the play log for the current program, newest first. It scrolls.
 - **Program list:** only **unplayed** items, in order. Played items stay in storage (`played_at`) but are not shown here.
   - **Reordering:** drag and drop.
-  - **Adding:** drag songs in from the library, holding or playlists, or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance.
-  - **Choosing the dance:** each item shows its label (§4 "Labels"). An item whose song has several dances has a **Dance** menu (right-click) listing every linked dance by its label, so dances with the same name are told apart by choreographer.
-  - **STOP markers:** inserted with a button or context menu.
+  - **Adding:** drag songs in from the library, holding, playlists or previously played (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance.
+  - **Each item's menu** ("⋯" or right-click) has its options.
+    - **Choosing the dance:** each item shows its label (§4 "Labels"). An item whose song has several dances lists every linked dance by its label, with the current one checked, so dances with the same name are told apart by choreographer.
+    - **Insert STOP before** and **Remove**.
+  - **STOP markers:** inserted with the **+ STOP** button (at the end) or an item's menu (before it).
+  - **The program's name** is shown above the list, with a ✎ button to rename it.
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
-- **Holding panel:** files with `in_holding`, above the library list.
-- **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection.
+- **Holding panel:** files with `in_holding`, above the library list. Drop songs on it to hold them, ✕ releases one, and held songs can be dragged into the program.
+- **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection, and the search carries over between the Program and Music pages.
 
 ### 6.3 Music page
 
@@ -331,7 +344,7 @@ PROGRAMS                  [+]
 |---|---|---|---|
 | ▶ / ⏭ / auto-continue on the program | `program` | yes | per setting |
 | Double-click in previously played | `replay` | no | **never**: halts and queues the program's next item |
-| Double-click anywhere else (library, holding, playlist) = **preview** | `preview` (with current `program_id`) | no | **never**: halts and queues the program's next item |
+| Double-click anywhere else (library on either page, holding, playlist) = **preview** | `preview` (with current `program_id`) | no | **never**: halts and queues the program's next item |
 | Double-click in program list | n/a: does nothing | n/a | n/a |
 
 - **Previews and replays count as real plays.** They stop whatever was playing, appear on the projector as Now Playing, and are listed in previously played.
@@ -345,13 +358,15 @@ PROGRAMS                  [+]
   1. Loads Next up.
   2. If `countdown.seconds > 0`, the projector shows "Starting in N…".
   3. Plays the song, setting `played_at` and writing `play_log`.
-- **⏭** stops the current song and starts the next item.
+- **⏭** stops the current song and starts the next item at once, without a countdown.
+- **Operator commands pass STOP markers.** When ▶ or ⏭ finds a STOP marker next, it is marked played and the song after it starts: pressing a button means "go". Only automatic continuation halts at a STOP.
 - **When a program song ends:**
   - **Auto-continue on:** the projector shows `Next: <title> in N…`, then the next item plays. ⏹ during the countdown cancels it.
   - **Auto-continue off:** playback stops, and Next up is queued.
 - **Reaching a STOP marker** always halts, regardless of auto-continue. The marker is marked played. While halted, the projector shows the **next** dance and its slide. ▶ resumes.
-- **Speed** ranges from 0.5× to 1.5× using `playbackRate` with `preservesPitch = true`. It resets to 1.0× for each new song unless the 🔒 toggle next to the speed slider is on. **Volume** is global.
-- **Missing or unreadable file at play time:** the item is skipped and a control-window warning is shown. With auto-continue on, the next item plays. With it off, playback halts with the item flagged.
+- **Speed** ranges from 0.5× to 1.5× using `playbackRate` with `preservesPitch = true`. It resets to 1.0× for each new song unless the 🔒 toggle next to the speed slider is on. **Volume** is global, and starts at 100% each time the app opens.
+- **Missing file at play time:** when the next song's file isn't on disk, it is skipped: left in the program, unplayed and flagged ⚠, while the song after it plays. A control-window warning names it. A preview or replay of a missing file only shows the warning.
+- **Unreadable file at play time** (the file is there but can't be played): a warning is shown, and the program continues as if the song had ended. With auto-continue on, the next item plays; with it off, playback halts.
 
 ### 7.3 Laptop-mode auto-fullscreen
 
@@ -502,11 +517,15 @@ Approach A (chosen): **the main process owns all state; the control window plays
 
 - **One source of truth.** Renderers send commands, for example `program.addItems`, `player.play`, `dance.update`. Main applies them and broadcasts a snapshot. No renderer decides what plays next. This prevents the Flutter app's class of desync bugs.
 - **`PlayerSession` has no Electron imports.** Timers are injected, so it is fully unit-testable.
+  - It reaches the database through small "ports".
+  - The control window's `<audio>` reports only "ended" and "failed", each tagged with the play's id, so a late event from an earlier song is ignored.
+- **Audio reaches `<audio>` through an `fdp-media://file/<id>` scheme.** It looks up the path by file id, so the renderer never names a path. It answers Range requests itself, because seeking needs them.
+- **`FDP_USER_DATA`:** setting it points the app at another data folder, so end-to-end tests and smoke runs never touch the real library.
 - **The typed IPC contract** lives in one shared `contract.ts`, used by main, the preloads and the renderers. Preloads expose only that API (`contextIsolation: true`, no `nodeIntegration`).
 - **Tooling:**
   - **Build:** electron-vite, React, TypeScript
   - **State:** Zustand, for UI-local state only (selection, search text)
-  - **Drag and drop:** dnd-kit
+  - **Drag and drop:** native HTML5 drag and drop, with the app's own data types (songs, program items). dnd-kit wasn't needed.
   - **Libraries:** `node:sqlite` (built in), music-metadata, plist
   - **Packaging:** electron-builder (a signed macOS `.dmg`)
 - **Dev gotcha:** VS Code's terminal sets `ELECTRON_RUN_AS_NODE=1`, so npm scripts run Electron with that variable unset.

@@ -26,3 +26,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Re-apply the import mapping to selected songs: the dialog shows their tags and lets you choose the mapping for that run.
 - Importing from Apple Music shows the tags of up to 50 songs (chosen at random in a larger library) beside the mapping choices, so you can see which tag holds teachers or choreographers.
 - Settings: choose the default import mapping and edit the list of dance types.
+- Programs: create one for each dance session (named for today's date), then rename, duplicate (a fresh copy to run again) or delete it. They're listed in the sidebar newest first, with a search box, and adding songs with no program open starts one.
+- The Program page: build the program by dragging songs from the library, holding, playlists or Previously played, or with ➕ Add selected; drag items to reorder them; add STOP / teaching markers; choose which dance an item is played as.
+- Play the program from the player bar at the top of every page: ▶, pause, stop, next and restart; a seek bar; auto-continue with an adjustable delay right in the player bar; a countdown before the first song; and STOP markers that halt playback until you press ▶.
+- Double-click a song in the library, a playlist or holding to preview it; double-click an entry in Previously played to play it again. Previews and replays never continue on their own.
+- Slow a song down or speed it up (0.5×–1.5×) without changing its pitch, with a lock to keep the speed for the next song, and set the volume.
+- Holding: drop songs on the holding panel to keep them handy for the session.
+- Previously played lists what was played in the program, newest first. Played items leave the program but are kept, so a saved program records what was danced.
+- When a program is loaded, its files are checked, and missing ones are flagged before the event. A missing file is skipped at play time with a warning.
