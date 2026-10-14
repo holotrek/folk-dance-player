@@ -2,16 +2,11 @@ import { useRef, useState } from 'react'
 import { Badge, Group, Text, UnstyledButton } from '@mantine/core'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
+import { formatTime } from '../format-time'
 import { carriesFiles, getDraggedFiles, setDraggedFiles } from './drag'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
 import classes from './LibraryTable.module.css'
-
-const duration = (ms: number | null): string => {
-  if (ms === null) return ''
-  const s = Math.round(ms / 1000)
-  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`
-}
 
 interface Column {
   sort: SortColumn | null
@@ -19,7 +14,7 @@ interface Column {
   render: (row: LibraryRow) => React.ReactNode
 }
 
-const COLUMNS: Column[] = [
+const ALL_COLUMNS: Column[] = [
   {
     sort: null,
     label: '',
@@ -57,12 +52,22 @@ const COLUMNS: Column[] = [
     label: 'Difficulty',
     render: (r) => (r.difficulty ? '●'.repeat(r.difficulty) : '')
   },
-  { sort: 'duration', label: 'Time', render: (r) => duration(r.durationMs) }
+  { sort: 'duration', label: 'Time', render: (r) => formatTime(r.durationMs) }
 ]
 
-// Spec §6.3: browse, sort, search and select songs; drag them onto playlists. Virtualized, so
-// large libraries stay fast. In a playlist (in its own order), dropping songs on a row moves them.
-export default function LibraryTable(): React.JSX.Element {
+// The Program page's library list (spec §6.2): the song and its dance, country and teacher.
+const COMPACT = new Set(['', 'Song / Dance', 'Country', 'Teacher', 'Time'])
+const COMPACT_COLUMNS = ALL_COLUMNS.filter((c) => COMPACT.has(c.label))
+
+// Spec §6.3: browse, sort, search and select songs; drag them onto playlists or the program.
+// Virtualized, so large libraries stay fast. In a playlist (in its own order), dropping songs on a
+// row moves them. Double-click plays a preview (spec §7.1).
+export default function LibraryTable({
+  compact = false
+}: {
+  compact?: boolean
+}): React.JSX.Element {
+  const COLUMNS = compact ? COMPACT_COLUMNS : ALL_COLUMNS
   const api = useLibraryApi()
   const store = useLibraryStore()
   const rows = useLibrary((s) => s.rows)
@@ -101,7 +106,7 @@ export default function LibraryTable(): React.JSX.Element {
 
   return (
     <div
-      className={classes.table}
+      className={`${classes.table} ${compact ? classes.compact : ''}`}
       role="table"
       aria-label="Songs"
       aria-rowcount={rows.length}
@@ -151,6 +156,7 @@ export default function LibraryTable(): React.JSX.Element {
                   dropTarget === r.songId ? classes.dropBefore : ''
                 }`}
                 style={{ transform: `translateY(${v.start}px)` }}
+                onDoubleClick={() => void api.invoke('player:preview', r.fileId)}
                 onClick={(e) =>
                   select(
                     r.songId,

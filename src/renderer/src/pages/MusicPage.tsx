@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Alert, Button, Group, Text, TextInput, Title } from '@mantine/core'
-import { useDebouncedValue } from '@mantine/hooks'
+import { Alert, Button, Group, Text, Title } from '@mantine/core'
 import type { ReapplyResult } from '@shared/library'
 import DropZone from '../import/DropZone'
 import ImportDialog from '../import/ImportDialog'
 import { useImportFlow } from '../import/useImportFlow'
 import { errorMessage } from '../ipc-error'
+import LibrarySearch from '../library/LibrarySearch'
 import LibraryTable from '../library/LibraryTable'
 import ReapplyDialog from '../library/ReapplyDialog'
 import SongEditor from '../library/SongEditor'
@@ -29,10 +29,7 @@ export default function MusicPage(): React.JSX.Element {
   const filter = useLibrary((s) => s.filter)
   const selected = useLibrary((s) => s.selected)
   const rows = useLibrary((s) => s.rows)
-  const setSearch = useLibrary((s) => s.setSearch)
   const [fileCount, setFileCount] = useState<number | null>(null)
-  const [search, setSearchText] = useState('')
-  const [debounced] = useDebouncedValue(search, 150)
   const [confirmReapply, setConfirmReapply] = useState(false)
   // The selection when the dialog opened, so a refresh behind the dialog can't change it.
   const [reapplyIds, setReapplyIds] = useState<number[]>([])
@@ -42,9 +39,6 @@ export default function MusicPage(): React.JSX.Element {
     api.invoke('library:stats').then((s) => setFileCount(s.fileCount))
   }, [api])
   useEffect(refresh, [refresh])
-  useEffect(() => {
-    void setSearch(debounced)
-  }, [debounced, setSearch])
   const flow = useImportFlow(api, refresh)
 
   const chosen = new Set(selected)
@@ -74,15 +68,7 @@ export default function MusicPage(): React.JSX.Element {
         </Group>
       </Group>
       <Group>
-        <TextInput
-          type="search"
-          role="searchbox"
-          aria-label="Search music"
-          placeholder="Search song, dance, teacher, choreographer or country"
-          value={search}
-          onChange={(e) => setSearchText(e.currentTarget.value)}
-          style={{ flex: 1 }}
-        />
+        <LibrarySearch style={{ flex: 1 }} />
         {selected.length > 0 && (
           <>
             <Button
