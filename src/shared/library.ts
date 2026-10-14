@@ -1,7 +1,10 @@
 // Types for the library (Music page, sidebar) shared by main and renderer. Spec §4, §6.
 
 export type LibraryFilter =
-  { kind: 'all' } | { kind: 'favorites' } | { kind: 'playlist'; playlistId: number }
+  | { kind: 'all' }
+  | { kind: 'favorites' }
+  | { kind: 'holding' } // the Program page's holding panel (spec §6.2)
+  | { kind: 'playlist'; playlistId: number }
 
 export type SortColumn =
   | 'title'

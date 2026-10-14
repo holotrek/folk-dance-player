@@ -117,3 +117,14 @@ export function setFavorite(db: DatabaseSync, fileIds: number[], favorite: boole
     for (const fileId of fileIds) upsert.run(fileId, favorite ? 1 : 0)
   })
 }
+
+// Holding (spec §3): a per-file flag; held songs appear in the Program page's holding panel.
+export function setHolding(db: DatabaseSync, fileIds: number[], held: boolean): void {
+  inTransaction(db, () => {
+    const upsert = db.prepare(
+      `INSERT INTO file_prefs (file_id, in_holding) VALUES (?, ?)
+       ON CONFLICT (file_id) DO UPDATE SET in_holding = excluded.in_holding`
+    )
+    for (const fileId of fileIds) upsert.run(fileId, held ? 1 : 0)
+  })
+}

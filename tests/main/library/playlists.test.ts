@@ -10,8 +10,10 @@ import {
   removeFromPlaylist,
   renamePlaylist,
   reorderPlaylist,
-  setFavorite
+  setFavorite,
+  setHolding
 } from '../../../src/main/library/playlists'
+import { listLibrary } from '../../../src/main/library/list'
 import {
   findEditedApplePlaylists,
   saveApplePlaylists
@@ -122,5 +124,18 @@ describe('setFavorite', () => {
       { file_id: a, is_favorite: 1 },
       { file_id: b, is_favorite: 0 }
     ])
+  })
+})
+
+describe('holding', () => {
+  test('holds and releases songs; the holding filter lists them', () => {
+    setHolding(db, [a, c], true)
+    setHolding(db, [a], false)
+    const held = listLibrary(db, {
+      search: '',
+      filter: { kind: 'holding' },
+      sort: { column: 'title', direction: 'asc' }
+    })
+    expect(held.map((r) => r.title)).toEqual(['C'])
   })
 })

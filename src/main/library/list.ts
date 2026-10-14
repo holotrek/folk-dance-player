@@ -59,6 +59,7 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
     params.push(fts)
   }
   if (query.filter.kind === 'favorites') where.push('fp.is_favorite = 1')
+  if (query.filter.kind === 'holding') where.push('fp.in_holding = 1')
 
   const playlistId = query.filter.kind === 'playlist' ? query.filter.playlistId : null
   const playlist = playlistId !== null
