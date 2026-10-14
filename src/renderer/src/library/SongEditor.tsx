@@ -265,7 +265,7 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
       <ConfirmDialog
         opened={merging !== null}
         title="Merge dances?"
-        message={`“${merging?.from.name}” will be merged into “${merging?.into.name}”: its songs, teachers and history move there, and “${merging?.from.name}” is deleted.`}
+        message={`“${merging?.from.name}” will be merged into “${merging?.into.name}”: its songs, teachers, notes and history move there, and “${merging?.from.name}” is deleted.`}
         confirmLabel="Merge"
         onConfirm={() =>
           merging &&

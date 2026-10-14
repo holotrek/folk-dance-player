@@ -207,4 +207,18 @@ describe('Music page in a playlist', () => {
     })
     await waitFor(() => expect(fake.callsTo('playlists:reorder')).toEqual([[7, [13, 11, 12]]]))
   })
+
+  test('rows cannot be reordered while a search narrows the playlist', async () => {
+    const fake = setup(
+      { 'library:list': inPlaylist, 'playlists:list': playlist, 'playlists:reorder': undefined },
+      true
+    )
+    await openPlaylist()
+    await userEvent.type(screen.getByRole('searchbox', { name: 'Search music' }), 'c')
+    await waitFor(() => expect(lastQuery(fake).search).toBe('c'))
+    fireEvent.drop(rowFor('A'), {
+      dataTransfer: { types: [FILES_MIME], getData: () => JSON.stringify([103]) }
+    })
+    expect(fake.callsTo('playlists:reorder')).toEqual([])
+  })
 })

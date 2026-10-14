@@ -199,6 +199,24 @@ describe('mergeDances', () => {
     expect(detail(a.songId).dances).toMatchObject([{ danceId: a.danceId, teacher: 'T2' }])
   })
 
+  test('keeps the notes of both dances', () => {
+    const a = addLibrarySong(db, { title: 'Svornato A', dance: { name: 'Svornato' } })
+    const b = addLibrarySong(db, { title: 'Svornato B', dance: { name: 'Svornato' } })
+    updateDance(db, a.danceId!, { notes: 'hands in W' })
+    updateDance(db, b.danceId!, { notes: 'slow start' })
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(detail(a.songId).dances[0].notes).toBe('hands in W\n\nslow start')
+  })
+
+  test('keeps the removed dance’s "Different dance" answers', () => {
+    const s = addLibrarySong(db, { title: 'Lesnoto Oro', dance: { name: 'Lesnoto' } })
+    const a = addLibrarySong(db, { title: 'Other A', dance: { name: 'Lesnoto' } })
+    const b = addLibrarySong(db, { title: 'Other B', dance: { name: 'Lesnoto' } })
+    markDifferentDances(db, s.danceId!, a.danceId!)
+    sameDance(db, s.songId, s.danceId!, b.danceId!)
+    expect(detail(s.songId).suggestions).toEqual([])
+  })
+
   test('refuses to merge a dance into itself', () => {
     const a = addLibrarySong(db, { title: 'Tune', dance: { name: 'Lesnoto' } })
     expect(() => mergeDances(db, a.danceId!, a.danceId!)).toThrow(LibraryEditError)
@@ -248,6 +266,12 @@ describe('same-name suggestions', () => {
       [a.danceId, false]
     ])
     expect(count('dances')).toBe(2)
+  })
+
+  test('a dance no song uses is not suggested', () => {
+    const a = addLibrarySong(db, { title: 'Lesnoto Oro', dance: { name: 'Lesnoto' } })
+    addDance(db, { name: 'Lesnoto' })
+    expect(detail(a.songId).suggestions).toEqual([])
   })
 
   test('"Different dance" stops the suggestion, in both directions', () => {

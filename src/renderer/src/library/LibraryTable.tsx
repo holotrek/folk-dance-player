@@ -69,6 +69,7 @@ export default function LibraryTable(): React.JSX.Element {
   const selected = useLibrary((s) => s.selected)
   const sort = useLibrary((s) => s.sort)
   const filter = useLibrary((s) => s.filter)
+  const search = useLibrary((s) => s.search)
   const setSort = useLibrary((s) => s.setSort)
   const select = useLibrary((s) => s.select)
   const [dropTarget, setDropTarget] = useState<number | null>(null)
@@ -82,7 +83,8 @@ export default function LibraryTable(): React.JSX.Element {
   })
 
   const chosen = new Set(selected)
-  const reorderable = filter.kind === 'playlist' && sort.column === 'position'
+  // A search hides some of the playlist, so a move can't be placed within the whole order.
+  const reorderable = filter.kind === 'playlist' && sort.column === 'position' && search === ''
 
   const onHeader = (column: SortColumn): void => {
     const direction = sort.column === column && sort.direction === 'asc' ? 'desc' : 'asc'

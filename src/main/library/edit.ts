@@ -119,7 +119,7 @@ export function getSongDetail(db: DatabaseSync, songId: number): SongDetail | nu
 }
 
 // Other dances with the same name (ignoring case and surrounding spaces) that aren't linked to
-// this song and weren't marked "different" (spec §6.3).
+// this song, are used by at least one song, and weren't marked "different" (spec §6.3).
 function sameNameSuggestions(
   db: DatabaseSync,
   songId: number,
@@ -129,6 +129,7 @@ function sameNameSuggestions(
     `SELECT c.id AS danceId, c.name, c.choreographer, c.country FROM dances c
      WHERE lower(trim(c.name)) = lower(trim(?)) AND c.id <> ?
        AND c.id NOT IN (SELECT dance_id FROM dance_songs WHERE song_id = ?)
+       AND EXISTS (SELECT 1 FROM dance_songs u WHERE u.dance_id = c.id)
        AND NOT EXISTS (SELECT 1 FROM distinct_dances x
          WHERE x.dance_a = min(c.id, ?) AND x.dance_b = max(c.id, ?))
      ORDER BY c.id`
@@ -304,6 +305,18 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
     }
     fillEmptyFrom(db, 'dances', 'id', keepId, removeId, ['country', 'choreographer', 'dance_type'])
     db.prepare('INSERT OR IGNORE INTO dance_prefs (dance_id) VALUES (?)').run(keepId)
+    // Notes are never dropped: when both dances have them, the removed dance's are appended.
+    const notesOf = (id: number): string =>
+      (
+        (
+          db.prepare('SELECT notes FROM dance_prefs WHERE dance_id = ?').get(id) as
+            { notes: string | null } | undefined
+        )?.notes ?? ''
+      ).trim()
+    const [keptNotes, removedNotes] = [notesOf(keepId), notesOf(removeId)]
+    if (keptNotes && removedNotes && keptNotes !== removedNotes) {
+      update(db, 'dance_prefs', 'dance_id', keepId, { notes: `${keptNotes}\n\n${removedNotes}` })
+    }
     fillEmptyFrom(db, 'dance_prefs', 'dance_id', keepId, removeId, [
       'difficulty',
       'notes',
@@ -311,6 +324,14 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
       'canva_page_id',
       'canva_page_index'
     ])
+    // "Different dance" answers about the removed dance now apply to the kept one.
+    db.prepare(
+      `INSERT OR IGNORE INTO distinct_dances (dance_a, dance_b)
+       SELECT min(?, other), max(?, other) FROM (
+         SELECT dance_b AS other FROM distinct_dances WHERE dance_a = ?
+         UNION SELECT dance_a FROM distinct_dances WHERE dance_b = ?)
+       WHERE other <> ?`
+    ).run(keepId, keepId, removeId, removeId, keepId)
     db.prepare('DELETE FROM dances WHERE id = ?').run(removeId)
   })
 }
