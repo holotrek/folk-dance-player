@@ -10,7 +10,7 @@ export default function TagPreviewTable({
 }): React.JSX.Element {
   return (
     <ScrollArea.Autosize mah={240}>
-      <Table aria-label="File tags" striped withTableBorder fz="sm">
+      <Table aria-label="File tags" striped withTableBorder stickyHeader fz="sm">
         <Table.Thead>
           <Table.Tr>
             <Table.Th>Song</Table.Th>
