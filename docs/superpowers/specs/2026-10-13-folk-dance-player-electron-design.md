@@ -572,6 +572,14 @@ The throwaway spike was deleted after this spec was approved; only its display h
 - **Windows build and testing.**
 - **Import from MITPlayer:** read MITPlayer's metadata file and map its fields into `songs` (and its lists into playlists or programs, if it has them), through the same mapping step and summary as other imports (§5). The file format still needs to be examined from a real sample before this can be designed.
 - **First-run tour:** a guided tutorial the first time the app opens. It steps through each area (sidebar, library and search, building a program, the player bar with auto-continue, the projector toggle, the Music page and importing, Settings) and explains how to use each one. It can be skipped and replayed later from Help.
+- **Bulk editing, like Apple Music's "Get Info" on several songs:** select several songs in the Music page table and edit their fields together.
+  - **Fields that agree** across the selection show the shared value.
+  - **Fields that differ** show a `Mixed` placeholder; a field left as `Mixed` isn't changed.
+  - **Only fields the user actually edits are applied,** to every selected song (or to its default dance, for dance fields).
+  - **Clear warnings, because bulk edits are easy to get wrong and hard to undo:**
+    - when the bulk editor opens: how many songs are selected, and that changes will apply to all of them
+    - again before saving: a confirmation listing each field that will change, the new value, and how many songs (and shared dances) it affects
+  - **Shared dances:** if a change would affect dances shared with songs outside the selection, the confirmation says so explicitly.
 - **About screen:** if an "About this app" screen is added, it includes a thank-you crediting MITPlayer as the inspiration for this app.
 
 ## 13. Project and release routines
