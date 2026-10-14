@@ -114,6 +114,36 @@ describe('program list', () => {
     await waitFor(() => expect(fake.callsTo('programs:addTracks').at(-1)).toEqual([5, [201], null]))
   })
 
+  test('songs dropped anywhere on the panel outside an item go to the end', async () => {
+    const fake = setup()
+    await screen.findByText('Hora')
+    fireEvent.drop(screen.getByRole('region', { name: 'Program' }), files([202]))
+    fireEvent.drop(screen.getByText('Program: Tue Oct 14'), files([201]))
+    await waitFor(() =>
+      expect(fake.callsTo('programs:addTracks')).toEqual([
+        [5, [202], null],
+        [5, [201], null]
+      ])
+    )
+  })
+
+  test('✕ removes an item at once', async () => {
+    const fake = setup()
+    await userEvent.click(await screen.findByRole('button', { name: 'Remove Hora' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Remove STOP / TEACHING' }))
+    expect(fake.callsTo('programs:removeItems')).toEqual([
+      [5, [1]],
+      [5, [2]]
+    ])
+  })
+
+  test('a STOP marker is drawn with an icon, not an emoji', async () => {
+    setup()
+    const stopRow = (await screen.findByText('STOP / TEACHING')).closest('[role=listitem]')!
+    expect(stopRow.querySelector('svg')).not.toBeNull()
+    expect(stopRow.textContent).not.toContain('⏸')
+  })
+
   test('dragging an item onto another moves it before that item', async () => {
     const fake = setup()
     await screen.findByText('Hora')

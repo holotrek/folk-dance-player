@@ -12,6 +12,7 @@ import {
   Tooltip
 } from '@mantine/core'
 import type { PlayerState } from '@shared/program'
+import { NextIcon, PauseIcon, PlayIcon, RestartIcon, StopIcon } from '../components/icons'
 import { formatTime } from '../format-time'
 import { useLibraryApi } from '../library/LibraryProvider'
 import { useProgram } from './ProgramProvider'
@@ -72,7 +73,7 @@ export default function PlayerBar(): React.JSX.Element {
           disabled={!loaded}
           onClick={() => audio.seek(0)}
         >
-          ◀◀
+          <RestartIcon />
         </ActionIcon>
         {playing ? (
           <ActionIcon
@@ -80,7 +81,7 @@ export default function PlayerBar(): React.JSX.Element {
             aria-label="Pause"
             onClick={(e) => e.detail < 2 && void api.invoke('player:pause')}
           >
-            ⏸
+            <PauseIcon />
           </ActionIcon>
         ) : (
           <ActionIcon
@@ -89,17 +90,17 @@ export default function PlayerBar(): React.JSX.Element {
             disabled={!canStart}
             onClick={(e) => e.detail < 2 && void api.invoke('player:play')}
           >
-            ▶
+            <PlayIcon />
           </ActionIcon>
         )}
         <ActionIcon
           variant="default"
           size="lg"
           aria-label="Stop"
-          disabled={player.status === 'idle'}
+          disabled={player.status === 'idle' || player.status === 'stopped'}
           onClick={() => void api.invoke('player:stop')}
         >
-          ⏹
+          <StopIcon />
         </ActionIcon>
         <ActionIcon
           variant="default"
@@ -108,7 +109,7 @@ export default function PlayerBar(): React.JSX.Element {
           disabled={player.programId === null}
           onClick={() => void api.invoke('player:next')}
         >
-          ▶▶
+          <NextIcon />
         </ActionIcon>
         <div className={classes.now} aria-live="polite">
           <Group gap={6} wrap="nowrap">

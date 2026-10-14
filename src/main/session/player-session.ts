@@ -65,7 +65,7 @@ export class PlayerSession {
   // after the countdown when one is set. An operator's ▶ passes STOP markers.
   play(): void {
     const { status } = this.state
-    if (status === 'paused') return this.update({ status: 'playing' })
+    if (status === 'paused' || status === 'stopped') return this.update({ status: 'playing' })
     if (status === 'playing') return
     if (status === 'countdown') return this.finishCountdown()
     const seconds = this.ports.countdownSeconds()
@@ -77,11 +77,16 @@ export class PlayerSession {
     if (this.state.status === 'playing') this.update({ status: 'paused' })
   }
 
-  // ⏹: stops the song or cancels the countdown. A program song stopped before its end goes back
-  // to being next up, so ▶ plays it again (its play stays in the log).
+  // ⏹: rewinds the song to its start and keeps it loaded, so ▶ plays it again as the same play
+  // (no new log entry). During a countdown, cancels it.
   stop(): void {
-    this.interrupt()
-    this.update({ status: 'idle', current: null, countdown: null })
+    if (this.state.status === 'countdown') {
+      this.cancelCountdown()
+      return this.update({ status: 'idle', countdown: null })
+    }
+    if (this.state.status === 'playing' || this.state.status === 'paused') {
+      this.update({ status: 'stopped' })
+    }
   }
 
   // ⏭: stops the song and starts the program's next song now, passing STOP markers.

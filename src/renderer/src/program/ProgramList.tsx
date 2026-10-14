@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { ActionIcon, Button, Group, Menu, Text, Title } from '@mantine/core'
 import type { SongDance } from '@shared/library'
 import type { ProgramItem } from '@shared/program'
+import { PauseIcon } from '../components/icons'
 import NamePrompt from '../components/NamePrompt'
 import { errorMessage } from '../ipc-error'
 import {
@@ -132,7 +133,14 @@ export default function ProgramList(): React.JSX.Element {
       .map((r) => r.fileId)
 
   return (
-    <section className={classes.panel} aria-label="Program">
+    // The whole panel takes drops: on an item they go before it, anywhere else at the end.
+    <section
+      className={`${classes.panel} ${dropTarget === 'end' ? classes.panelActive : ''}`}
+      aria-label="Program"
+      onDragOver={(e) => over(e, 'end')}
+      onDragLeave={() => setDropTarget(null)}
+      onDrop={(e) => drop(e, null)}
+    >
       <Group justify="space-between" mb="xs" wrap="nowrap">
         <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
           <Title order={5} style={{ whiteSpace: 'nowrap' }}>
@@ -188,16 +196,25 @@ export default function ProgramList(): React.JSX.Element {
             ].join(' ')}
             draggable
             onDragStart={(e) => setDraggedItems(e.dataTransfer, [item.id])}
-            onDragOver={(e) => over(e, item.id)}
+            onDragOver={(e) => {
+              e.stopPropagation()
+              over(e, item.id)
+            }}
             onDragLeave={() => setDropTarget(null)}
-            onDrop={(e) => drop(e, item.id)}
+            onDrop={(e) => {
+              e.stopPropagation()
+              drop(e, item.id)
+            }}
             onContextMenu={(e) => {
               e.preventDefault()
               ;(e.currentTarget.querySelector('[data-options]') as HTMLElement | null)?.click()
             }}
           >
             {item.kind === 'stop' ? (
-              <span className={classes.label}>⏸ STOP / TEACHING</span>
+              <span className={`${classes.label} ${classes.stopLabel}`}>
+                <PauseIcon size={14} />
+                <span>STOP / TEACHING</span>
+              </span>
             ) : (
               <>
                 {item.isMissing && (
@@ -214,15 +231,21 @@ export default function ProgramList(): React.JSX.Element {
                 </Text>
               </>
             )}
+            <ActionIcon
+              variant="subtle"
+              size="sm"
+              color="gray"
+              className={classes.remove}
+              aria-label={`Remove ${item.kind === 'stop' ? 'STOP / TEACHING' : item.label}`}
+              title="Remove from the program"
+              onClick={() => act(() => api.invoke('programs:removeItems', program!.id, [item.id]))}
+            >
+              ✕
+            </ActionIcon>
             <ItemMenu item={item} onError={setError} />
           </div>
         ))}
-        <div
-          className={`${classes.end} ${dropTarget === 'end' ? classes.endActive : ''}`}
-          onDragOver={(e) => over(e, 'end')}
-          onDragLeave={() => setDropTarget(null)}
-          onDrop={(e) => drop(e, null)}
-        >
+        <div className={classes.end}>
           {items.length === 0 && (
             <Text size="sm" c="dimmed" p="sm">
               {programId === null

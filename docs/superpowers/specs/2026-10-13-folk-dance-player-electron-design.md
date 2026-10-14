@@ -295,6 +295,8 @@ PROGRAMS                  [+]
     - **Choosing the dance:** each item shows its label (§4 "Labels"). An item whose song has several dances lists every linked dance by its label, with the current one checked, so dances with the same name are told apart by choreographer.
     - **Insert STOP before** and **Remove**.
   - **STOP markers:** inserted with the **+ STOP** button (at the end) or an item's menu (before it).
+  - **Removing:** an ✕ appears on each item on hover and removes it at once; Remove is also in the item's menu.
+  - **Dropping:** the whole Program panel accepts drops. Dropped on an item, songs go before it; anywhere else, at the end.
   - **The program's name** is shown above the list, with a ✎ button to rename it.
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
 - **Holding panel:** files with `in_holding`, above the library list. Drop songs on it to hold them, ✕ releases one, and held songs can be dragged into the program.
@@ -360,7 +362,8 @@ PROGRAMS                  [+]
   2. If `countdown.seconds > 0`, the projector shows "Starting in N…".
   3. Plays the song, setting `played_at` and writing `play_log`.
 - **⏭** stops the current song and starts the next item at once, without a countdown.
-- **⏹ mid-song, or a preview or replay that interrupts a program song,** puts that song back as next up (unplayed), so ▶ plays it again; its play stays in the log. ⏭ counts the song as played. Unticking auto-continue during the countdown halts before the next song.
+- **⏹** rewinds the song to its start and keeps it loaded ("stopped"); ▶ plays it again as the same play, with no new log entry, and ⏭ moves on. ⏹ during a countdown cancels it.
+- **A preview or replay that interrupts a program song** puts that song back as next up (unplayed), so ▶ plays it later; its play stays in the log. ⏭ counts the song as played. Unticking auto-continue during the countdown halts before the next song.
 - **Operator commands pass STOP markers.** When ▶ or ⏭ finds a STOP marker next, it is marked played and the song after it starts: pressing a button means "go". Only automatic continuation halts at a STOP.
 - **When a program song ends:**
   - **Auto-continue on:** the projector shows `Next: <title> in N…`, then the next item plays. ⏹ during the countdown cancels it.
@@ -369,6 +372,7 @@ PROGRAMS                  [+]
 - **Speed** ranges from 0.5× to 1.5× using `playbackRate` with `preservesPitch = true`. It resets to 1.0× for each new song unless the 🔒 toggle next to the speed slider is on. **Volume** is global, and starts at 100% each time the app opens.
 - **Missing file at play time:** when the next song's file isn't on disk, it is skipped: left in the program, unplayed and flagged ⚠, while the song after it plays. A control-window warning names it, also when no playable song is left. A preview or replay of a missing file only shows the warning; whatever was playing or counting down carries on.
 - **A double-click on ▶ or ⏸** counts as one press, since ▶ turns into ⏸ under the pointer.
+- **Transport icons** are drawn (SVG), not characters: ⏸ and ⏹ render as colored emoji on macOS while ▶ doesn't.
 - **Unreadable file at play time** (the file is there but can't be played): a warning is shown, and the program continues as if the song had ended. With auto-continue on, the next item plays; with it off, playback halts.
 
 ### 7.3 Laptop-mode auto-fullscreen

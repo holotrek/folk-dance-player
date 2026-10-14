@@ -52,8 +52,9 @@ export interface NowPlaying {
 }
 
 export interface PlayerState {
-  status: 'idle' | 'countdown' | 'playing' | 'paused'
-  current: NowPlaying | null // set while playing or paused
+  // 'stopped': ⏹ rewound the song to its start; it stays loaded and ▶ plays it again.
+  status: 'idle' | 'countdown' | 'playing' | 'paused' | 'stopped'
+  current: NowPlaying | null // set while playing, paused or stopped
   // "Starting in N…" before the first song, or "Next: … in N…" between songs (spec §7.2).
   countdown: { secondsLeft: number; reason: 'start' | 'continue' } | null
   programId: number | null

@@ -306,19 +306,23 @@ describe('review fixes', () => {
     expect(playing()).toBe('B')
   })
 
-  test('⏹ mid-song puts the song back as next up; ▶ plays it again', () => {
+  test('⏹ keeps the song loaded at its start; ▶ plays it again as the same play', () => {
     addTracks(db, program, [songs.a.fileId, songs.b.fileId])
     setup()
     session.play()
+    const playId = state().current!.playId
     session.stop()
-    expect(unplayed()).toEqual(['A', 'B'])
-    expect(state().nextUp).toMatchObject({ title: 'A' })
-    session.play()
+    expect(state()).toMatchObject({ status: 'stopped', current: { playId } })
     expect(playing()).toBe('A')
-    expect(log()).toEqual([
-      ['program', 'A'],
-      ['program', 'A']
-    ])
+    expect(unplayed()).toEqual(['B'])
+    session.stop() // a second ⏹ changes nothing
+    expect(state().status).toBe('stopped')
+    session.play()
+    expect(state()).toMatchObject({ status: 'playing', current: { playId } })
+    expect(log()).toEqual([['program', 'A']])
+    session.stop()
+    session.next() // ⏭ from a stopped song moves on
+    expect(playing()).toBe('B')
   })
 
   test('a preview that interrupts a program song puts that song back as next up', () => {

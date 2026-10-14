@@ -72,6 +72,28 @@ describe('player bar', () => {
     expect(fake.callsTo('player:pause')).toEqual([])
   })
 
+  test('stopped: the song stays loaded at its start, and ▶ plays it again', async () => {
+    const fake = setup(playing(hora))
+    await waitFor(() => expect(audio().src).toContain('101'))
+    audio().currentTime = 42
+    act(() => fake.emit('player:state', { ...playing(hora), status: 'stopped' }))
+    expect(audio().currentTime).toBe(0)
+    expect(HTMLMediaElement.prototype.pause).toHaveBeenCalled()
+    expect(title()).toHaveTextContent('Hora')
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Play' }))
+    expect(fake.callsTo('player:play')).toHaveLength(1)
+  })
+
+  test('transport buttons show matching drawn icons, not emoji characters', async () => {
+    setup(playing(hora))
+    for (const name of ['Restart song', 'Pause', 'Stop', 'Next']) {
+      const button = await screen.findByRole('button', { name })
+      expect(button.querySelector('svg')).not.toBeNull()
+      expect(button.textContent).toBe('')
+    }
+  })
+
   test('transport buttons send pause, stop and next', async () => {
     const fake = setup(playing(hora))
     await userEvent.click(await screen.findByRole('button', { name: 'Pause' }))

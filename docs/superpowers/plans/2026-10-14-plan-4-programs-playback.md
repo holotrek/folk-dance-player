@@ -6441,3 +6441,9 @@ The final whole-branch review found nothing Critical. Six findings were fixed on
 - `fdp-media` is served on the default session; restrict it before Canva content loads (plan 6).
 - Errors from a program's Duplicate and Delete are swallowed.
 
+**From the user's testing** (after the review fixes; the suite grew to 413):
+- **⏹ keeps the song loaded.** A new `'stopped'` status rewinds the song to its start; ▶ plays it again as the same play (no new log entry), ⏭ moves on, and a second ⏹ does nothing. This replaces the review fix that put a ⏹-ed song back into the program. A preview or replay that interrupts a program song still puts it back as next up.
+- **Drawn icons.** `components/icons.tsx` (play, pause, stop, restart, next) replaces ◀◀ ▶ ⏸ ⏹ ▶▶ in the player bar and the ⏸ on STOP rows; ⏸ and ⏹ rendered as blue emoji on macOS.
+- **The whole Program panel is the drop zone**; dropping on an item still places songs before it.
+- **An ✕ on each program item** (on hover) removes it at once; the "⋯" menu keeps the dance choice, Insert STOP before and Remove.
+

@@ -17,7 +17,7 @@ export interface AudioControls {
 }
 
 // The control window plays the audio (spec §9): this follows main's player state — which song,
-// playing or paused, speed and volume — and reports back when a song ends or can't be played.
+// playing, paused or stopped, speed and volume — and reports back when a song ends or can't be played.
 export function useAudio(api: RendererApi, player: PlayerState): AudioControls {
   const ref = useRef<HTMLAudioElement | null>(null)
   const [positionMs, setPosition] = useState(0)
@@ -25,6 +25,7 @@ export function useAudio(api: RendererApi, player: PlayerState): AudioControls {
   const playId = player.current?.playId ?? null
   const fileId = player.current?.track.fileId ?? null
   const playing = player.status === 'playing'
+  const stopped = player.status === 'stopped'
 
   // A new play: load its file from the start.
   useEffect(() => {
@@ -42,13 +43,20 @@ export function useAudio(api: RendererApi, player: PlayerState): AudioControls {
     audio.currentTime = 0
   }, [playId, fileId])
 
+  // Playing or paused; ⏹ ('stopped') pauses and rewinds to the start, keeping the song loaded.
   useEffect(() => {
     const audio = ref.current
     if (!audio || playId === null) return
-    if (playing)
+    if (playing) {
       void audio.play().catch(() => undefined) // a failure arrives as an 'error' event
-    else audio.pause()
-  }, [playing, playId])
+      return
+    }
+    audio.pause()
+    if (stopped) {
+      audio.currentTime = 0
+      setPosition(0)
+    }
+  }, [playing, stopped, playId])
 
   // Speed changes keep the pitch (spec §7.2). A new source resets playbackRate to the default.
   useEffect(() => {
