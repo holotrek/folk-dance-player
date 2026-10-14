@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { AppShell, Tabs } from '@mantine/core'
+import { useElementSize } from '@mantine/hooks'
 import Sidebar from './components/Sidebar'
 import { LibraryProvider } from './library/LibraryProvider'
 import { ProgramProvider } from './program/ProgramProvider'
+import PlayerBar from './program/PlayerBar'
 import MusicPage from './pages/MusicPage'
 import ProgramPage from './pages/ProgramPage'
 import SettingsPage from './pages/SettingsPage'
@@ -10,24 +12,33 @@ import classes from './App.module.css'
 
 type Page = 'program' | 'music' | 'settings'
 
+// Before the header has been measured (and in tests, where nothing has a size).
+const HEADER_FALLBACK = 170
+
+// Spec §6: the player bar is above the tabs on every page, mounted once, so the audio keeps
+// playing — and stays controllable — whichever page is open.
 export default function App(): React.JSX.Element {
   const [page, setPage] = useState<Page>('program')
+  const header = useElementSize()
   return (
     <LibraryProvider api={window.api}>
       <ProgramProvider api={window.api}>
         <AppShell
-          header={{ height: 48 }}
+          header={{ height: Math.ceil(header.height) || HEADER_FALLBACK }}
           navbar={{ width: 220, breakpoint: 0, collapsed: { desktop: page === 'settings' } }}
           padding="sm"
         >
           <AppShell.Header px="sm">
-            <Tabs value={page} onChange={(v) => v && setPage(v as Page)} variant="pills" pt={8}>
-              <Tabs.List>
-                <Tabs.Tab value="program">Program</Tabs.Tab>
-                <Tabs.Tab value="music">Music</Tabs.Tab>
-                <Tabs.Tab value="settings">Settings</Tabs.Tab>
-              </Tabs.List>
-            </Tabs>
+            <div ref={header.ref} className={classes.header}>
+              <PlayerBar />
+              <Tabs value={page} onChange={(v) => v && setPage(v as Page)} variant="pills">
+                <Tabs.List>
+                  <Tabs.Tab value="program">Program</Tabs.Tab>
+                  <Tabs.Tab value="music">Music</Tabs.Tab>
+                  <Tabs.Tab value="settings">Settings</Tabs.Tab>
+                </Tabs.List>
+              </Tabs>
+            </div>
           </AppShell.Header>
           <AppShell.Navbar p="sm">
             <Sidebar />

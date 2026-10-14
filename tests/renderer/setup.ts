@@ -44,4 +44,9 @@ for (const [prop, value] of [
   Object.defineProperty(HTMLElement.prototype, prop, { configurable: true, get: () => value })
 }
 
+// jsdom doesn't implement media playback. Playing resolves; tests drive the element's events.
+HTMLMediaElement.prototype.play = vi.fn(() => Promise.resolve())
+HTMLMediaElement.prototype.pause = vi.fn()
+HTMLMediaElement.prototype.load = vi.fn()
+
 afterEach(() => cleanup())
