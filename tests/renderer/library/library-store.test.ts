@@ -81,6 +81,16 @@ describe('library store', () => {
     expect(store.getState().selected).toEqual([2, 4, 1])
   })
 
+  test('selects every row, in table order, keeping the anchor for shift-click', async () => {
+    setup()
+    await store.getState().refresh()
+    store.getState().select(3, 'single')
+    store.getState().selectAll()
+    const ids = store.getState().rows.map((r) => r.songId)
+    expect(store.getState().selected).toEqual(ids)
+    expect(store.getState().anchor).toBe(3)
+  })
+
   test('drops selected songs that disappear after a refresh', async () => {
     let rows = [row(1), row(2)]
     const fake = createFakeApi({ 'library:list': () => rows, 'playlists:list': [] })

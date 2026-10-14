@@ -18,6 +18,7 @@ export interface LibraryState {
   setSort(sort: LibrarySort): Promise<void>
   select(songId: number, mode: SelectMode): void
   clearSelection(): void
+  selectAll(): void
   selectedRows(): LibraryRow[]
   // Refetches whenever main reports a library change; returns the unsubscribe function.
   watch(): () => void
@@ -99,6 +100,8 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
     },
 
     clearSelection: () => set({ selected: [], anchor: null }),
+
+    selectAll: () => set((s) => ({ selected: s.rows.map((r) => r.songId) })),
 
     selectedRows() {
       const { rows, selected } = get()

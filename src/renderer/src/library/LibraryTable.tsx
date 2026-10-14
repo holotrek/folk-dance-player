@@ -100,7 +100,20 @@ export default function LibraryTable(): React.JSX.Element {
   }
 
   return (
-    <div className={classes.table} role="table" aria-label="Songs" aria-rowcount={rows.length}>
+    <div
+      className={classes.table}
+      role="table"
+      aria-label="Songs"
+      aria-rowcount={rows.length}
+      // Focusable, so clicking a row gives the table the keyboard: ⌘A / Ctrl+A selects every song.
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'a') {
+          e.preventDefault()
+          store.getState().selectAll()
+        }
+      }}
+    >
       <div className={classes.header} role="row">
         {COLUMNS.map((c, i) => (
           <div

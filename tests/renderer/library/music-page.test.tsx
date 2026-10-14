@@ -111,6 +111,24 @@ describe('Music page library table', () => {
     expect(screen.getAllByRole('row', { selected: true })).toHaveLength(2)
   })
 
+  test('⌘A or Ctrl+A in the table selects every song; in the search box it doesn’t', async () => {
+    setup()
+    await screen.findByText('Gone')
+    fireEvent.click(rowFor('Hora Fetelor'))
+    const table = screen.getByRole('table', { name: 'Songs' })
+    fireEvent.keyDown(table, { key: 'a', metaKey: true })
+    expect(screen.getAllByRole('row', { selected: true })).toHaveLength(3)
+    fireEvent.click(rowFor('Hora Fetelor'))
+    fireEvent.keyDown(table, { key: 'a', ctrlKey: true })
+    expect(screen.getAllByRole('row', { selected: true })).toHaveLength(3)
+    fireEvent.click(rowFor('Hora Fetelor'))
+    fireEvent.keyDown(screen.getByRole('searchbox', { name: 'Search music' }), {
+      key: 'a',
+      metaKey: true
+    })
+    expect(screen.getAllByRole('row', { selected: true })).toHaveLength(1)
+  })
+
   test('dragging rows carries the selected recordings', async () => {
     setup()
     await screen.findByText('Gone')

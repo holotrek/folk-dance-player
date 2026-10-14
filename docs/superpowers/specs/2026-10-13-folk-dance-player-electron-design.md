@@ -287,7 +287,7 @@ PROGRAMS                  [+]
 
 ### 6.3 Music page
 
-- **Table:** one row per song, for browsing, sorting, searching and selecting. It is virtualized, so it stays fast with large libraries. Editing happens in the side editor, not in the table. Click selects, ⌘-click adds to the selection, and Shift-click selects a range. Selected rows can be dragged onto a playlist or Favorites.
+- **Table:** one row per song, for browsing, sorting, searching and selecting. It is virtualized, so it stays fast with large libraries. Editing happens in the side editor, not in the table. Click selects, ⌘-click adds to the selection, Shift-click selects a range, and ⌘A (Ctrl+A on Windows) selects every song shown while the table has focus. Selected rows can be dragged onto a playlist or Favorites.
   - **Columns:** song title, artist, dance (the default dance's name), country, teacher, choreographer, dance type, difficulty, favorite, slide, duration, path and status.
   - **Song / Dance** shows the label (§4), with a "+N" badge when the song has more than one dance.
   - **In a playlist** (shown in its own order), dropping rows onto another row moves them there, and **Remove from playlist** removes the selection.
