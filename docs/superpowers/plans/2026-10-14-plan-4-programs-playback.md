@@ -4,7 +4,8 @@
 
 **Goal:** Organizers can build a program for a dance session and run it:
 - **Programs:** create, load, rename, duplicate and delete them from the sidebar, which now has one component per section.
-- **The Program page:** a player bar; previously played above the program; holding above the library list.
+- **The player bar:** above the page tabs, on every page.
+- **The Program page:** previously played above the program; holding above the library list.
 - **Playback:** auto-continue, the countdown, STOP markers, previews and replays, speed changes that keep the pitch, and missing-file handling.
 
 **Architecture:**
@@ -31,6 +32,7 @@ This is plan 4 of 7. Plans 1–3 are merged. **Not in this plan:**
 - **◀◀ restarts the current song.** Going back to an earlier song is a replay (double-click in previously played).
 - **A new program is named for today** ("Tue Oct 14"). `+` asks for the name, prefilled with that. Adding songs with no program loaded creates one with that name and loads it.
 - **Duplicate makes a fresh copy to run again:** every item, all unplayed. There is no "reset played".
+- **The player bar is above the page tabs, on every page,** so a preview started on the Music page can be controlled there. This also keeps the `<audio>` element mounted, so changing pages never cuts the music.
 
 ## Global Constraints
 
@@ -55,7 +57,7 @@ This is plan 4 of 7. Plans 1–3 are merged. **Not in this plan:**
 
 These are the five failure modes most likely to bite an organizer during an event. Each has a test in the task that owns it.
 
-1. **Fast or repeated operator input around a song change:** ▶ pressed twice, ⏭ during a countdown, or ⏹ then ▶. This must never play two songs, skip one silently, or act on a late "ended" from the previous song. Task 4: "with a countdown set, ▶ counts down first…", "⏹ cancels the countdown…", "a late "ended" from an earlier song is ignored", and "⏭ starts the next item now…".
+1. **Fast or repeated operator input around a song change:** ▶ pressed twice, ⏭ during a countdown, ⏹ then ▶, or changing pages mid-song. This must never cut the music, play two songs, skip one silently, or act on a late "ended" from the previous song. Task 8: "the player is above the tabs and keeps playing on every page". Task 4: "with a countdown set, ▶ counts down first…", "⏹ cancels the countdown…", "a late "ended" from an earlier song is ignored", and "⏭ starts the next item now…".
 2. **The program edited while it runs:** reordering, inserting a STOP, or removing items during a song or a countdown. Next up must follow the edit, and a STOP that moves to the head during the countdown must still halt. Task 4: "a STOP moved to the head during the countdown still halts"; Task 5: every program edit refreshes the player.
 3. **Missing files at the event:** loading a program flags them beforehand. At play time, a missing file is skipped without getting stuck, and stays in the program flagged. Task 2: "flags the program's missing files…"; Task 4: "a missing file is skipped, flagged and left in the program…"; Task 5: "loading a program … checks its files".
 4. **Quitting or crashing mid-program:** after a restart the player is idle, never auto-resumes, and queues the first unplayed item. Task 4: "after a restart, the session is idle…".
@@ -83,10 +85,12 @@ src/renderer/src/program/             program-name, program-store, ProgramProvid
                                       PlayerBar, ProgramList, PlayedList, HoldingPanel (+ css)
 src/renderer/src/library/             LibrarySearch (new); drag, LibraryTable (modify)
 src/renderer/src/pages/ProgramPage.tsx (+css), MusicPage.tsx (modify)
+src/renderer/src/App.tsx (+css, modify)  providers; the player bar above the tabs
 src/renderer/src/format-time.ts       formatTime()
 tests/main/programs/, tests/main/session/, tests/main/media/, tests/main/ipc/program-handlers.test.ts
 tests/main/helpers/test-player.ts     a real PlayerSession for handler tests
 tests/renderer/program/               store, sidebar section, player bar, lists, holding, page (+ fixtures)
+tests/renderer/app.test.tsx           the player survives page changes
 ```
 
 ---
@@ -3212,7 +3216,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - `setSearch(search)`
     - `load(programId | null)`, which invokes `programs:setCurrent`
     - `ensureProgram()`: returns the loaded program's id, or creates one named for today, loads it and returns it
-    - `watch()`: takes `player:getState`, then every `player:state`. It refetches on `programs:changed`, on `library:changed`, and when another program is loaded.
+    - `watch()`: takes `player:getState`, then every `player:state`. A broadcast that arrives before the first answer wins, since the answer is older. It refetches on `programs:changed`, on `library:changed`, and when another program is loaded.
   - **`ProgramProvider`, `useProgram(selector)`, `useProgramStore()`.** `App` wraps the shell in `ProgramProvider` inside `LibraryProvider`.
   - **`renderWithLibrary`:** now also provides the program store.
   - **The fake API:** answers `programs:list`/`programs:played` with `[]`, `programs:get` with `null`, and `player:getState` with `IDLE_PLAYER_STATE`.
@@ -3367,6 +3371,22 @@ describe('program store', () => {
     fake.emit('player:state', { ...IDLE_PLAYER_STATE, programId: 5 })
     await vi.waitFor(() => expect(store.getState().program).toEqual(detail))
     expect(store.getState().player.programId).toBe(5)
+  })
+
+  test('a player state broadcast before the first answer arrives is kept', async () => {
+    let answer: (state: typeof IDLE_PLAYER_STATE) => void = () => undefined
+    const fake = createFakeApi({
+      'player:getState': () => new Promise((resolve) => (answer = resolve)),
+      'programs:list': summaries,
+      'programs:get': detail,
+      'programs:played': []
+    })
+    store = createProgramStore(fake.api)
+    stop = store.getState().watch()
+    fake.emit('player:state', { ...IDLE_PLAYER_STATE, programId: 5, status: 'paused' })
+    answer(IDLE_PLAYER_STATE) // an older state, answered late
+    await vi.waitFor(() => expect(store.getState().program).toEqual(detail))
+    expect(store.getState().player).toMatchObject({ programId: 5, status: 'paused' })
   })
 
   test('searches the program list by name', async () => {
@@ -3582,17 +3602,20 @@ export function createProgramStore(api: RendererApi): ProgramStore {
     },
 
     watch() {
+      // A broadcast is always newer than the first answer, which may arrive after it.
+      let heard = false
       const stops = [
         api.on('programs:changed', () => void get().refresh()),
         api.on('library:changed', () => void get().refresh()),
         api.on('player:state', (player) => {
+          heard = true
           const loaded = player.programId !== get().player.programId
           set({ player })
           if (loaded) void get().refresh()
         })
       ]
       void api.invoke('player:getState').then((player) => {
-        set({ player })
+        if (!heard) set({ player })
         void get().refresh()
       })
       return () => stops.forEach((stop) => stop())
@@ -3844,7 +3867,7 @@ export default function App(): React.JSX.Element {
 - [ ] **Step 5: Run the tests, typecheck and commit**
 
 Run: `npx vitest run tests/renderer && npm test && npm run typecheck && npx prettier --check .`
-Expected: `tests/renderer/program`: 10 pass; the suite: 370; typecheck and formatting are clean.
+Expected: `tests/renderer/program`: 11 pass; the suite: 371; typecheck and formatting are clean.
 
 ```bash
 git add src/renderer/src tests/renderer
@@ -3859,8 +3882,8 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 **Files:**
 - Create: `src/renderer/src/format-time.ts`, `src/renderer/src/program/useAudio.ts`, `PlayerBar.tsx`, `PlayerBar.module.css`, `tests/renderer/program/fixtures.ts`
-- Modify: `tests/renderer/setup.ts` (replace: stubs `HTMLMediaElement.prototype.play`, `pause` and `load`)
-- Test: `tests/renderer/program/player-bar.test.tsx`
+- Modify: `tests/renderer/setup.ts` (replace: stubs `HTMLMediaElement.prototype.play`, `pause` and `load`), `src/renderer/src/App.tsx` (replace), `src/renderer/src/App.module.css` (replace)
+- Test: `tests/renderer/program/player-bar.test.tsx`, `tests/renderer/app.test.tsx`
 
 **Interfaces:**
 - Consumes: `useProgram` (Task 7), `mediaUrl` (Task 3), the `player:*` channels (Task 5).
@@ -3871,11 +3894,12 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - plays or pauses to match `status`
     - sets `playbackRate`, `defaultPlaybackRate` and `preservesPitch = true`, plus the volume
     - reports `player:ended(playId)` and `player:failed(playId, message)`
-  - **`PlayerBar`:** the player bar.
+  - **`PlayerBar`:** the player bar, in two rows (plus a warning line when there is one).
     - **Transport:** ◀◀ (restart the song), ▶/⏸, ⏹, ▶▶.
     - **The title line:** shows the song, the countdown, or next up; previews and replays are marked.
-    - **Controls:** a seek bar with the times; speed with a 🔒 toggle (`aria-pressed`); volume; the auto-continue checkbox, and its seconds (saved on blur).
+    - **Controls:** speed with a 🔒 toggle (`aria-pressed`) and volume on the first row; the seek bar with the times, the auto-continue checkbox, and its seconds (saved on blur) on the second.
     - **Warnings** appear with a "Dismiss warning" button. The `<audio>` element has `data-testid="player-audio"`.
+  - **`App`:** puts `PlayerBar` above the page tabs in the header, mounted once for every page (the user's request). The header's height follows its contents (`useElementSize`; 170 px before it's measured).
   - **Fixtures:** `track(fileId, title, extra?)`, `item(id, track)`, `stop(id)`, `playerState(extra?)` and `playing(track, extra?, playId?)`.
 
 - [ ] **Step 1: Write the failing tests**
@@ -4129,10 +4153,64 @@ describe('player bar', () => {
 })
 ```
 
+`tests/renderer/app.test.tsx`:
+
+```tsx
+import { MantineProvider } from '@mantine/core'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { afterEach, describe, expect, test } from 'vitest'
+import App from '@renderer/App'
+import { createFakeApi } from './fake-api'
+import { playing, track } from './program/fixtures'
+import { testTheme } from './test-theme'
+
+const hora = track(101, 'Hora')
+
+afterEach(() => {
+  delete (window as { api?: unknown }).api
+})
+
+function setup() {
+  const fake = createFakeApi({
+    'player:getState': playing(hora),
+    'player:pause': undefined,
+    'app:getInfo': { version: '0.1.0', dbPath: '/data/fdp.sqlite', schemaVersion: 2 }
+  })
+  ;(window as { api?: unknown }).api = fake.api
+  render(
+    <MantineProvider theme={testTheme}>
+      <App />
+    </MantineProvider>
+  )
+  return fake
+}
+
+describe('App', () => {
+  test('the player is above the tabs and keeps playing on every page', async () => {
+    const fake = setup()
+    const audio = screen.getByTestId('player-audio')
+    await waitFor(() => expect((audio as HTMLAudioElement).src).toBe('fdp-media://file/101'))
+    const banner = screen.getByRole('banner')
+    expect(banner).toContainElement(audio)
+    expect(banner).toContainElement(screen.getByRole('tab', { name: 'Music' }))
+
+    for (const tab of ['Music', 'Settings', 'Program']) {
+      await userEvent.click(screen.getByRole('tab', { name: tab }))
+      // The same element, never remounted: the song isn't cut off by changing pages.
+      expect(screen.getByTestId('player-audio')).toBe(audio)
+    }
+    await userEvent.click(screen.getByRole('tab', { name: 'Music' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Pause' }))
+    expect(fake.callsTo('player:pause')).toHaveLength(1)
+  })
+})
+```
+
 - [ ] **Step 2: Run them to verify they fail**
 
-Run: `npx vitest run tests/renderer/program/player-bar.test.tsx`
-Expected: FAIL — `Failed to resolve import "@renderer/program/PlayerBar"`.
+Run: `npx vitest run tests/renderer/program/player-bar.test.tsx tests/renderer/app.test.tsx`
+Expected: FAIL. The player bar test can't resolve `@renderer/program/PlayerBar`, and the App test finds no audio element (the player isn't in the header yet).
 
 - [ ] **Step 3: Implement**
 
@@ -4327,7 +4405,7 @@ function status(player: PlayerState): { title: string; detail: string | null } {
 }
 
 // Spec §6.2 player bar: transport, the current song, a seek bar, speed (with 🔒) and volume,
-// and auto-continue. Owns the <audio> element.
+// and auto-continue. Owns the <audio> element, so it's mounted once, above the tabs (App).
 export default function PlayerBar(): React.JSX.Element {
   const api = useLibraryApi()
   const player = useProgram((s) => s.player)
@@ -4465,8 +4543,6 @@ export default function PlayerBar(): React.JSX.Element {
         <Text size="sm" className={classes.time}>
           {loaded ? `${formatTime(seeking ?? audio.positionMs)} / ${formatTime(duration)}` : ''}
         </Text>
-      </Group>
-      <Group gap="xs">
         <Checkbox
           label="Auto-continue"
           checked={player.autoContinue.enabled}
@@ -4511,14 +4587,90 @@ export default function PlayerBar(): React.JSX.Element {
 }
 ```
 
+Replace `src/renderer/src/App.tsx` with:
+
+```tsx
+import { useState } from 'react'
+import { AppShell, Tabs } from '@mantine/core'
+import { useElementSize } from '@mantine/hooks'
+import Sidebar from './components/Sidebar'
+import { LibraryProvider } from './library/LibraryProvider'
+import { ProgramProvider } from './program/ProgramProvider'
+import PlayerBar from './program/PlayerBar'
+import MusicPage from './pages/MusicPage'
+import ProgramPage from './pages/ProgramPage'
+import SettingsPage from './pages/SettingsPage'
+import classes from './App.module.css'
+
+type Page = 'program' | 'music' | 'settings'
+
+// Before the header has been measured (and in tests, where nothing has a size).
+const HEADER_FALLBACK = 170
+
+// Spec §6: the player bar is above the tabs on every page, mounted once, so the audio keeps
+// playing — and stays controllable — whichever page is open.
+export default function App(): React.JSX.Element {
+  const [page, setPage] = useState<Page>('program')
+  const header = useElementSize()
+  return (
+    <LibraryProvider api={window.api}>
+      <ProgramProvider api={window.api}>
+        <AppShell
+          header={{ height: Math.ceil(header.height) || HEADER_FALLBACK }}
+          navbar={{ width: 220, breakpoint: 0, collapsed: { desktop: page === 'settings' } }}
+          padding="sm"
+        >
+          <AppShell.Header px="sm">
+            <div ref={header.ref} className={classes.header}>
+              <PlayerBar />
+              <Tabs value={page} onChange={(v) => v && setPage(v as Page)} variant="pills">
+                <Tabs.List>
+                  <Tabs.Tab value="program">Program</Tabs.Tab>
+                  <Tabs.Tab value="music">Music</Tabs.Tab>
+                  <Tabs.Tab value="settings">Settings</Tabs.Tab>
+                </Tabs.List>
+              </Tabs>
+            </div>
+          </AppShell.Header>
+          <AppShell.Navbar p="sm">
+            <Sidebar />
+          </AppShell.Navbar>
+          <AppShell.Main className={classes.main}>
+            {page === 'program' && <ProgramPage />}
+            {page === 'music' && <MusicPage />}
+            {page === 'settings' && <SettingsPage api={window.api} />}
+          </AppShell.Main>
+        </AppShell>
+      </ProgramProvider>
+    </LibraryProvider>
+  )
+}
+```
+
+Replace `src/renderer/src/App.module.css` with:
+
+```css
+.header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--mantine-spacing-xs);
+  padding-block: var(--mantine-spacing-xs);
+}
+
+.main {
+  height: calc(100dvh - var(--app-shell-header-height, 0px));
+  box-sizing: border-box;
+}
+```
+
 - [ ] **Step 4: Run the tests, typecheck and commit**
 
 Run: `npx vitest run tests/renderer && npm test && npm run typecheck && npx prettier --check .`
-Expected: `tests/renderer/program/player-bar.test.tsx`: 10 pass; the suite: 380; typecheck and formatting are clean.
+Expected: the player bar 10 pass and the App test 1 passes; the suite: 382; typecheck and formatting are clean.
 
 ```bash
 git add src/renderer/src tests/renderer
-git commit -m "feat(playback): player bar and the control window's audio element
+git commit -m "feat(playback): player bar above the tabs, with the control window's audio element
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
@@ -5245,7 +5397,7 @@ export default function PlayedList(): React.JSX.Element {
 - [ ] **Step 4: Run the tests, typecheck and commit**
 
 Run: `npx vitest run tests/renderer && npm test && npm run typecheck && npx prettier --check .`
-Expected: program list 8 pass, played list 2 pass; the suite: 390; typecheck and formatting are clean.
+Expected: program list 8 pass, played list 2 pass; the suite: 392; typecheck and formatting are clean.
 
 ```bash
 git add src/renderer/src tests/renderer
@@ -5272,7 +5424,7 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
     - lists held songs (`library:list` with the `holding` filter) and refetches on `library:changed`
     - songs dropped on it are held; "Release <label>" (✕) releases one
     - rows drag into the program; double-click previews
-  - **`ProgramPage`:** the player bar, then a 2×2 grid: Previously played | Holding, then Program | Library (region "Library": `LibrarySearch` and a compact `LibraryTable`).
+  - **`ProgramPage`:** a 2×2 grid: Previously played | Holding, then Program | Library (region "Library": `LibrarySearch` and a compact `LibraryTable`). The player bar is in `App` (Task 8).
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -5342,7 +5494,7 @@ describe('holding panel', () => {
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
-import type { LibraryRow } from '@shared/library'
+import type { LibraryQuery, LibraryRow } from '@shared/library'
 import ProgramPage from '@renderer/pages/ProgramPage'
 import MusicPage from '@renderer/pages/MusicPage'
 import { createFakeApi } from '../fake-api'
@@ -5363,18 +5515,21 @@ const row = {
 function setup(page: 'program' | 'music') {
   const fake = createFakeApi({
     'player:getState': playerState({ programId: null }),
-    'library:list': [row],
+    // The library list has the song; holding is empty.
+    'library:list': (query: LibraryQuery) => (query.filter.kind === 'holding' ? [] : [row]),
     'library:stats': { fileCount: 1 },
-    'player:preview': undefined
+    'player:preview': undefined,
+    'library:song': null // the Music page opens the song editor for the selected song
   })
   renderWithLibrary(page === 'program' ? <ProgramPage /> : <MusicPage />, fake.api)
   return fake
 }
 
 describe('Program page', () => {
-  test('has the player, previously played, the program, holding and the library', async () => {
+  test('has previously played, the program, holding and the library (the player is in App)', async () => {
     setup('program')
-    expect(await screen.findByRole('button', { name: 'Play' })).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: 'Program' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Play' })).toBeNull()
     for (const name of ['Previously played', 'Program', 'Holding', 'Library']) {
       expect(screen.getByRole('region', { name })).toBeInTheDocument()
     }
@@ -5394,7 +5549,8 @@ describe('Program page', () => {
 
   test('double-clicking a library song previews it', async () => {
     const fake = setup('program')
-    await userEvent.dblClick(await screen.findByText('Sârba'))
+    const library = screen.getByRole('region', { name: 'Library' })
+    await userEvent.dblClick(await within(library).findByText('Sârba'))
     expect(fake.callsTo('player:preview')).toEqual([[201]])
   })
 
@@ -5409,7 +5565,7 @@ describe('Program page', () => {
 - [ ] **Step 2: Run them to verify they fail**
 
 Run: `npx vitest run tests/renderer/program/holding-panel.test.tsx tests/renderer/program/program-page.test.tsx`
-Expected: FAIL. `@renderer/program/HoldingPanel` can't be resolved, and the Program page still shows its Plan 1 placeholders, so there is no Play button.
+Expected: FAIL. `@renderer/program/HoldingPanel` can't be resolved, and the Program page still shows its Plan 1 placeholders, so its regions aren't there.
 
 - [ ] **Step 3: Implement**
 
@@ -5911,16 +6067,14 @@ import LibrarySearch from '../library/LibrarySearch'
 import LibraryTable from '../library/LibraryTable'
 import HoldingPanel from '../program/HoldingPanel'
 import PlayedList from '../program/PlayedList'
-import PlayerBar from '../program/PlayerBar'
 import ProgramList from '../program/ProgramList'
 import classes from './ProgramPage.module.css'
 
-// Spec §6.2: the player bar; previously played above the program on the left; holding above the
-// library list on the right.
+// Spec §6.2: previously played above the program on the left; holding above the library list on
+// the right. The player bar is above the tabs (App), on every page.
 export default function ProgramPage(): React.JSX.Element {
   return (
     <div className={classes.root}>
-      <PlayerBar />
       <div className={classes.grid}>
         <PlayedList />
         <HoldingPanel />
@@ -5966,7 +6120,7 @@ Replace `src/renderer/src/pages/ProgramPage.module.css` with:
 - [ ] **Step 4: Run the tests, typecheck and commit**
 
 Run: `npx vitest run tests/renderer && npm test && npm run typecheck && npx prettier --check . && npm run build`
-Expected: holding 3 pass, Program page 4 pass; the suite: 397; typecheck, formatting and build are clean.
+Expected: holding 3 pass, Program page 4 pass; the suite: 399; typecheck, formatting and build are clean.
 
 ```bash
 git add src/renderer/src tests/renderer
@@ -5993,6 +6147,22 @@ Make these replacements in order. Each "before" text appears exactly once in its
 1. Replace:
 
 ````markdown
+Three pages: **Program**, **Music**, **Settings**. A left sidebar (styled like Apple Music) appears on Program and Music.
+
+````
+
+   with:
+
+````markdown
+Three pages: **Program**, **Music**, **Settings**. A left sidebar (styled like Apple Music) appears on Program and Music.
+
+The **player bar** (§6.2) sits above the page tabs and stays on every page. A song started anywhere, such as a preview double-clicked on the Music page, can be paused, stopped or skipped without going to the Program page. The control window's `<audio>` element lives in the player bar, which is mounted once, so changing pages never cuts the music.
+
+````
+
+2. Replace:
+
+````markdown
 - **Programs** are loaded only from the sidebar; there is no dropdown.
 ````
 
@@ -6003,7 +6173,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
   - Each entry shows how many songs are left to play.
 ````
 
-2. Replace:
+3. Replace:
 
 ````markdown
   - The search box filters by name as you type.
@@ -6019,7 +6189,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
   - Each program's options are on a "⋯" button or a right-click: Rename…, Duplicate, and Delete… (with a confirmation). **Duplicate** makes a fresh copy to run again: every item, all unplayed. The original keeps its record of what was danced.
 ````
 
-3. Replace:
+4. Replace:
 
 ````markdown
 
@@ -6030,7 +6200,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
 
 ````markdown
 
-- **Player bar:** transport controls, the current item's label (§4 "Labels"), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the projector toggle (plan 5).
+- **Player bar** (above the tabs on every page; drawn above the Program page here): transport controls, the current item's label (§4 "Labels"), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the projector toggle (plan 5).
   - **◀◀** restarts the current song. To go back to an earlier song, double-click it in previously played.
   - **▶** turns into **⏸** while a song plays.
   - When nothing is playing, the bar shows what's next ("Next up: …", "Starting in N…", or "Next: … in N…").
@@ -6038,7 +6208,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
   - A warning (a skipped missing file, a file that can't be played) appears under the bar until dismissed. It is never shown on the projector.
 ````
 
-4. Replace:
+5. Replace:
 
 ````markdown
   - **Reordering:** drag and drop.
@@ -6059,7 +6229,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
   - **The program's name** is shown above the list, with a ✎ button to rename it.
 ````
 
-5. Replace:
+6. Replace:
 
 ````markdown
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
@@ -6075,7 +6245,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
 - **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection, and the search carries over between the Program and Music pages.
 ````
 
-6. Replace:
+7. Replace:
 
 ````markdown
 | Double-click in previously played | `replay` | no | **never**: halts and queues the program's next item |
@@ -6089,7 +6259,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
 | Double-click anywhere else (library on either page, holding, playlist) = **preview** | `preview` (with current `program_id`) | no | **never**: halts and queues the program's next item |
 ````
 
-7. Replace:
+8. Replace:
 
 ````markdown
   3. Plays the song, setting `played_at` and writing `play_log`.
@@ -6104,7 +6274,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
 - **Operator commands pass STOP markers.** When ▶ or ⏭ finds a STOP marker next, it is marked played and the song after it starts: pressing a button means "go". Only automatic continuation halts at a STOP.
 ````
 
-8. Replace:
+9. Replace:
 
 ````markdown
 - **Reaching a STOP marker** always halts, regardless of auto-continue. The marker is marked played. While halted, the projector shows the **next** dance and its slide. ▶ resumes.
@@ -6121,7 +6291,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
 - **Unreadable file at play time** (the file is there but can't be played): a warning is shown, and the program continues as if the song had ended. With auto-continue on, the next item plays; with it off, playback halts.
 ````
 
-9. Replace:
+10. Replace:
 
 ````markdown
 - **`PlayerSession` has no Electron imports.** Timers are injected, so it is fully unit-testable.
@@ -6137,7 +6307,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
 - **`FDP_USER_DATA`:** setting it points the app at another data folder, so end-to-end tests and smoke runs never touch the real library.
 ````
 
-10. Replace:
+11. Replace:
 
 ````markdown
   - **State:** Zustand, for UI-local state only (selection, search text)
@@ -6165,7 +6335,7 @@ Make these replacements in order. Each "before" text appears exactly once in its
 - Settings: choose the default import mapping and edit the list of dance types.
 - Programs: create one for each dance session (named for today's date), then rename, duplicate (a fresh copy to run again) or delete it. They're listed in the sidebar newest first, with a search box, and adding songs with no program open starts one.
 - The Program page: build the program by dragging songs from the library, holding, playlists or Previously played, or with ➕ Add selected; drag items to reorder them; add STOP / teaching markers; choose which dance an item is played as.
-- Play the program: ▶, pause, stop, next and restart; a seek bar; auto-continue with an adjustable delay right in the player bar; a countdown before the first song; and STOP markers that halt playback until you press ▶.
+- Play the program from the player bar at the top of every page: ▶, pause, stop, next and restart; a seek bar; auto-continue with an adjustable delay right in the player bar; a countdown before the first song; and STOP markers that halt playback until you press ▶.
 - Double-click a song in the library, a playlist or holding to preview it; double-click an entry in Previously played to play it again. Previews and replays never continue on their own.
 - Slow a song down or speed it up (0.5×–1.5×) without changing its pitch, with a lock to keep the speed for the next song, and set the volume.
 - Holding: drop songs on the holding panel to keep them handy for the session.
@@ -6196,15 +6366,15 @@ Newest first. Format: **date — decision.** Why. _Rejected:_ alternatives.
 - **2026-10-14 — Audio is served by `fdp-media://file/<id>`, with Range handled in `mediaResponse`.** The renderer runs on a dev-server origin, where `file://` media is blocked. Serving by file id means a page can't ask for arbitrary paths. Seeking needs 206 responses, and we answer Range requests ourselves rather than rely on `net.fetch` of a `file://` URL. The CSP allows `media-src fdp-media:`.
 - **2026-10-14 — `FDP_USER_DATA` points the app at another data folder.** `--user-data-dir` doesn't move `app.getPath('userData')`. Use the variable for smoke runs and end-to-end tests, so they never touch a real library.
 - **2026-10-14 — Drag and drop is native HTML5 with the app's own MIME types** (`FILES_MIME` for songs, `ITEMS_MIME` for program items in `library/drag.ts`). It covers every drag in the app (library to playlists, holding and programs; reordering playlists and programs). _Rejected:_ dnd-kit, as the spec first planned (not needed, and native events also work for drops between panels).
-- **2026-10-14 — The Program page has its own store (`createProgramStore`, `ProgramProvider`) beside the library store.** It holds the program list, the loaded program, its play log and the player state. It refetches on `programs:changed` and `library:changed` (labels can change), and takes every `player:state`. The library list, its search and its selection stay in the library store, shared by both pages. Main coalesces the many change notices of one action (a song start marks an item played and writes the log) into one broadcast.
+- **2026-10-14 — The Program page has its own store (`createProgramStore`, `ProgramProvider`) beside the library store.** It holds the program list, the loaded program, its play log and the player state. It refetches on `programs:changed` and `library:changed` (labels can change), and takes every `player:state`; the first `player:getState` answer is ignored if a broadcast already arrived (it would be older). The library list, its search and its selection stay in the library store, shared by both pages. Main coalesces the many change notices of one action (a song start marks an item played and writes the log) into one broadcast.
+- **2026-10-14 — The player bar is mounted once, above the page tabs (in `App`'s header).** The user wanted to control a preview started on the Music page without switching pages, and the `<audio>` element lives in the player bar, so on the Program page alone it was unmounted (cutting the music) on every page change. The header's height follows the bar (`useElementSize`) so a warning line doesn't overlap the page. _Rejected:_ the player bar on the Program page only.
 - **2026-10-14 — The sidebar is one component per section** (`components/sidebar/`: `LibrarySection`, `PlaylistsSection`, `ProgramsSection`, plus `DropTarget`, `FilterEntry` and `SectionHeading`). `Sidebar.tsx` only composes them, so each section can grow without the file becoming unwieldy.
 ````
-
 
 - [ ] **Step 2: Run everything**
 
 Run: `npm test && npm run typecheck && npx prettier --check . && npm run build`
-Expected: 397 tests pass; typecheck, formatting and build are clean.
+Expected: 399 tests pass; typecheck, formatting and build are clean.
 
 - [ ] **Step 3: Manual check in the real app, on a copy of the library**
 
@@ -6226,8 +6396,9 @@ npm run build && FDP_USER_DATA=/tmp/fdp-check npm start
    - ⏭ skips at once.
 5. **Speed:** 0.75× keeps the pitch. The next song is back at 1× unless 🔒 is on.
 6. **Previews and replays:** double-click a library song (on both pages) and a holding song. Each plays marked "Preview", then playback halts with next up queued. Double-click a Previously played entry: "Replay".
-7. **Missing file:** in the copy, rename one program song's file away, then load the program again. It shows ⚠, and at play time it is skipped with a warning while the next song plays. Rename the file back.
-8. **Restart:** quit mid-song and start again. The program resumes at the next unplayed item, and nothing plays until ▶.
+7. **The player on every page:** start a preview on the Music page and pause it from the bar there. Change pages while a song plays: the music never stops.
+8. **Missing file:** in the copy, rename one program song's file away, then load the program again. It shows ⚠, and at play time it is skipped with a warning while the next song plays. Rename the file back.
+9. **Restart:** quit mid-song and start again. The program resumes at the next unplayed item, and nothing plays until ▶.
 
 - [ ] **Step 4: Commit**
 
@@ -6242,6 +6413,6 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 
 ## Done when
 
-- `npm test` passes: 397 tests (307 from Plans 1–3, plus 90 new).
+- `npm test` passes: 399 tests (307 from Plans 1–3, plus 92 new).
 - `npm run typecheck`, `npx prettier --check .` and `npm run build` are clean.
-- In the running app you can build and run a program: create, load, reorder, add STOPs, and choose the dance per item; play with auto-continue, the countdown and STOP halts; preview and replay; change the speed without changing the pitch; and hold songs. Missing files are flagged and skipped, and a restart resumes at the next unplayed item without playing.
+- In the running app the player bar is on every page, and you can build and run a program: create, load, reorder, add STOPs, and choose the dance per item; play with auto-continue, the countdown and STOP halts; preview and replay; change the speed without changing the pitch; and hold songs. Missing files are flagged and skipped, and a restart resumes at the next unplayed item without playing.
