@@ -372,6 +372,42 @@ describe('review fixes', () => {
   })
 })
 
+describe('what the projector shows', () => {
+  test('with auto-continue off, a STOP reached after a song is marked played; the next dance is queued', () => {
+    addTracks(db, program, [songs.a.fileId])
+    addStop(db, program)
+    addTracks(db, program, [songs.b.fileId])
+    setup({ autoContinue: false })
+    session.play()
+    finish()
+    expect(state()).toMatchObject({ status: 'idle', nextUp: { title: 'B' } })
+    expect(unplayed()).toEqual(['B'])
+  })
+
+  test('says when playback halted at a STOP marker, until the next song starts', () => {
+    addTracks(db, program, [songs.a.fileId])
+    addStop(db, program)
+    addTracks(db, program, [songs.b.fileId])
+    setup({ seconds: 0 })
+    session.play()
+    expect(state().atStop).toBe(false)
+    finish()
+    expect(state()).toMatchObject({ status: 'idle', atStop: true })
+    session.play()
+    expect(state()).toMatchObject({ status: 'playing', atStop: false })
+  })
+
+  test('refresh relabels the playing song after its dance is edited', () => {
+    addTracks(db, program, [songs.a.fileId])
+    setup()
+    session.play()
+    db.prepare("UPDATE dances SET name = 'Hora Mare' WHERE id = ?").run(songs.a.danceId)
+    session.refresh()
+    expect(state().current?.track.label).toBe('A | Hora Mare')
+    expect(state().status).toBe('playing')
+  })
+})
+
 describe('remote control commands', () => {
   test('toggle plays when nothing plays, pauses a playing song, and resumes it', () => {
     addTracks(db, program, [songs.a.fileId, songs.b.fileId])

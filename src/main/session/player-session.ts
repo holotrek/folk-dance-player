@@ -56,9 +56,12 @@ export class PlayerSession {
     return this.state
   }
 
-  // Re-reads the program and settings (after an edit, or a different program was loaded).
+  // Re-reads the program and settings (after an edit, or a different program was loaded), and the
+  // playing song's label (its dance may have been edited).
   refresh(): void {
-    this.update({})
+    const current = this.state.current
+    const track = current && this.ports.getTrack(current.track.fileId, current.track.danceId)
+    this.update(current && track ? { current: { ...current, track } } : {})
   }
 
   // ▶ (spec §7.2): resumes, or skips a running countdown, or starts the program's next song —
@@ -192,8 +195,9 @@ export class PlayerSession {
     if (programId === null) return this.sync()
     this.warnSkipped(this.pick(false, false).skipped)
     const head = this.ports.unplayedItems(programId)[0]
-    if (head?.kind === 'stop' && this.ports.autoContinue().enabled) {
+    if (head?.kind === 'stop') {
       this.ports.markPlayed(head.id)
+      return this.update({ atStop: true })
     }
     this.sync()
   }
@@ -282,6 +286,7 @@ export class PlayerSession {
     this.update({
       status: 'playing',
       countdown: null,
+      atStop: false,
       speed: this.state.speedLocked ? this.state.speed : 1,
       current: {
         playId: this.nextPlayId++,
