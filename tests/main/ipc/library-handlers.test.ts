@@ -16,7 +16,7 @@ function setup() {
     importer: {
       run: async () => emptySummary(),
       cancel: () => undefined,
-      previewApple: async () => ({ trackCount: 0, playlists: [] }),
+      previewApple: async () => ({ trackCount: 0, playlists: [], tagSample: [] }),
       checkPlaylistConflicts: () => []
     },
     dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },

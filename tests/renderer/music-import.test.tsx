@@ -12,6 +12,10 @@ const preview = {
   playlists: [
     { persistentId: 'BAL', name: 'Balkan', trackCount: 2 },
     { persistentId: 'CPL', name: 'Couple dances', trackCount: 1 }
+  ],
+  tagSample: [
+    { title: 'Ajde Jano', artist: 'Ensemble', albumArtist: 'Bora Özkök', genre: 'Serbia' },
+    { title: 'Ali Paşa', artist: null, albumArtist: null, genre: 'Turkey' }
   ]
 }
 
@@ -202,6 +206,10 @@ describe('Apple Music import', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Import from Apple Music…' }))
     const dialog = await screen.findByRole('dialog', { name: 'Import from Apple Music' })
     expect(await within(dialog).findByText('3 songs with files on this Mac')).toBeInTheDocument()
+    const tags = within(dialog).getByRole('table', { name: 'File tags' })
+    expect(within(tags).getByText('Bora Özkök')).toBeInTheDocument()
+    expect(within(tags).getByText('Turkey')).toBeInTheDocument()
+    expect(dialog).toHaveTextContent('Tags of 2 of the 3 songs, chosen at random')
 
     await userEvent.click(within(dialog).getByRole('radio', { name: 'Choose playlists' }))
     await userEvent.click(within(dialog).getByRole('checkbox', { name: 'Balkan (2 songs)' }))

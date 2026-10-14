@@ -102,14 +102,32 @@ export function parseAppleLibrary(xml: string): AppleLibrary {
 const localTracks = (lib: AppleLibrary, ids: number[]): AppleTrack[] =>
   ids.map((id) => lib.tracks.get(id)).filter((t): t is AppleTrack => !!t?.path)
 
-export function previewAppleLibrary(lib: AppleLibrary): ApplePreview {
+// How many tracks' tags the import's mapping step shows.
+export const TAG_SAMPLE_SIZE = 50
+
+export function previewAppleLibrary(
+  lib: AppleLibrary,
+  random: () => number = Math.random
+): ApplePreview {
+  const local = [...lib.tracks.values()].filter((t) => t.path)
+  // A partial Fisher–Yates shuffle: the first TAG_SAMPLE_SIZE slots end up a random sample.
+  const pool = [...local]
+  const size = Math.min(TAG_SAMPLE_SIZE, pool.length)
+  for (let i = 0; i < size; i++) {
+    const j = i + Math.floor(random() * (pool.length - i))
+    ;[pool[i], pool[j]] = [pool[j], pool[i]]
+  }
   return {
-    trackCount: [...lib.tracks.values()].filter((t) => t.path).length,
+    trackCount: local.length,
     playlists: lib.playlists.map((p) => ({
       persistentId: p.persistentId,
       name: p.name,
       trackCount: localTracks(lib, p.trackIds).length
-    }))
+    })),
+    tagSample: pool
+      .slice(0, size)
+      .map((t) => ({ ...t.tags }))
+      .sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''))
   }
 }
 

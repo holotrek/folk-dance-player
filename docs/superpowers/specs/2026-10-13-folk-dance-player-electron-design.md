@@ -191,10 +191,11 @@ The step shows the current values, which can be changed for this import and are 
 - **"Artist" tag goes to:** Artist (the song's artist) | Teacher (the pairing's teacher) | Choreographer (the dance's choreographer) | ignore
 - **"Album Artist" tag goes to:** the same choices
 - **Genre → Country:** on or off. If on, the genre becomes the new dance's country.
+- **Tag preview (Apple Music imports):** a scrolling table of up to 50 tracks' Name, Artist, Album Artist and Genre, read from the XML. When the library has more tracks, the 50 are chosen at random, so the organizer can see which tag holds teachers or choreographers. A file import has no preview, because tags are read only after the mapping is chosen.
 
 Mapping is applied once, when a song and its automatic dance are created. It is not stored per song.
 
-The Music page has **Re-apply mapping to selected**. After a confirmation, it deliberately overwrites the mapped fields from the raw tags using the current settings: the song's artist, its default dance's choreographer and country, and that pairing's teacher. All fields remain freely editable afterwards.
+The Music page has **Re-apply mapping to selected**. Its dialog shows the selected songs' tags (the same table, up to 50 songs) and the mapping choices, which start from the import settings and apply to that run only. It deliberately overwrites the mapped fields from the raw tags: the song's artist, its default dance's choreographer and country, and that pairing's teacher. All fields remain freely editable afterwards.
 
 ### 5.3 Apple Music XML
 

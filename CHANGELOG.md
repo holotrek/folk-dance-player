@@ -24,4 +24,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Link a song to more dances, make one its default, unlink one, or merge two dances that are really the same. When two dances share a name, the app asks whether they're the same dance.
 - Make playlists: create, rename, duplicate and delete them, drag songs onto them, reorder them, and remove songs. Mark favorites, and drag songs onto Favorites.
 - Re-apply the import mapping to selected songs: the dialog shows their tags and lets you choose the mapping for that run.
+- Importing from Apple Music shows the tags of up to 50 songs (chosen at random in a larger library) beside the mapping choices, so you can see which tag holds teachers or choreographers.
 - Settings: choose the default import mapping and edit the list of dance types.

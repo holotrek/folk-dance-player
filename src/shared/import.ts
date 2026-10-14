@@ -52,9 +52,19 @@ export interface ApplePlaylistInfo {
   trackCount: number
 }
 
+// One track's tags as Apple Music lists them, shown beside the mapping choices.
+export interface TagSample {
+  title: string | null
+  artist: string | null
+  albumArtist: string | null
+  genre: string | null
+}
+
 export interface ApplePreview {
   trackCount: number
   playlists: ApplePlaylistInfo[]
+  // Up to TAG_SAMPLE_SIZE local tracks, chosen at random when there are more; sorted by title.
+  tagSample: TagSample[]
 }
 
 export interface ApplePlaylistConflict {

@@ -21,7 +21,7 @@ function makeDeps(overrides: Partial<HandlerDeps> = {}): HandlerDeps {
     importer: {
       run: async () => summary,
       cancel: () => undefined,
-      previewApple: async () => ({ trackCount: 0, playlists: [] }),
+      previewApple: async () => ({ trackCount: 0, playlists: [], tagSample: [] }),
       checkPlaylistConflicts: () => []
     },
     dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
@@ -91,7 +91,7 @@ describe('import and library handlers', () => {
       cancel: () => void calls.push('cancel'),
       previewApple: async (path) => {
         calls.push(`preview ${path}`)
-        return { trackCount: 1, playlists: [] }
+        return { trackCount: 1, playlists: [], tagSample: [] }
       },
       checkPlaylistConflicts: (ids) => {
         calls.push(`conflicts ${ids.join(',')}`)
@@ -102,7 +102,8 @@ describe('import and library handlers', () => {
     await h['import:cancel']()
     expect(await h['import:previewApple']('/x/Library.xml')).toEqual({
       trackCount: 1,
-      playlists: []
+      playlists: [],
+      tagSample: []
     })
     expect(await h['import:checkPlaylistConflicts'](['BAL'])).toEqual([
       { persistentId: 'BAL', name: 'Balkan' }
