@@ -2,6 +2,7 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { emptySummary, type ImportSummary } from '@shared/import'
+import { DEFAULT_SETTINGS } from '@shared/settings'
 import MusicPage from '@renderer/pages/MusicPage'
 import { createFakeApi } from './fake-api'
 import { renderWithMantine } from './render'
@@ -140,6 +141,48 @@ describe('Music page import', () => {
     )
     await userEvent.click(await screen.findByRole('button', { name: 'Done' }))
     expect(await screen.findByText('5 songs in your library')).toBeInTheDocument()
+  })
+})
+
+describe('import dialog robustness', () => {
+  test('double-clicking Import starts only one import', async () => {
+    // Real IPC takes a few milliseconds; the second click lands while settings are saving.
+    const slowSet = async () => {
+      await new Promise((r) => setTimeout(r, 50))
+      return DEFAULT_SETTINGS
+    }
+    const fake = createFakeApi({
+      'library:stats': { fileCount: 0 },
+      'import:pickMusic': ['/Music'],
+      'settings:set': slowSet,
+      'import:start': summary()
+    })
+    renderWithMantine(<MusicPage api={fake.api} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Add Music…' }))
+    await userEvent.dblClick(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: 'Import' })
+    )
+    await screen.findByText('Import finished')
+    expect(fake.callsTo('import:start')).toHaveLength(1)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  test('a result that arrives after the dialog was closed does not reopen it', async () => {
+    let resolvePreview: (p: typeof preview) => void = () => undefined
+    const fake = createFakeApi({
+      'library:stats': { fileCount: 0 },
+      'import:pickAppleLibrary': '/Users/me/Library.xml',
+      'import:previewApple': () => new Promise((resolve) => (resolvePreview = resolve))
+    })
+    renderWithMantine(<MusicPage api={fake.api} />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Import from Apple Music…' }))
+    await screen.findByText('Reading your Apple Music library…')
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await act(async () => resolvePreview(preview))
+    // Give the modal's open transition time to mount if it (wrongly) reopens.
+    await act(() => new Promise((r) => setTimeout(r, 400)))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
   })
 })
 

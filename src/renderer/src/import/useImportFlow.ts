@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 import type { RendererApi } from '@shared/contract'
 import type {
   AppleSelection,
@@ -35,6 +35,23 @@ export const APPLE_TITLE = 'Import from Apple Music'
 export function useImportFlow(api: RendererApi, onFinished: () => void) {
   const [state, setState] = useState<ImportFlowState>({ step: 'closed' })
   const [mapping, setMapping] = useState<ImportMapping | null>(null)
+  const busy = useRef(false)
+  const session = useRef(0)
+
+  // Runs one user action at a time, so a double-click can't start two imports. `live()` turns
+  // false once the dialog is closed, so a late result (e.g. a slow preview) never reopens it.
+  const action =
+    <A extends unknown[]>(fn: (live: () => boolean, ...args: A) => Promise<void>) =>
+    async (...args: A): Promise<void> => {
+      if (busy.current) return
+      busy.current = true
+      const id = session.current
+      try {
+        await fn(() => session.current === id, ...args)
+      } finally {
+        busy.current = false
+      }
+    }
 
   const loadMapping = useCallback(async () => {
     const s = await api.invoke('settings:getAll')
@@ -53,21 +70,22 @@ export function useImportFlow(api: RendererApi, onFinished: () => void) {
     await api.invoke('settings:set', 'import.genreIsCountry', mapping.genreIsCountry)
   }
 
-  const openPaths = async (paths: string[]): Promise<void> => {
+  const openPaths = async (live: () => boolean, paths: string[]): Promise<void> => {
     if (paths.length === 0) return
     await loadMapping()
-    setState({ step: 'mapping', paths })
+    if (live()) setState({ step: 'mapping', paths })
   }
 
-  const run = async (title: string, request: ImportRequest): Promise<void> => {
+  const run = async (live: () => boolean, title: string, request: ImportRequest): Promise<void> => {
     setState({ step: 'running', title, progress: null, cancelling: false })
     const unsubscribe = api.on('import:progress', (progress) =>
       setState((s) => (s.step === 'running' ? { ...s, progress } : s))
     )
     try {
-      setState({ step: 'summary', summary: await api.invoke('import:start', request) })
+      const summary = await api.invoke('import:start', request)
+      if (live()) setState({ step: 'summary', summary })
     } catch (err) {
-      setState({ step: 'error', title, message: errorMessage(err) })
+      if (live()) setState({ step: 'error', title, message: errorMessage(err) })
     } finally {
       unsubscribe()
     }
@@ -77,11 +95,11 @@ export function useImportFlow(api: RendererApi, onFinished: () => void) {
     state,
     mapping,
     setMapping,
-    addMusic: async () => openPaths(await api.invoke('import:pickMusic')),
-    dropFiles: (files: File[]) => openPaths(api.getPathsForFiles(files)),
-    importFromApple: async () => {
+    addMusic: action(async (live) => openPaths(live, await api.invoke('import:pickMusic'))),
+    dropFiles: action(async (live, files: File[]) => openPaths(live, api.getPathsForFiles(files))),
+    importFromApple: action(async (live) => {
       const xmlPath = await api.invoke('import:pickAppleLibrary')
-      if (!xmlPath) return
+      if (!xmlPath || !live()) return
       setState({
         step: 'loading',
         title: APPLE_TITLE,
@@ -92,35 +110,42 @@ export function useImportFlow(api: RendererApi, onFinished: () => void) {
           api.invoke('import:previewApple', xmlPath),
           loadMapping()
         ])
-        setState({ step: 'apple', xmlPath, preview })
+        if (live()) setState({ step: 'apple', xmlPath, preview })
       } catch (err) {
-        setState({ step: 'error', title: APPLE_TITLE, message: errorMessage(err) })
+        if (live()) setState({ step: 'error', title: APPLE_TITLE, message: errorMessage(err) })
       }
-    },
-    startPaths: async (paths: string[]) => {
+    }),
+    startPaths: action(async (live, paths: string[]) => {
       await saveMapping()
-      await run(MUSIC_TITLE, { kind: 'paths', paths })
-    },
-    continueApple: async (xmlPath: string, preview: ApplePreview, selection: AppleSelection) => {
-      await saveMapping()
-      const ids =
-        selection.mode === 'all'
-          ? preview.playlists.map((p) => p.persistentId)
-          : selection.persistentIds
-      const conflicts = await api.invoke('import:checkPlaylistConflicts', ids)
-      if (conflicts.length > 0) setState({ step: 'conflicts', xmlPath, selection, conflicts })
-      else await run(APPLE_TITLE, { kind: 'apple', xmlPath, selection, decisions: {} })
-    },
-    startApple: (
-      xmlPath: string,
-      selection: AppleSelection,
-      decisions: Record<string, PlaylistDecision>
-    ) => run(APPLE_TITLE, { kind: 'apple', xmlPath, selection, decisions }),
+      if (live()) await run(live, MUSIC_TITLE, { kind: 'paths', paths })
+    }),
+    continueApple: action(
+      async (live, xmlPath: string, preview: ApplePreview, selection: AppleSelection) => {
+        await saveMapping()
+        const ids =
+          selection.mode === 'all'
+            ? preview.playlists.map((p) => p.persistentId)
+            : selection.persistentIds
+        const conflicts = await api.invoke('import:checkPlaylistConflicts', ids)
+        if (!live()) return
+        if (conflicts.length > 0) setState({ step: 'conflicts', xmlPath, selection, conflicts })
+        else await run(live, APPLE_TITLE, { kind: 'apple', xmlPath, selection, decisions: {} })
+      }
+    ),
+    startApple: action(
+      async (
+        live,
+        xmlPath: string,
+        selection: AppleSelection,
+        decisions: Record<string, PlaylistDecision>
+      ) => run(live, APPLE_TITLE, { kind: 'apple', xmlPath, selection, decisions })
+    ),
     cancel: async () => {
       setState((s) => (s.step === 'running' ? { ...s, cancelling: true } : s))
       await api.invoke('import:cancel')
     },
     close: () => {
+      session.current += 1
       setState({ step: 'closed' })
       onFinished()
     }
