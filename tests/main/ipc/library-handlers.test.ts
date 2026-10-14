@@ -5,13 +5,15 @@ import { createHandlers, type HandlerDeps } from '../../../src/main/ipc/handlers
 import { SettingsStore } from '../../../src/main/settings/settings-store'
 import { addLibrarySong } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
+import { testPlayer } from '../helpers/test-player'
 
 function setup() {
   const db = createTestDb()
+  const settings = new SettingsStore(db)
   let changes = 0
   const deps: HandlerDeps = {
     db,
-    settings: new SettingsStore(db),
+    settings,
     appInfo: () => ({ version: '0', dbPath: '', schemaVersion: 2 }),
     importer: {
       run: async () => emptySummary(),
@@ -20,7 +22,9 @@ function setup() {
       checkPlaylistConflicts: () => []
     },
     dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
-    onLibraryChanged: () => void changes++
+    player: testPlayer(db, settings),
+    onLibraryChanged: () => void changes++,
+    onProgramsChanged: () => undefined
   }
   return {
     db,
