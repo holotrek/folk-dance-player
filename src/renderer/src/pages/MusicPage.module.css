@@ -12,3 +12,10 @@
   display: flex;
   gap: var(--mantine-spacing-sm);
 }
+
+.editor {
+  width: 380px;
+  flex-shrink: 0;
+  overflow: auto;
+  padding-right: var(--mantine-spacing-xs);
+}

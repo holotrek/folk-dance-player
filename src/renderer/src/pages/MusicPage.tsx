@@ -8,6 +8,7 @@ import ImportDialog from '../import/ImportDialog'
 import { useImportFlow } from '../import/useImportFlow'
 import { errorMessage } from '../ipc-error'
 import LibraryTable from '../library/LibraryTable'
+import SongEditor from '../library/SongEditor'
 import { useLibrary, useLibraryApi, useLibraryStore } from '../library/LibraryProvider'
 import classes from './MusicPage.module.css'
 
@@ -126,6 +127,11 @@ export default function MusicPage(): React.JSX.Element {
       <DropZone onFiles={flow.dropFiles} />
       <div className={classes.body}>
         <LibraryTable />
+        {selected.length === 1 && (
+          <aside className={classes.editor} aria-label="Song editor">
+            <SongEditor key={selected[0]} songId={selected[0]} />
+          </aside>
+        )}
       </div>
       <ImportDialog flow={flow} />
       <ConfirmDialog

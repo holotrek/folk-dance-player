@@ -123,6 +123,29 @@ describe('Music page library table', () => {
     expect(JSON.parse(data[FILES_MIME])).toEqual([101, 102])
   })
 
+  test('opens the song editor beside the table when exactly one song is selected', async () => {
+    const fake = setup({
+      'library:song': {
+        songId: 2,
+        fileId: 102,
+        title: 'Hora Fetelor',
+        artist: null,
+        path: '/m/2.mp3',
+        durationMs: 1,
+        isMissing: false,
+        isFavorite: true,
+        dances: [],
+        suggestions: []
+      }
+    })
+    await screen.findByText('Gone')
+    fireEvent.click(rowFor('Hora Fetelor'))
+    expect(await screen.findByDisplayValue('Hora Fetelor')).toBeInTheDocument()
+    expect(fake.callsTo('library:song')).toEqual([[2]])
+    fireEvent.click(rowFor('Gone'), { metaKey: true })
+    await waitFor(() => expect(screen.queryByDisplayValue('Hora Fetelor')).not.toBeInTheDocument())
+  })
+
   test('marks the selection as favorites', async () => {
     const fake = setup()
     await screen.findByText('Gone')

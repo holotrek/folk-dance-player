@@ -24,6 +24,11 @@ class ResizeObserverStub {
 }
 window.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver
 Element.prototype.scrollIntoView = vi.fn()
+// Auto-growing textareas listen for font loading, which jsdom doesn't implement.
+Object.defineProperty(document, 'fonts', {
+  configurable: true,
+  value: { addEventListener: vi.fn(), removeEventListener: vi.fn(), ready: Promise.resolve() }
+})
 
 // jsdom lays nothing out, so every element measures 0×0. Popovers (menus) then treat their anchor
 // as detached and hide, and virtualized lists (which read offsetWidth/offsetHeight) render no
