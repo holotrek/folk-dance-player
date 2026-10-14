@@ -42,3 +42,39 @@ export interface PlayedEntry {
   playedAt: string
   track: Track | null // null when the file has since been removed from the library
 }
+
+// What the player is doing; main broadcasts it after every change (spec §9).
+export interface NowPlaying {
+  playId: number // new for every start; the control window's audio events carry it
+  source: PlayKind
+  itemId: number | null // the program item, for program plays
+  track: Track
+}
+
+export interface PlayerState {
+  status: 'idle' | 'countdown' | 'playing' | 'paused'
+  current: NowPlaying | null // set while playing or paused
+  // "Starting in N…" before the first song, or "Next: … in N…" between songs (spec §7.2).
+  countdown: { secondsLeft: number; reason: 'start' | 'continue' } | null
+  programId: number | null
+  nextUp: ProgramItem | null // the program's first unplayed item
+  speed: number // 0.5–1.5, pitch preserved
+  speedLocked: boolean // keep the speed for the next song
+  volume: number // 0–1
+  autoContinue: { enabled: boolean; seconds: number }
+  warning: string | null // shown in the control window only, never on the projector
+}
+
+// Before anything has played (and in the control window until main's state arrives).
+export const IDLE_PLAYER_STATE: PlayerState = {
+  status: 'idle',
+  current: null,
+  countdown: null,
+  programId: null,
+  nextUp: null,
+  speed: 1,
+  speedLocked: false,
+  volume: 1,
+  autoContinue: { enabled: true, seconds: 5 },
+  warning: null
+}
