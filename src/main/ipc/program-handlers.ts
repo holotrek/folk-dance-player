@@ -1,4 +1,5 @@
 import type { InvokeHandlers } from '@shared/contract'
+import { NO_REMOTE } from '@shared/program'
 import { checkProgramFiles } from '../programs/file-check'
 import { listPlayed } from '../programs/history'
 import {
@@ -16,7 +17,10 @@ import {
 } from '../programs/programs'
 import type { HandlerDeps } from './handlers'
 
-type ProgramChannel = Extract<keyof InvokeHandlers, `programs:${string}` | `player:${string}`>
+type ProgramChannel = Extract<
+  keyof InvokeHandlers,
+  `programs:${string}` | `player:${string}` | `remote:${string}`
+>
 
 // Handlers for programs and the player (spec §6.2, §7). A program edit runs, the player
 // re-reads next up, then the change is announced.
@@ -72,6 +76,9 @@ export function programHandlers(deps: HandlerDeps): Pick<InvokeHandlers, Program
       if (change.seconds !== undefined) settings.set('autoContinue.seconds', change.seconds)
       player.refresh()
     },
-    'player:dismissWarning': () => player.dismissWarning()
+    'player:dismissWarning': () => player.dismissWarning(),
+    'player:restart': () => player.restart(),
+    'remote:status': () => deps.remote?.status() ?? NO_REMOTE,
+    'remote:requestAccess': () => deps.remote?.requestAccess() ?? NO_REMOTE
   }
 }

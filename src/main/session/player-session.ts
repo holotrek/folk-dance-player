@@ -77,6 +77,19 @@ export class PlayerSession {
     if (this.state.status === 'playing') this.update({ status: 'paused' })
   }
 
+  // The remote's play/pause button (one physical button): pauses a playing song, or does ▶.
+  toggle(): void {
+    if (this.state.status === 'playing') this.pause()
+    else this.play()
+  }
+
+  // ◀◀ (and the remote's back button): rewinds the current song to its start. It stays the same
+  // play; playing or paused, it carries on as it was.
+  restart(): void {
+    const current = this.state.current
+    if (current) this.update({ current: { ...current, restarts: current.restarts + 1 } })
+  }
+
   // ⏹: rewinds the song to its start and keeps it loaded, so ▶ plays it again as the same play
   // (no new log entry). During a countdown, cancels it.
   stop(): void {
@@ -274,6 +287,7 @@ export class PlayerSession {
         playId: this.nextPlayId++,
         source,
         itemId,
+        restarts: 0,
         track: {
           fileId,
           songId,

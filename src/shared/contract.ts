@@ -18,7 +18,13 @@ import type {
   SongPatch,
   Suggestions
 } from './library'
-import type { PlayedEntry, PlayerState, ProgramDetail, ProgramSummary } from './program'
+import type {
+  PlayedEntry,
+  PlayerState,
+  ProgramDetail,
+  ProgramSummary,
+  RemoteStatus
+} from './program'
 import type { SettingKey, Settings } from './settings'
 
 export interface AppInfo {
@@ -114,6 +120,10 @@ export interface InvokeContract {
     result: void
   }
   'player:dismissWarning': { args: []; result: void }
+  'player:restart': { args: []; result: void }
+  'remote:status': { args: []; result: RemoteStatus }
+  // Asks macOS for Accessibility permission (its own dialog), then reports the status.
+  'remote:requestAccess': { args: []; result: RemoteStatus }
 }
 
 export type InvokeChannel = keyof InvokeContract
@@ -183,7 +193,10 @@ export const INVOKE_CHANNELS = [
   'player:setSpeedLocked',
   'player:setVolume',
   'player:setAutoContinue',
-  'player:dismissWarning'
+  'player:dismissWarning',
+  'player:restart',
+  'remote:status',
+  'remote:requestAccess'
 ] as const satisfies readonly InvokeChannel[]
 
 // Compile error if a channel in InvokeContract is missing from INVOKE_CHANNELS.

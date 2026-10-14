@@ -71,7 +71,7 @@ export default function PlayerBar(): React.JSX.Element {
           size="lg"
           aria-label="Restart song"
           disabled={!loaded}
-          onClick={() => audio.seek(0)}
+          onClick={() => void api.invoke('player:restart')}
         >
           <RestartIcon />
         </ActionIcon>

@@ -1,4 +1,12 @@
-import { app, BrowserWindow, dialog, ipcMain, protocol } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  dialog,
+  globalShortcut,
+  ipcMain,
+  protocol,
+  systemPreferences
+} from 'electron'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
 import type { EventChannel, EventContract } from '@shared/contract'
@@ -12,6 +20,7 @@ import { ImportService } from './import/import-service'
 import { startUtilityWorker } from './import/utility-worker'
 import { createHandlers } from './ipc/handlers'
 import { mediaResponse } from './media/media-response'
+import { registerMediaKeys } from './remote/media-keys'
 import { checkProgramFiles } from './programs/file-check'
 import { getProgram } from './programs/programs'
 import { trackPath } from './programs/tracks'
@@ -23,6 +32,10 @@ import { SettingsStore } from './settings/settings-store'
 
 // A separate library for end-to-end tests and smoke runs, so they never touch the real one.
 if (process.env['FDP_USER_DATA']) app.setPath('userData', process.env['FDP_USER_DATA'])
+
+// The remote's media keys go to PlayerSession (global shortcuts, spec §7.4). Chromium's own media
+// key handling would pause or play the <audio> element behind the session's back.
+app.commandLine.appendSwitch('disable-features', 'HardwareMediaKeyHandling,MediaSessionService')
 
 // Audio is served to the control window by file id (spec §9). Must be registered before ready.
 protocol.registerSchemesAsPrivileged([
@@ -136,6 +149,15 @@ app.whenReady().then(() => {
     )
   })
 
+  const mediaKeys = registerMediaKeys(globalShortcut, player)
+  // macOS delivers media keys only to an app trusted for Accessibility; other platforms don't ask.
+  const trusted = (prompt: boolean) =>
+    process.platform !== 'darwin' || systemPreferences.isTrustedAccessibilityClient(prompt)
+  const remote = {
+    status: () => ({ trusted: trusted(false), keys: mediaKeys }),
+    requestAccess: () => ({ trusted: trusted(true), keys: mediaKeys })
+  }
+
   registerHandlers(
     ipcMain,
     createHandlers({
@@ -145,6 +167,7 @@ app.whenReady().then(() => {
       importer,
       dialogs: importDialogs,
       player,
+      remote,
       onLibraryChanged: () => {
         player.refresh() // labels or missing flags of the next item may have changed
         libraryChanged()
@@ -157,7 +180,10 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
   })
-  app.on('will-quit', () => db.close())
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll()
+    db.close()
+  })
 })
 
 app.on('window-all-closed', () => {

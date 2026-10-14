@@ -3,3 +3,6 @@ dist/
 out/
 .DS_Store
 *.log
+
+# Written when the remote spike runs
+docs/spikes/remote-spike/remote-log.txt

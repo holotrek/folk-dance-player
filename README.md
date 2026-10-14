@@ -13,7 +13,7 @@ coming up — while you keep programming on your laptop.
 - **Organize it.** Link each song to the dances done to it: one tune can carry several dances, and one dance can be done to many tunes. Record each dance's country, choreographer, dance type, difficulty and notes, and who taught it to your group, with autocomplete. Use favorites, a holding area and playlists.
 - **Search** by song title, dance name, teacher, choreographer or country. Accents don't matter: "pasa" finds "Paşa".
 - **Build programs** (the dances for a session) by drag and drop, with STOP/Teaching markers. Save and reload them.
-- **Play.** Auto-continue with an adjustable delay, a countdown, preview any song by double-clicking, and slow songs down for teaching without changing their pitch.
+- **Play.** Auto-continue with an adjustable delay, a countdown, preview any song by double-clicking, and slow songs down for teaching without changing their pitch. A media remote works too: play/pause, next and back.
 - **Projector view.** A borderless, large-font display on a second screen or projector, with each dance's Canva slide. Slides are saved for use offline.
 - **Fullscreen on one screen.** When no projector is connected, the same view can cover the laptop screen after an idle timeout.
 

@@ -58,6 +58,15 @@ export function useAudio(api: RendererApi, player: PlayerState): AudioControls {
     }
   }, [playing, stopped, playId])
 
+  // ◀◀ or the remote's back button: main bumps the play's restart count; rewind to the start.
+  const restarts = player.current?.restarts ?? 0
+  useEffect(() => {
+    const audio = ref.current
+    if (!audio || playId === null || restarts === 0) return
+    audio.currentTime = 0
+    setPosition(0)
+  }, [restarts, playId])
+
   // Speed changes keep the pitch (spec §7.2). A new source resets playbackRate to the default.
   useEffect(() => {
     const audio = ref.current

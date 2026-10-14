@@ -372,6 +372,47 @@ describe('review fixes', () => {
   })
 })
 
+describe('remote control commands', () => {
+  test('toggle plays when nothing plays, pauses a playing song, and resumes it', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    setup()
+    session.toggle()
+    expect(state().status).toBe('playing')
+    expect(playing()).toBe('A')
+    session.toggle()
+    expect(state().status).toBe('paused')
+    session.toggle()
+    expect(state().status).toBe('playing')
+    session.stop()
+    session.toggle()
+    expect(state()).toMatchObject({ status: 'playing' })
+    expect(playing()).toBe('A')
+  })
+
+  test('toggle during a countdown starts the song now', () => {
+    addTracks(db, program, [songs.a.fileId])
+    setup({ countdown: 5 })
+    session.toggle()
+    expect(state().status).toBe('countdown')
+    session.toggle()
+    expect(playing()).toBe('A')
+  })
+
+  test('restart rewinds the current song: the same play, with a new restart count', () => {
+    addTracks(db, program, [songs.a.fileId])
+    setup()
+    session.restart() // nothing loaded: nothing happens
+    expect(state().current).toBeNull()
+    session.play()
+    const playId = state().current!.playId
+    expect(state().current!.restarts).toBe(0)
+    session.pause()
+    session.restart()
+    expect(state()).toMatchObject({ status: 'paused', current: { playId, restarts: 1 } })
+    expect(log()).toEqual([['program', 'A']])
+  })
+})
+
 describe('speed and volume', () => {
   test('speed resets to 1× for each song unless locked, within 0.5–1.5×', () => {
     addTracks(db, program, [songs.a.fileId, songs.b.fileId, songs.c.fileId])

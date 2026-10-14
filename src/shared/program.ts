@@ -49,6 +49,7 @@ export interface NowPlaying {
   source: PlayKind
   itemId: number | null // the program item, for program plays
   track: Track
+  restarts: number // bumped by ◀◀ (restart); the control window rewinds when it changes
 }
 
 export interface PlayerState {
@@ -79,3 +80,12 @@ export const IDLE_PLAYER_STATE: PlayerState = {
   autoContinue: { enabled: true, seconds: 5 },
   warning: null
 }
+
+// Whether the remote works (spec §7.4): its media keys are global shortcuts, which macOS only
+// delivers to an app it trusts for Accessibility.
+export interface RemoteStatus {
+  trusted: boolean
+  keys: string[] // the media keys registered
+}
+
+export const NO_REMOTE: RemoteStatus = { trusted: false, keys: [] }

@@ -2,17 +2,22 @@ import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import type { RendererApi } from '@shared/contract'
+import type { RemoteStatus } from '@shared/program'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 import SettingsPage from '@renderer/pages/SettingsPage'
 import { renderWithMantine } from './render'
 
-function fakeApi(initial: Settings = DEFAULT_SETTINGS) {
+function fakeApi(
+  initial: Settings = DEFAULT_SETTINGS,
+  remote: () => RemoteStatus = () => ({ trusted: true, keys: ALL_KEYS })
+) {
   let current: Settings = { ...initial }
   const calls: unknown[][] = []
   const api: RendererApi = {
     invoke: (async (channel: string, ...args: unknown[]) => {
       calls.push([channel, ...args])
       if (channel === 'settings:getAll') return current
+      if (channel === 'remote:status' || channel === 'remote:requestAccess') return remote()
       if (channel === 'app:getInfo')
         return { version: '0.1.0', dbPath: '/data/folk-dance-player.sqlite', schemaVersion: 1 }
       if (channel === 'settings:set') {
@@ -30,6 +35,8 @@ function fakeApi(initial: Settings = DEFAULT_SETTINGS) {
   }
   return { api, calls }
 }
+
+const ALL_KEYS = ['MediaPlayPause', 'MediaNextTrack', 'MediaPreviousTrack', 'MediaStop']
 
 describe('SettingsPage', () => {
   test('shows the stored settings', async () => {
@@ -110,5 +117,28 @@ describe('SettingsPage', () => {
       "Couldn't save setting: Invalid value for autoContinue.seconds: -4"
     )
     expect(screen.getByRole('alert')).not.toHaveTextContent('invoking remote method')
+  })
+
+  test('says the remote is ready when its media keys are active', async () => {
+    const { api } = fakeApi()
+    renderWithMantine(<SettingsPage api={api} />)
+    expect(await screen.findByText(/The remote is ready/)).toBeInTheDocument()
+  })
+
+  test('without Accessibility permission, explains and asks macOS for it', async () => {
+    let trusted = false
+    const { api, calls } = fakeApi(DEFAULT_SETTINGS, () => ({ trusted, keys: ALL_KEYS }))
+    renderWithMantine(<SettingsPage api={api} />)
+    expect(await screen.findByText(/needs Accessibility permission/)).toBeInTheDocument()
+    trusted = true
+    await userEvent.click(screen.getByRole('button', { name: 'Allow remote control…' }))
+    expect(calls).toContainEqual(['remote:requestAccess'])
+    expect(await screen.findByText(/The remote is ready/)).toBeInTheDocument()
+  })
+
+  test('names media keys another app is holding', async () => {
+    const { api } = fakeApi(DEFAULT_SETTINGS, () => ({ trusted: true, keys: ALL_KEYS.slice(1) }))
+    renderWithMantine(<SettingsPage api={api} />)
+    expect(await screen.findByText(/Another app is using: play\/pause/)).toBeInTheDocument()
   })
 })

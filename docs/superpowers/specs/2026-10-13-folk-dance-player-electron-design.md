@@ -337,6 +337,7 @@ PROGRAMS                  [+]
 - Projector display choice
 - Auto-fullscreen on/off and timeout
 - Countdown seconds
+- Remote control: whether the remote's media keys work, and a button that asks macOS for Accessibility permission when they don't (§7.4)
 - "Reveal logs"
 
 ## 7. Playback and program flow
@@ -379,6 +380,18 @@ PROGRAMS                  [+]
 
 - **When:** only when projector mode is off. If `autoFullscreen.enabled` is on and there has been no input in the control window for `autoFullscreen.seconds`, the projector view opens over the laptop display.
 - **Closing:** mouse movement or Esc closes it, after a 1 s grace period.
+
+### 7.4 Remote control
+
+A media remote (or a keyboard's media keys) controls playback, whether the app is idle or playing, focused or not:
+
+- **Play/pause** (one button): pauses a playing song; otherwise does ▶ (resumes, skips a countdown, or starts the program's next song, also from idle or after a STOP).
+- **Next:** ⏭.
+- **Back:** ◀◀ (restarts the current song).
+- **Stop** (keyboards): ⏹.
+- **Volume:** left to the system.
+
+The keys are registered as global shortcuts in the main process and go to `PlayerSession`. Chromium's own media-key handling is switched off, so nothing can pause the `<audio>` element behind the session's back. On macOS, media keys reach an app only when it is trusted for Accessibility; Settings says whether the remote works and asks for the permission when it doesn't. See `docs/spikes/remote-control.md`.
 
 ## 8. Projector view
 

@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
+import type { RemoteStatus } from '@shared/program'
 import type { ImportService } from '../import/import-service'
 import { getLibraryStats } from '../library/stats'
 import type { PlayerSession } from '../session/player-session'
@@ -21,6 +22,8 @@ export interface HandlerDeps {
   player: PlayerSession
   // Whether a file is on disk (the program pre-check); defaults to the real file system.
   fileExists?: (path: string) => boolean
+  // The remote's media keys (spec §7.4); reported off when absent.
+  remote?: { status(): RemoteStatus; requestAccess(): RemoteStatus }
   // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void
   // Called after every change to programs or their items.

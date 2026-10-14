@@ -13,6 +13,7 @@ import {
 import type { AppInfo, RendererApi } from '@shared/contract'
 import type { ImportMapping } from '@shared/import'
 import type { SettingKey, Settings } from '@shared/settings'
+import RemoteSection from '../components/RemoteSection'
 import ImportMappingFields from '../import/ImportMappingFields'
 import { errorMessage } from '../ipc-error'
 
@@ -115,6 +116,7 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
         {number('autoContinue.seconds', 'Auto-continue after (seconds)', 0, 600)}
         {number('countdown.seconds', 'Countdown before first song (seconds)', 0, 60)}
       </Stack>
+      <RemoteSection api={api} />
       <Stack gap="xs">
         <Title order={4}>Fullscreen on this screen</Title>
         {toggle('autoFullscreen.enabled', 'Show fullscreen view when idle')}

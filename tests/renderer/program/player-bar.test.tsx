@@ -20,7 +20,8 @@ const COMMANDS = [
   'player:setSpeedLocked',
   'player:setVolume',
   'player:setAutoContinue',
-  'player:dismissWarning'
+  'player:dismissWarning',
+  'player:restart'
 ] as const
 
 function setup(state: PlayerState) {
@@ -104,11 +105,15 @@ describe('player bar', () => {
     expect(fake.callsTo('player:next')).toHaveLength(1)
   })
 
-  test('◀◀ restarts the song', async () => {
-    setup(playing(hora))
+  test('◀◀ asks main to restart; the audio rewinds when the restart count changes', async () => {
+    const fake = setup(playing(hora))
     await waitFor(() => expect(audio().src).toContain('101'))
     audio().currentTime = 42
     await userEvent.click(screen.getByRole('button', { name: 'Restart song' }))
+    expect(fake.callsTo('player:restart')).toEqual([[]])
+    expect(audio().currentTime).toBe(42) // main decides; the remote's back button goes there too
+    const state = playing(hora)
+    act(() => fake.emit('player:state', { ...state, current: { ...state.current!, restarts: 1 } }))
     expect(audio().currentTime).toBe(0)
   })
 
@@ -153,7 +158,7 @@ describe('player bar', () => {
     act(() =>
       fake.emit('player:state', {
         ...playing(hora, { speed: 0.75 }, 2),
-        current: { playId: 2, source: 'preview', itemId: null, track: hora }
+        current: { playId: 2, source: 'preview', itemId: null, track: hora, restarts: 0 }
       })
     )
     expect(screen.getByText('Preview')).toBeInTheDocument()

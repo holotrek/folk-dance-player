@@ -92,6 +92,22 @@ describe('program handlers', () => {
     expect((await h['programs:played'](p)).map((e) => e.track?.title)).toEqual(['Kolo', 'Hora'])
   })
 
+  test('◀◀ restarts the current song through the player', async () => {
+    const { h, songs } = setup()
+    const p = await h['programs:create']('Set')
+    await h['programs:addTracks'](p, [songs.hora.fileId], null)
+    await h['programs:setCurrent'](p)
+    await h['player:play']()
+    await h['player:restart']()
+    expect((await h['player:getState']()).current?.restarts).toBe(1)
+  })
+
+  test('remote status comes from the app; without one, the remote is reported off', async () => {
+    const { h } = setup()
+    expect(await h['remote:status']()).toEqual({ trusted: false, keys: [] })
+    expect(await h['remote:requestAccess']()).toEqual({ trusted: false, keys: [] })
+  })
+
   test('auto-continue is changed from the player bar', async () => {
     const { h, settings } = setup()
     await h['player:setAutoContinue']({ enabled: false })
