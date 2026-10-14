@@ -1,5 +1,6 @@
 import type { EventChannel, EventContract, InvokeChannel, RendererApi } from '@shared/contract'
 import { IDLE_PLAYER_STATE, NO_REMOTE } from '@shared/program'
+import { PROJECTOR_OFF } from '@shared/projector'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 
 type Handler = (...args: never[]) => unknown
@@ -44,6 +45,10 @@ export function createFakeApi(
         if (channel === 'programs:get') return null
         if (channel === 'player:getState') return IDLE_PLAYER_STATE
         if (channel === 'remote:status') return NO_REMOTE
+        // The projector is off, and the control window's progress reports go nowhere.
+        if (channel === 'projector:status') return PROJECTOR_OFF
+        if (channel === 'projector:displays') return []
+        if (channel === 'projector:reportProgress') return undefined
         if (channel === 'settings:getAll') return fake.settings
         if (channel === 'settings:set') {
           const [key, value] = args as [keyof Settings, unknown]

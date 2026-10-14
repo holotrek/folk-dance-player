@@ -23,6 +23,7 @@ export function useAudio(api: RendererApi, player: PlayerState): AudioControls {
   const [positionMs, setPosition] = useState(0)
   const [durationMs, setDuration] = useState<number | null>(null)
   const playId = player.current?.playId ?? null
+  const trackMs = player.current?.track.durationMs ?? null
   const fileId = player.current?.track.fileId ?? null
   const playing = player.status === 'playing'
   const stopped = player.status === 'stopped'
@@ -90,7 +91,13 @@ export function useAudio(api: RendererApi, player: PlayerState): AudioControls {
         playId,
         MEDIA_ERRORS[audio.error?.code ?? 0] ?? 'unknown error'
       )
-    const onTime = () => setPosition(audio.currentTime * 1000)
+    // The position also goes to main, for the projector's red line (spec §8.2).
+    const onTime = () => {
+      const ms = audio.currentTime * 1000
+      setPosition(ms)
+      const duration = Number.isFinite(audio.duration) ? audio.duration * 1000 : trackMs
+      void api.invoke('projector:reportProgress', playId, ms, duration)
+    }
     const onMeta = () => setDuration(Number.isFinite(audio.duration) ? audio.duration * 1000 : null)
     audio.addEventListener('ended', onEnded)
     audio.addEventListener('error', onError)
@@ -102,7 +109,7 @@ export function useAudio(api: RendererApi, player: PlayerState): AudioControls {
       audio.removeEventListener('timeupdate', onTime)
       audio.removeEventListener('loadedmetadata', onMeta)
     }
-  }, [api, playId])
+  }, [api, playId, trackMs])
 
   return {
     ref,

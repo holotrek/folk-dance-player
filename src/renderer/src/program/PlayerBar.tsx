@@ -8,6 +8,7 @@ import {
   NumberInput,
   Paper,
   Slider,
+  Switch,
   Text,
   Tooltip
 } from '@mantine/core'
@@ -17,6 +18,7 @@ import { formatTime } from '../format-time'
 import { useLibraryApi } from '../library/LibraryProvider'
 import { useProgram } from './ProgramProvider'
 import { useAudio } from './useAudio'
+import { useProjectorStatus } from './useProjectorStatus'
 import classes from './PlayerBar.module.css'
 
 const nextLabel = (player: PlayerState): string | null =>
@@ -52,6 +54,7 @@ export default function PlayerBar(): React.JSX.Element {
   const api = useLibraryApi()
   const player = useProgram((s) => s.player)
   const audio = useAudio(api, player)
+  const projector = useProjectorStatus(api)
   const [seeking, setSeeking] = useState<number | null>(null)
   const [seconds, setSeconds] = useState<string | number>(player.autoContinue.seconds)
   useEffect(() => setSeconds(player.autoContinue.seconds), [player.autoContinue.seconds])
@@ -216,6 +219,18 @@ export default function PlayerBar(): React.JSX.Element {
           }}
         />
         <Text size="sm">s</Text>
+        <Group gap={6} wrap="nowrap" ml="md">
+          <Switch
+            label="Projector"
+            checked={projector.enabled}
+            onChange={(e) => void api.invoke('projector:setEnabled', e.currentTarget.checked)}
+          />
+          {projector.open && (
+            <Text size="xs" c="dimmed" className={classes.label}>
+              {projector.notice ?? `On ${projector.display}`}
+            </Text>
+          )}
+        </Group>
       </Group>
       {player.warning && (
         <Alert
