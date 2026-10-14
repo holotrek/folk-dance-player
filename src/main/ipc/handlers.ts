@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
 import type { RemoteStatus } from '@shared/program'
+import { projectorHandlers, type ProjectorDeps } from './projector-handlers'
 import type { ImportService } from '../import/import-service'
 import { getLibraryStats } from '../library/stats'
 import type { PlayerSession } from '../session/player-session'
@@ -24,6 +25,8 @@ export interface HandlerDeps {
   fileExists?: (path: string) => boolean
   // The remote's media keys (spec §7.4); reported off when absent.
   remote?: { status(): RemoteStatus; requestAccess(): RemoteStatus }
+  // The projector window (spec §8); reported off when absent.
+  projector?: ProjectorDeps
   // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void
   // Called after every change to programs or their items.
@@ -46,6 +49,7 @@ export function createHandlers(deps: HandlerDeps): InvokeHandlers {
     'import:cancel': () => deps.importer.cancel(),
     'library:stats': () => getLibraryStats(deps.db),
     ...libraryHandlers(deps),
-    ...programHandlers(deps)
+    ...programHandlers(deps),
+    ...projectorHandlers(deps)
   }
 }

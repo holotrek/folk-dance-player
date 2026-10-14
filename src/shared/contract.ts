@@ -25,6 +25,12 @@ import type {
   ProgramSummary,
   RemoteStatus
 } from './program'
+import type {
+  DisplayChoice,
+  ProjectorProgress,
+  ProjectorSnapshot,
+  ProjectorStatus
+} from './projector'
 import type { SettingKey, Settings } from './settings'
 
 export interface AppInfo {
@@ -124,6 +130,18 @@ export interface InvokeContract {
   'remote:status': { args: []; result: RemoteStatus }
   // Asks macOS for Accessibility permission (its own dialog), then reports the status.
   'remote:requestAccess': { args: []; result: RemoteStatus }
+  // The player bar's projector toggle (spec §8.1).
+  'projector:status': { args: []; result: ProjectorStatus }
+  'projector:setEnabled': { args: [on: boolean]; result: ProjectorStatus }
+  'projector:displays': { args: []; result: DisplayChoice[] }
+  'projector:setDisplay': { args: [displayId: number | null]; result: ProjectorStatus }
+  // The projector window asks for the current snapshot when it loads.
+  'projector:getSnapshot': { args: []; result: ProjectorSnapshot }
+  // The control window reports the playing song's position, for the projector's red line.
+  'projector:reportProgress': {
+    args: [playId: number, positionMs: number, durationMs: number | null]
+    result: void
+  }
 }
 
 export type InvokeChannel = keyof InvokeContract
@@ -196,7 +214,13 @@ export const INVOKE_CHANNELS = [
   'player:dismissWarning',
   'player:restart',
   'remote:status',
-  'remote:requestAccess'
+  'remote:requestAccess',
+  'projector:status',
+  'projector:setEnabled',
+  'projector:displays',
+  'projector:setDisplay',
+  'projector:getSnapshot',
+  'projector:reportProgress'
 ] as const satisfies readonly InvokeChannel[]
 
 // Compile error if a channel in InvokeContract is missing from INVOKE_CHANNELS.
@@ -213,6 +237,11 @@ export interface EventContract {
   'programs:changed': null
   // The player's state after every change (spec §9).
   'player:state': PlayerState
+  // To the control window: the projector opened, closed or moved.
+  'projector:status': ProjectorStatus
+  // To the projector window only: what to show, and the playing song's position.
+  'projector:snapshot': ProjectorSnapshot
+  'projector:progress': ProjectorProgress
 }
 
 export type EventChannel = keyof EventContract
@@ -221,7 +250,10 @@ export const EVENT_CHANNELS = [
   'import:progress',
   'library:changed',
   'programs:changed',
-  'player:state'
+  'player:state',
+  'projector:status',
+  'projector:snapshot',
+  'projector:progress'
 ] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>
