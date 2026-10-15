@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { AppShell, Tabs } from '@mantine/core'
 import { useElementSize } from '@mantine/hooks'
+import { useAppearance } from './appearance'
 import Sidebar from './components/Sidebar'
 import { LibraryProvider } from './library/LibraryProvider'
 import { ProgramProvider } from './program/ProgramProvider'
@@ -20,6 +21,7 @@ const HEADER_FALLBACK = 170
 export default function App(): React.JSX.Element {
   const [page, setPage] = useState<Page>('program')
   const header = useElementSize()
+  useAppearance(window.api)
   return (
     <LibraryProvider api={window.api}>
       <ProgramProvider api={window.api}>
