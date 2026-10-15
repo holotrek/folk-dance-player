@@ -66,12 +66,12 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
   - **End-to-end tests:** add it to the `e2e` job's `matrix.os` in `pr-gate.yml` (for example `ubuntu-latest`, under a virtual display, or `windows-latest`), and add its check to the required checks of the `main` ruleset (Settings → Rules).
   - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml`. Windows also needs its electron-builder target and a `dist` script without `env -u`, which is Unix-only.
 - **Pull requests from forks** run with read-only permissions and no secrets. GitHub asks a maintainer to approve a first-time contributor's runs.
-- **Dependabot** opens weekly update PRs (npm packages and the workflows' actions), only for releases at least 14 days old.
+- **Dependabot** opens weekly update PRs (npm packages and the workflows' actions), only for releases at least 14 days old. It skips major npm upgrades: make those on purpose (Vite stays on 7 for electron-vite 5; `@types/node` follows Node's major).
 
 ## Releasing
 
 1. Complete the manual hardware checklist in spec §10.2 (projector, Canva, offline slides, slowed audio).
-2. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version (for the very first release, `0.1.0`). It opens a "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Check the notes, and merge it once its checks pass.
+2. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version (for the very first release, `0.1.0`). It opens a **draft** "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Check the version and notes, then click **Ready for review**: that starts the PR Gate (a pull request opened by a workflow starts none by itself). Merge it once its checks pass.
 3. **Actions → Create Release → Run workflow** on main. It refuses a version that isn't higher than the last release or has no CHANGELOG section; otherwise it tests, builds the `.dmg`, checks it with the end-to-end tests, and publishes the GitHub release `vX.Y.Z` with the `.dmg` and the notes.
 4. To try a release without publishing, tick **Dry run** (any branch): the `.dmg` is kept as a workflow artifact for a week.
 
