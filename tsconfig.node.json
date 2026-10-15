@@ -10,6 +10,8 @@
     "tests/main/**/*",
     "tests/shared/**/*",
     "e2e/**/*",
+    "scripts/**/*.mts",
+    "tests/scripts/**/*",
     "playwright.config.ts"
   ],
   "compilerOptions": {

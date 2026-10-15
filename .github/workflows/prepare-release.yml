@@ -1,0 +1,49 @@
+# Prepare Release (spec §13.4): run from the Actions tab on main. It bumps the version, moves the
+# CHANGELOG's Unreleased notes under it, and opens a pull request "Release vX.Y.Z". Merge it, then
+# run Create Release.
+name: Prepare Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: 'major, minor, patch, or an exact version such as 1.0.0 (the first release: 0.1.0)'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Releases are prepared from main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run Prepare Release on main (pick main under 'Use workflow from')."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - id: bump
+        env:
+          BUMP: ${{ inputs.bump }}
+        run: node scripts/release.mts prepare "$BUMP"
+      - name: Open the release pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.bump.outputs.version }}
+        run: |
+          branch="release/v$VERSION"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git switch -c "$branch"
+          git commit -am "chore(release): v$VERSION"
+          git push origin "$branch"
+          gh pr create --base main --head "$branch" --title "Release v$VERSION" \
+            --body "Bumps the version to $VERSION and dates its CHANGELOG notes. When this is merged, run **Create Release** on main."
+          # A PR opened with this workflow's token doesn't start the PR Gate; start it here.
+          gh workflow run pr-gate.yml --ref "$branch"

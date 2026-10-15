@@ -1,0 +1,88 @@
+# PR Gate (spec §13.4): every pull request, and every push to main, must typecheck, pass the
+# formatting check and the tests, build, and pass the end-to-end tests. Pull requests that change
+# the app must also add a CHANGELOG line. Branch protection requires these checks before merging.
+name: PR Gate
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  push:
+    branches: [main]
+  # Prepare Release starts this on its release branch: a PR opened by a workflow doesn't start
+  # other workflows by itself, and branch protection needs these checks to merge it.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: pr-gate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Typecheck, test and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.1.0
+      - run: npm ci
+      - run: npx prettier --check .
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx electron-vite build
+
+  e2e:
+    name: End-to-end (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        # macOS first; ubuntu-latest (under a virtual display) and windows-latest can join later.
+        os: [macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.1.0
+      - run: npm ci
+      - run: npm run test:e2e
+      - name: Keep Playwright's report of a failure
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: e2e-results-${{ matrix.os }}
+          path: test-results/
+          retention-days: 7
+
+  changelog:
+    name: CHANGELOG
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 2 # the PR's merge commit and its first parent, today's main
+      - name: A change to the app adds a CHANGELOG line
+        env:
+          AUTHOR: ${{ github.event.pull_request.user.login }}
+          LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
+        run: |
+          if [ "$AUTHOR" = "dependabot[bot]" ] || echo "$LABELS" | grep -q '"no changelog"'; then
+            echo "No CHANGELOG line needed (Dependabot, or labeled 'no changelog')."
+            exit 0
+          fi
+          # The merge commit against today's main: exactly this PR's changes. (The event's base SHA
+          # goes stale when main moves, and would count other PRs' files.)
+          changed=$(git diff --name-only HEAD^1 HEAD)
+          if echo "$changed" | grep -q '^src/' && ! echo "$changed" | grep -qx 'CHANGELOG.md'; then
+            echo "::error::This PR changes the app (src/) but not CHANGELOG.md. Add a line under Unreleased, written for organizers, or label the PR 'no changelog' if nobody would notice the change."
+            exit 1
+          fi
+          echo "OK"
