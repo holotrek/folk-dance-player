@@ -4,17 +4,24 @@ import {
   dialog,
   globalShortcut,
   ipcMain,
+  net,
   powerMonitor,
   powerSaveBlocker,
   protocol,
   screen,
   systemPreferences
 } from 'electron'
+import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
 import type { EventChannel, EventContract } from '@shared/contract'
-import { MEDIA_SCHEME, parseMediaUrl } from '@shared/media'
+import { MEDIA_SCHEME, parseMediaUrl, parseSlideUrl } from '@shared/media'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import { CanvaService } from './canva/canva-service'
+import { CaptureQueue } from './canva/capture-queue'
+import { slideImagePath } from './canva/decks'
+import { canvaFetcher, createCanvaPage, createLiveView } from './canva/electron-canva'
+import { createSlideCapturer } from './canva/slide-capturer'
 import { openDatabase } from './db/connection'
 import { getSchemaVersion, migrate, SchemaTooNewError } from './db/migrate'
 import { MIGRATIONS } from './db/migrations'
@@ -32,6 +39,7 @@ import {
   type Rect
 } from './projector/projector-controller'
 import { createProjectorFeed } from './projector/projector-feed'
+import { LiveSlide } from './projector/live-slide'
 import { registerMediaKeys } from './remote/media-keys'
 import { checkProgramFiles } from './programs/file-check'
 import { getProgram } from './programs/programs'
@@ -44,6 +52,9 @@ import { SettingsStore } from './settings/settings-store'
 
 // A separate library for end-to-end tests and smoke runs, so they never touch the real one.
 if (process.env['FDP_USER_DATA']) app.setPath('userData', process.env['FDP_USER_DATA'])
+
+// One app at a time: a second copy would open the same library and fight over the projector.
+if (!app.requestSingleInstanceLock()) app.exit(0)
 
 // The remote's media keys go to PlayerSession (global shortcuts, spec §7.4). Chromium's own media
 // key handling would pause or play the <audio> element behind the session's back.
@@ -66,7 +77,11 @@ function loadPage(win: BrowserWindow, page: 'index.html' | 'projector.html'): vo
 // Spec §8.1: borderless over a whole display, above everything, never taking focus, so the
 // control window keeps the keyboard. Always-on-top is set before the bounds, or macOS keeps the
 // window below the menu bar.
-function createProjectorWindow(bounds: Rect): ProjectorWindow {
+// `hooks` lets the live Canva view follow the window (spec §8.3).
+function createProjectorWindow(
+  bounds: Rect,
+  hooks: { opened(win: BrowserWindow): void; resized(): void; closed(): void }
+): ProjectorWindow {
   const win = new BrowserWindow({
     ...bounds,
     frame: false,
@@ -79,9 +94,12 @@ function createProjectorWindow(bounds: Rect): ProjectorWindow {
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/projector.js'),
-      sandbox: false
+      sandbox: true
     }
   })
+  hooks.opened(win)
+  win.on('resize', hooks.resized)
+  win.once('closed', hooks.closed)
   win.setAlwaysOnTop(true, 'screen-saver')
   // skipTransformProcessType: without it, macOS briefly makes the whole app a background app on
   // every call, hiding the control window and the Dock icon, and after sleep it can stay that way.
@@ -119,7 +137,7 @@ function createMainWindow(): BrowserWindow {
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
-      sandbox: false
+      sandbox: true
     }
   })
   win.on('ready-to-show', () => win.show())
@@ -217,10 +235,37 @@ app.whenReady().then(() => {
   )
   protocol.handle(MEDIA_SCHEME, (request) => {
     const fileId = parseMediaUrl(request.url)
-    return mediaResponse(
-      fileId === null ? null : trackPath(db, fileId),
-      request.headers.get('range')
-    )
+    const slide = parseSlideUrl(request.url)
+    const path =
+      fileId !== null
+        ? trackPath(db, fileId)
+        : slide
+          ? slideImagePath(db, slide.deckId, slide.pageId)
+          : null
+    return mediaResponse(path, request.headers.get('range'))
+  })
+
+  // Canva slides (spec §8.3): saved images under the app data folder, captured in the background.
+  const slidesDir = join(app.getPath('userData'), 'slides')
+  const captures = new CaptureQueue({
+    db,
+    capturer: createSlideCapturer({
+      createPage: createCanvaPage,
+      sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+    }),
+    slidesDir,
+    writeFile: async (path, data) => {
+      await mkdir(slidesDir, { recursive: true })
+      await writeFile(path, data)
+    },
+    onStatus: (status) => broadcast('canva:captureStatus', status),
+    onCaptured: libraryChanged
+  })
+  const canva = new CanvaService({
+    db,
+    fetcher: canvaFetcher,
+    queue: captures,
+    onChange: libraryChanged
   })
 
   const mediaKeys = registerMediaKeys(globalShortcut, player)
@@ -235,6 +280,20 @@ app.whenReady().then(() => {
   // One control window; closing it quits, so the projector is never left on its own.
   const mainWindow = createMainWindow()
   mainWindow.on('closed', () => app.quit())
+  app.on('second-instance', () => {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.show()
+    mainWindow.focus()
+  })
+
+  // The live Canva view lives in the projector window, over the saved image.
+  let projectorWindow: BrowserWindow | null = null
+  const live = new LiveSlide({
+    createView: () => createLiveView(projectorWindow!),
+    online: () => projectorWindow !== null && net.isOnline(),
+    size: () => projectorWindow?.getContentBounds() ?? null,
+    onChange: () => updateProjector()
+  })
 
   const controller = new ProjectorController({
     displays: () => screen.getAllDisplays().map(toDisplay),
@@ -253,7 +312,15 @@ app.whenReady().then(() => {
         height: Math.min(height, area.height)
       })
     },
-    createWindow: createProjectorWindow,
+    createWindow: (bounds) =>
+      createProjectorWindow(bounds, {
+        opened: (win) => (projectorWindow = win),
+        resized: () => live.resize(),
+        closed: () => {
+          live.close()
+          projectorWindow = null
+        }
+      }),
     settings: {
       enabled: () => settings.get('projector.enabled'),
       setEnabled: (on) => settings.set('projector.enabled', on),
@@ -264,7 +331,7 @@ app.whenReady().then(() => {
       updateProjector()
     }
   })
-  const feed = createProjectorFeed({ db, player, projector: controller })
+  const feed = createProjectorFeed({ db, player, projector: controller, live })
   const keepAwake = new KeepAwake(powerSaveBlocker)
   updateProjector = coalesced(() => {
     feed.update()
@@ -320,6 +387,7 @@ app.whenReady().then(() => {
         snapshot: () => feed.snapshot(),
         progress: (progress) => feed.progress(progress)
       },
+      canva: { service: canva, captureStatus: () => captures.current() },
       onLibraryChanged: () => {
         player.refresh() // labels or missing flags of the next item may have changed
         libraryChanged()
@@ -338,6 +406,8 @@ app.whenReady().then(() => {
 
   controller.start()
   activity.start()
+  // Re-read the decks and capture linked slides that have no image yet (spec §8.3).
+  void canva.startup(net.isOnline())
   app.on('will-quit', () => {
     activity.stop()
     globalShortcut.unregisterAll()
