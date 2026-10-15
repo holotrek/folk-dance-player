@@ -1,8 +1,9 @@
 import type { MenuItemConstructorOptions } from 'electron'
 
 // The macOS menu bar (spec §10.1: Help → Reveal logs). Settings… opens the Settings page; the
-// Edit menu gives text fields copy, paste and undo; Window gives ⌘W and ⌘M. The developer tools
-// are offered only in development.
+// Edit menu gives text fields copy, paste and undo; Window gives Minimize (⌘M) and Zoom. There is
+// deliberately no Close Window (⌘W): closing the control window quits the app, mid-dance. The
+// developer tools are offered only in development.
 export function menuTemplate(o: {
   appName: string
   dev: boolean

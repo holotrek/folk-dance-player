@@ -189,7 +189,7 @@ function coalesced(fn: () => void): () => void {
 function openLibraryDatabase(dbPath: string, backupsDir: string): DatabaseSync {
   const db = openDatabase(dbPath)
   try {
-    const copy = backupDatabase(db, backupsDir, new Date())
+    const copy = backupDatabase(db, backupsDir, new Date(), MIGRATIONS.at(-1)!.version)
     if (copy) log.info(`Backed up the library to ${copy}`)
   } catch (err) {
     log.error("Couldn't back up the library", err)
@@ -214,7 +214,10 @@ function startupErrorMessage(err: unknown): string {
   return `The music library could not be opened.\n\n${err instanceof Error ? err.message : String(err)}`
 }
 
-app.whenReady().then(() => {
+// Everything that starts the app once Electron is ready. Startup is synchronous, so anything that
+// throws here is shown and ends the app: otherwise it would only be logged, leaving a copy with no
+// window that holds the single-instance lock (spec §10.1's log-only rule is for runtime failures).
+function startApp(): void {
   electronApp.setAppUserModelId('com.folkdanceplayer.app')
   // The packaged app gets its icon from the bundle (build/icon.icns); unpackaged, the Dock would
   // show Electron's.
@@ -486,6 +489,20 @@ app.whenReady().then(() => {
     globalShortcut.unregisterAll()
     db.close()
   })
+}
+
+app.whenReady().then(() => {
+  try {
+    startApp()
+  } catch (err) {
+    log.error('Startup failed', err)
+    dialog.showErrorBox(
+      'Folk Dance Player',
+      `Folk Dance Player couldn't start.\n\n${err instanceof Error ? err.message : String(err)}\n\n` +
+        `The details are in the log: ${log.dir}`
+    )
+    app.exit(1)
+  }
 })
 
 app.on('window-all-closed', () => {

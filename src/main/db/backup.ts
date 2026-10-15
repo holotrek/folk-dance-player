@@ -12,11 +12,20 @@ const stamp = (d: Date) =>
 
 // Spec §10.1: at startup, before migrations, the library is copied to `dir` (VACUUM INTO: a
 // consistent copy, safe while the database is open), keeping the newest `KEEP` copies. Names sort
-// by time, so the oldest go first; other files in `dir` are left alone. A brand-new library
-// (schema 0) has nothing to protect. Returns the copy's path, or null when none was made.
-export function backupDatabase(db: DatabaseSync, dir: string, now: Date): string | null {
+// by time, so the oldest go first; other files in `dir` are left alone. Returns the copy's path,
+// or null when none was made:
+// - a brand-new library (schema 0) has nothing to protect;
+// - a library from a newer version of the app (schema above `newestSchema`, which this app
+//   refuses to open) is left alone, so going back to an older version can't rotate out the
+//   backups taken before it was upgraded.
+export function backupDatabase(
+  db: DatabaseSync,
+  dir: string,
+  now: Date,
+  newestSchema: number
+): string | null {
   const { user_version } = db.prepare('PRAGMA user_version').get() as { user_version: number }
-  if (user_version === 0) return null
+  if (user_version === 0 || user_version > newestSchema) return null
   mkdirSync(dir, { recursive: true })
   const path = join(dir, `folk-dance-player-${stamp(now)}.sqlite`)
   db.prepare('VACUUM INTO ?').run(path)

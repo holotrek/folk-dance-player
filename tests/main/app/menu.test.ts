@@ -29,7 +29,7 @@ describe('the app menu', () => {
     expect(app.at(-1)!.role).toBe('quit')
   })
 
-  test('Edit and Window are the standard ones, so copy, paste and ⌘W work', () => {
+  test('Edit and Window are the standard ones, so copy, paste and ⌘M work', () => {
     const { menu } = setup()
     expect(menu.map((m) => m.role ?? m.label)).toEqual([
       'Folk Dance Player',
