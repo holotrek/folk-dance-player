@@ -1,3 +1,4 @@
+import LibraryFilterNote from '../library/LibraryFilterNote'
 import LibrarySearch from '../library/LibrarySearch'
 import LibraryTable from '../library/LibraryTable'
 import HoldingPanel from '../program/HoldingPanel'
@@ -16,6 +17,7 @@ export default function ProgramPage(): React.JSX.Element {
         <ProgramList />
         <section className={classes.library} aria-label="Library">
           <LibrarySearch />
+          <LibraryFilterNote />
           <LibraryTable compact />
         </section>
       </div>

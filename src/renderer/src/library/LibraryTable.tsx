@@ -3,6 +3,7 @@ import { Badge, Group, Text, UnstyledButton } from '@mantine/core'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
+import FavoriteToggle from './FavoriteToggle'
 import { carriesFiles, getDraggedFiles, setDraggedFiles } from './drag'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
@@ -23,11 +24,14 @@ const ALL_COLUMNS: Column[] = [
         <Text span c="red" aria-label="File missing" title="The file can't be found">
           ⚠
         </Text>
-      ) : r.isFavorite ? (
-        <Text span aria-label="Favorite">
-          ★
-        </Text>
-      ) : null
+      ) : (
+        <FavoriteToggle
+          fileId={r.fileId}
+          label={r.label}
+          isFavorite={r.isFavorite}
+          className={r.isFavorite ? undefined : classes.unstarred}
+        />
+      )
   },
   {
     sort: 'title',
@@ -55,6 +59,17 @@ const ALL_COLUMNS: Column[] = [
   { sort: 'duration', label: 'Time', render: (r) => formatTime(r.durationMs) }
 ]
 
+// In a playlist: each song's number in the playlist's own order.
+const NUMBER_COLUMN: Column = {
+  sort: null,
+  label: '#',
+  render: (r) => (
+    <Text span size="xs" c="dimmed">
+      {r.playlistNumber}
+    </Text>
+  )
+}
+
 // The Program page's library list (spec §6.2): the song and its dance, country and teacher.
 const COMPACT = new Set(['', 'Song / Dance', 'Country', 'Teacher', 'Time'])
 const COMPACT_COLUMNS = ALL_COLUMNS.filter((c) => COMPACT.has(c.label))
@@ -67,7 +82,6 @@ export default function LibraryTable({
 }: {
   compact?: boolean
 }): React.JSX.Element {
-  const COLUMNS = compact ? COMPACT_COLUMNS : ALL_COLUMNS
   const api = useLibraryApi()
   const store = useLibraryStore()
   const rows = useLibrary((s) => s.rows)
@@ -77,7 +91,12 @@ export default function LibraryTable({
   const search = useLibrary((s) => s.search)
   const setSort = useLibrary((s) => s.setSort)
   const select = useLibrary((s) => s.select)
-  const [dropTarget, setDropTarget] = useState<number | null>(null)
+  const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
+  const inPlaylist = filter.kind === 'playlist'
+  const COLUMNS = [
+    ...(inPlaylist ? [NUMBER_COLUMN] : []),
+    ...(compact ? COMPACT_COLUMNS : ALL_COLUMNS)
+  ]
   const scroll = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -96,17 +115,22 @@ export default function LibraryTable({
     void setSort({ column, direction })
   }
 
-  const dropOn = (target: LibraryRow, fileIds: number[]): void => {
+  // Moves the dropped songs before `target`, or to the end when it is null.
+  const dropOn = (target: LibraryRow | null, fileIds: number[]): void => {
     if (filter.kind !== 'playlist') return
     const order = rows.map((r) => r.playlistItemId!)
     const moving = rows.filter((r) => fileIds.includes(r.fileId)).map((r) => r.playlistItemId!)
-    const next = moveBefore(order, moving, target.playlistItemId)
+    const next = moveBefore(order, moving, target?.playlistItemId ?? null)
     if (next.join() !== order.join()) void api.invoke('playlists:reorder', filter.playlistId, next)
   }
 
   return (
     <div
-      className={`${classes.table} ${compact ? classes.compact : ''}`}
+      className={[
+        classes.table,
+        compact ? classes.compact : '',
+        inPlaylist ? classes.numbered : ''
+      ].join(' ')}
       role="table"
       aria-label="Songs"
       aria-rowcount={rows.length}
@@ -194,6 +218,23 @@ export default function LibraryTable({
             )
           })}
         </div>
+        {/* Below the last row: songs dropped here move to the end of the playlist. */}
+        <div
+          className={`${classes.end} ${dropTarget === 'end' ? classes.dropBefore : ''}`}
+          data-testid="songs-end"
+          onDragOver={(e) => {
+            if (!reorderable || !carriesFiles(e.dataTransfer)) return
+            e.preventDefault()
+            setDropTarget('end')
+          }}
+          onDragLeave={() => setDropTarget(null)}
+          onDrop={(e) => {
+            setDropTarget(null)
+            if (!reorderable) return
+            e.preventDefault()
+            dropOn(null, getDraggedFiles(e.dataTransfer))
+          }}
+        />
       </div>
     </div>
   )

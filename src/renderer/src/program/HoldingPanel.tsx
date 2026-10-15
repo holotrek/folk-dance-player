@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { ActionIcon, Text, Title } from '@mantine/core'
 import type { LibraryRow } from '@shared/library'
+import FavoriteToggle from '../library/FavoriteToggle'
 import { carriesFiles, getDraggedFiles, setDraggedFiles } from '../library/drag'
 import { useLibraryApi } from '../library/LibraryProvider'
 import classes from './ProgramList.module.css'
@@ -14,7 +15,7 @@ const HOLDING = {
 // Spec §6.2 holding panel: songs set aside for this session, in the order they were placed.
 // Drag and drop works as in the program: songs dropped on a held song go before it, anywhere else
 // in the panel at the end, and held songs dragged within the panel move. Drag them into the
-// program; double-click to preview; ✕ to release.
+// program; double-click to preview; the star to favorite; ✕ to release.
 export default function HoldingPanel(): React.JSX.Element {
   const api = useLibraryApi()
   const [rows, setRows] = useState<LibraryRow[]>([])
@@ -83,6 +84,7 @@ export default function HoldingPanel(): React.JSX.Element {
             <Text span size="xs" c="dimmed">
               {r.country}
             </Text>
+            <FavoriteToggle fileId={r.fileId} label={r.label} isFavorite={r.isFavorite} />
             <ActionIcon
               variant="subtle"
               size="sm"
