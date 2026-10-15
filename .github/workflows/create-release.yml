@@ -1,8 +1,10 @@
-# Create Release (spec §13.4): run from the Actions tab on main. It refuses a version that isn't
-# higher than the last release, or that has no CHANGELOG section; then it tests, builds the
-# Universal .dmg, checks it with the end-to-end tests, tags vX.Y.Z and publishes a GitHub release
-# with the .dmg and the CHANGELOG notes. A dry run (any branch) does everything but publish, and
-# keeps the .dmg as a workflow artifact for a week.
+# Create Release (spec §13.4): run from the Actions tab on main.
+# 1. Check: the version must be higher than the last release and have CHANGELOG notes.
+# 2. Build, one job per OS (a matrix, like the PR Gate's end-to-end tests): test, build the
+#    installer, check it with the end-to-end tests, keep it as an artifact.
+# 3. Publish, once every build has passed: tag vX.Y.Z and publish one GitHub release with every
+#    installer and the CHANGELOG notes, so a release is never half-published.
+# A dry run (any branch) does everything but publish, and keeps the installers for a week.
 name: Create Release
 
 on:
@@ -16,7 +18,7 @@ on:
         default: false
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: create-release
@@ -27,8 +29,11 @@ env:
   DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}
 
 jobs:
-  release:
-    runs-on: macos-latest
+  check:
+    name: Check the version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - name: Releases come from main
         if: env.DRY_RUN != 'true' && github.ref != 'refs/heads/main'
@@ -41,30 +46,70 @@ jobs:
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version-file: .nvmrc
-          cache: npm
-      - run: npm install --global npm@12.1.0
       - id: version
         run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
       - name: The version is new and has release notes
-        # A dry run reports a failed check but goes on, to test the build.
+        # A dry run reports a failed check but goes on, to test the builds.
         continue-on-error: ${{ env.DRY_RUN == 'true' }}
-        run: node scripts/release.mts check release-notes.md
+        run: node scripts/release.mts check
+
+  build:
+    name: Build (${{ matrix.os }})
+    needs: check
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # Each OS builds its own installer. Windows joins with its electron-builder target, e.g.
+          # { os: windows-latest, installer: 'dist/*.exe' }.
+          - os: macos-latest
+            installer: 'dist/*.dmg'
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.1.0
       - run: npm ci
       - run: npm test
       - run: npm run dist
       - run: npm run test:e2e:dist
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installer-${{ matrix.os }}
+          path: ${{ matrix.installer }}
+          retention-days: 7
+          if-no-files-found: error
+
+  publish:
+    name: Publish
+    needs: [check, build]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # the tag and the release
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - name: Release notes
+        continue-on-error: ${{ env.DRY_RUN == 'true' }}
+        run: node scripts/release.mts check release-notes.md
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: installer-*
+          path: installers
+          merge-multiple: true
+      - run: ls -la installers
       - name: Publish the release
         if: env.DRY_RUN != 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.check.outputs.version }}
         run: |
-          gh release create "v$VERSION" "dist/Folk Dance Player-$VERSION-universal.dmg" \
-            --target "$GITHUB_SHA" --title "Folk Dance Player $VERSION" --notes-file release-notes.md
-      - name: Keep the .dmg (dry run)
-        if: env.DRY_RUN == 'true'
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: folk-dance-player-${{ steps.version.outputs.version }}-dmg
-          path: dist/*.dmg
-          retention-days: 7
+          gh release create "v$VERSION" installers/* --target "$GITHUB_SHA" \
+            --title "Folk Dance Player $VERSION" --notes-file release-notes.md

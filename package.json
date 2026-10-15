@@ -18,7 +18,7 @@
     "test:e2e": "npm run build && env -u ELECTRON_RUN_AS_NODE playwright test",
     "test:e2e:dist": "env -u ELECTRON_RUN_AS_NODE FDP_APP=\"dist/mac-universal/Folk Dance Player.app\" playwright test",
     "format": "prettier --write .",
-    "dist": "npm run build && env -u ELECTRON_RUN_AS_NODE electron-builder --mac",
+    "dist": "npm run build && env -u ELECTRON_RUN_AS_NODE electron-builder --mac --publish never",
     "icon": "env -u ELECTRON_RUN_AS_NODE electron scripts/make-icon.cjs",
     "postinstall": "install-electron"
   },
