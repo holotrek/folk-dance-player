@@ -17,7 +17,7 @@ list as a known issue) before the release.
 ## Before you start
 
 - [ ] Install the `.dmg` (drag the app to Applications; the first time, System Settings → Privacy & Security → **Open Anyway**).
-- [ ] A program has a song or two, and at least one is marked as taught, so a Teaching row appears.
+- [ ] A program has a few songs, with a STOP before one of them (its ⋯ menu → **Insert STOP before**), so the projector shows a Teaching row.
 - [ ] One dance is linked to a Canva slide (Music page → the dance's editor → Canva slide, with a deck's public **view** link), and a few seconds have passed so its image is saved.
 
 ## A. No projector connected
@@ -34,7 +34,7 @@ System Settings → Displays: not mirrored, with the laptop as the main display.
 - [ ] 5. Turn on the Projector switch: the view goes to the projector and the control window stays on the laptop. Moving the mouse and pressing Esc do **not** close it.
 - [ ] 6. Play the program:
   - [ ] The red progress line moves.
-  - [ ] A Teaching row shows before the taught dance.
+  - [ ] A Teaching row shows before the dance after the STOP.
   - [ ] Previously played fills in as songs play.
   - [ ] A preview double-clicked on the Music page shows on the projector too.
 - [ ] 7. Drag the control window onto the projector: it moves back to the laptop.
