@@ -56,13 +56,24 @@ npm run dev
   2. Add it to `INVOKE_CHANNELS`. Typecheck fails until you do.
   3. Implement it in `createHandlers`.
 
+## Continuous integration
+
+GitHub Actions (spec §13.4) runs on every pull request and every push to main:
+
+- **PR Gate:** formatting, typecheck, unit tests and build on Linux; the end-to-end tests on macOS; and the CHANGELOG check. Branch protection requires all three before merging into main.
+- **The CHANGELOG check:** a pull request that changes `src/` must add a line to `CHANGELOG.md`. If nobody would notice the change, label the PR `no changelog`. Dependabot's PRs are skipped.
+- **Adding an OS:**
+  - **End-to-end tests:** add it to the `e2e` job's `matrix.os` in `pr-gate.yml` (for example `ubuntu-latest`, under a virtual display, or `windows-latest`), and add its check to branch protection.
+  - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml`. Windows also needs its electron-builder target and a `dist` script without `env -u`, which is Unix-only.
+- **Pull requests from forks** run with read-only permissions and no secrets. GitHub asks a maintainer to approve a first-time contributor's runs.
+- **Dependabot** opens weekly update PRs (npm packages and the workflows' actions), only for releases at least 14 days old.
+
 ## Releasing
 
-1. `npm test` and `npm run test:e2e` pass. Complete the manual hardware checklist in spec §10.2 (projector, Canva, offline slides, slowed audio).
-2. Bump `version` in `package.json` (semver).
-3. In `CHANGELOG.md`, move the `Unreleased` entries under `## [x.y.z] - YYYY-MM-DD`.
-4. Commit as `chore(release): vx.y.z` and tag `vx.y.z`.
-5. Build the `.dmg` with `npm run dist`, check it with `npm run test:e2e:dist`, and attach `dist/Folk Dance Player-x.y.z-universal.dmg` to the GitHub release.
+1. Complete the manual hardware checklist in spec §10.2 (projector, Canva, offline slides, slowed audio).
+2. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version. It opens a "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Check the notes, and merge it once its checks pass.
+3. **Actions → Create Release → Run workflow** on main. It refuses a version that isn't higher than the last release or has no CHANGELOG section; otherwise it tests, builds the `.dmg`, checks it with the end-to-end tests, and publishes the GitHub release `vX.Y.Z` with the `.dmg` and the notes.
+4. To try a release without publishing, tick **Dry run** (any branch): the `.dmg` is kept as a workflow artifact for a week.
 
 ### Signing and notarizing
 
@@ -73,7 +84,9 @@ Until there's an Apple Developer ID, `npm run dist` makes an **ad-hoc signed** a
 3. Run:
 
    ```bash
-   npm run build && env -u ELECTRON_RUN_AS_NODE npx electron-builder --mac \
+   npm run build && env -u ELECTRON_RUN_AS_NODE npx electron-builder --mac --publish never \
      -c.mac.identity="Developer ID Application: <name> (<team>)" \
      -c.mac.hardenedRuntime=true -c.mac.notarize=true
    ```
+
+In CI, the certificate (as `CSC_LINK` and `CSC_KEY_PASSWORD`) and the notarization credentials become repo secrets, passed to Create Release's build job.

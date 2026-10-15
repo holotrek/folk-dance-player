@@ -1,5 +1,7 @@
 # Folk Dance Player
 
+[![PR Gate](https://github.com/holotrek/folk-dance-player/actions/workflows/pr-gate.yml/badge.svg)](https://github.com/holotrek/folk-dance-player/actions/workflows/pr-gate.yml)
+
 A music player made for **folk dance organizers**. Build the running order for a dance session from
 your music library, play it with auto-continue and teaching stops, and show dancers a large-font
 **projector view** of what was played, what's playing (with the dance's Canva slide) and what's
@@ -19,7 +21,7 @@ coming up — while you keep programming on your laptop.
 
 ## Install
 
-1. Download `Folk Dance Player-<version>-universal.dmg` (it runs on Apple silicon and Intel Macs).
+1. Download `Folk Dance Player-<version>-universal.dmg` from the [Releases](https://github.com/holotrek/folk-dance-player/releases) page (it runs on Apple silicon and Intel Macs).
 2. Open it and drag **Folk Dance Player** to **Applications**.
 3. Open the app. The first time, macOS says it's from an unidentified developer, because the app
    isn't signed with an Apple Developer ID yet: open **System Settings → Privacy & Security** and
