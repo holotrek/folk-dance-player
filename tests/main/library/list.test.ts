@@ -46,7 +46,8 @@ describe('listLibrary', () => {
         difficulty: null,
         danceCount: 1,
         label: 'Hora de la Munte | Hora Mare',
-        playlistItemId: null
+        playlistItemId: null,
+        playlistNumber: null
       }
     ])
   })
@@ -127,6 +128,29 @@ describe('listLibrary', () => {
     })
     expect(rows.map((r) => r.title)).toEqual(['B', 'A'])
     expect(rows[0].playlistItemId).toBe(itemB)
+  })
+
+  test("numbers a playlist's songs in its own order, whatever the sort or search", () => {
+    const a = addLibrarySong(db, { title: 'A' })
+    const b = addLibrarySong(db, { title: 'B' })
+    const c = addLibrarySong(db, { title: 'C' })
+    const p = Number(
+      db.prepare("INSERT INTO playlists (name, source) VALUES ('Mine', 'local')").run()
+        .lastInsertRowid
+    )
+    const add = db.prepare(
+      'INSERT INTO playlist_items (playlist_id, position, file_id) VALUES (?, ?, ?)'
+    )
+    add.run(p, 10, c.fileId) // positions need not be 1, 2, 3
+    add.run(p, 20, a.fileId)
+    add.run(p, 30, b.fileId)
+    const numbers = (q: Partial<LibraryQuery>) =>
+      listLibrary(db, { ...all, filter: { kind: 'playlist', playlistId: p }, ...q }).map(
+        (r) => `${r.playlistNumber} ${r.title}`
+      )
+    expect(numbers({ sort: { column: 'title', direction: 'asc' } })).toEqual(['2 A', '3 B', '1 C'])
+    expect(numbers({ search: 'b' })).toEqual(['3 B'])
+    expect(listLibrary(db, all).map((r) => r.playlistNumber)).toEqual([null, null, null])
   })
 
   test('sorts by a column in either direction, keeping empty values last', () => {

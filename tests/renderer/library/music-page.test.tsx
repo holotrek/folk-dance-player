@@ -27,6 +27,7 @@ const row = (songId: number, extra: Partial<LibraryRow> = {}): LibraryRow => ({
   danceCount: 1,
   label: `Song ${songId} | Dance ${songId}`,
   playlistItemId: null,
+  playlistNumber: null,
   ...extra
 })
 

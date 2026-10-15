@@ -47,6 +47,7 @@ interface Row {
   danceCount: number
   choreographerCount: number
   playlistItemId: number | null
+  playlistNumber: number | null
 }
 
 // The Music page's rows (spec §6.3): search, sidebar filter and sort are all done here.
@@ -85,7 +86,13 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
          d.dance_type AS danceType, dp.difficulty,
          (SELECT COUNT(*) FROM dance_songs c WHERE c.song_id = s.id) AS danceCount,
          ${choreographerCountSql('s.id')} AS choreographerCount,
-         ${playlist ? 'pi.id' : 'NULL'} AS playlistItemId
+         ${playlist ? 'pi.id' : 'NULL'} AS playlistItemId,
+         ${
+           playlist
+             ? `(SELECT COUNT(*) FROM playlist_items x
+                 WHERE x.playlist_id = pi.playlist_id AND x.position <= pi.position)`
+             : 'NULL'
+         } AS playlistNumber
        FROM songs s
        JOIN files f ON f.id = s.file_id
        ${playlistJoin}

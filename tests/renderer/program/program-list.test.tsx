@@ -36,7 +36,8 @@ const libraryRow = (fileId: number, title: string): LibraryRow => ({
   difficulty: null,
   danceCount: 1,
   label: title,
-  playlistItemId: null
+  playlistItemId: null,
+  playlistNumber: null
 })
 
 afterEach(() => vi.useRealTimers())
