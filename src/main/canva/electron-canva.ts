@@ -3,6 +3,7 @@ import type { Rect } from '@shared/projector'
 import type { LiveView } from '../projector/live-slide'
 import { guardCanva } from '../navigation'
 import type { Fetcher } from './canva-client'
+import { isDeckView } from './canva-url'
 import type { CanvaPage } from './slide-capturer'
 
 // Canva's pages run in their own session, sandboxed, away from the app's windows.
@@ -30,9 +31,23 @@ function nudge(contents: WebContents, width: number, height: number): void {
   )
 }
 
-// Within a loaded deck, loading another #slide only changes the slide in the page.
+// Within a loaded deck, loading another #slide only changes the slide in the page (no response).
+// A page that ends up anywhere but the deck's own view page, or with an error status, is a
+// failed load: it is never shown or saved (a Wi-Fi login page, a deck no longer public).
 const load = async (contents: WebContents, url: string): Promise<void> => {
-  await contents.loadURL(url)
+  let status = 200
+  const navigated = (_event: unknown, _url: string, code: number): void => {
+    status = code
+  }
+  contents.on('did-navigate', navigated)
+  try {
+    await contents.loadURL(url)
+  } finally {
+    contents.off('did-navigate', navigated)
+  }
+  if (status !== 200 || !isDeckView(url.split('#')[0], contents.getURL())) {
+    throw new Error("Canva didn't show the deck (a Wi-Fi login page, or the deck isn't public?)")
+  }
 }
 
 // Spec §8.3: slides are captured at 1920×1080 in an off-screen window.

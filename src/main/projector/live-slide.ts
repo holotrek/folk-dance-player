@@ -26,7 +26,9 @@ const HASH_FADE_MS = 1_500
 // when the page fails to load, it never shows. `onChange` fires when the view appears or goes.
 export class LiveSlide {
   private view: LiveView | null = null
-  private deckUrl: string | null = null // the deck the view has loaded
+  // The deck the view has loaded with its controls faded. Until the fade, a switch starts over:
+  // another slide's load would skip the nudge, and the controls would stay up.
+  private deckUrl: string | null = null
   private target: LiveTarget | null = null
   private live = false
   private generation = 0
@@ -59,7 +61,7 @@ export class LiveSlide {
     const view = this.view
     view.setVisible(false)
     if (wasLive) this.deps.onChange()
-    this.deckUrl = target.viewUrl
+    if (!sameDeck) this.deckUrl = null
     const generation = this.generation
     view.load(`${target.viewUrl}#${target.position}`).then(
       () => {
@@ -68,6 +70,7 @@ export class LiveSlide {
         this.timer = setTimeout(
           () => {
             this.timer = null
+            this.deckUrl = target.viewUrl
             this.live = true
             view.setVisible(true)
             this.deps.onChange()
@@ -110,3 +113,26 @@ export class LiveSlide {
 
 const same = (a: Pick<LiveTarget, 'deckId' | 'pageId'>, b: Pick<LiveTarget, 'deckId' | 'pageId'>) =>
   a.deckId === b.deckId && a.pageId === b.pageId
+
+// Which projector window the live view belongs to. The controller replaces the window (laptop mode
+// → projector mode, another display) by closing the old one and opening the new one at once, and
+// the old window's 'closed' arrives after the new one opened, so it must not end the new one.
+export function followProjectorWindow<W>(live: Pick<LiveSlide, 'close'>): {
+  current(): W | null
+  opened(window: W): void
+  closed(window: W): void
+} {
+  let current: W | null = null
+  return {
+    current: () => current,
+    opened: (window) => {
+      live.close() // the view leaves any old window
+      current = window
+    },
+    closed: (window) => {
+      if (current !== window) return
+      live.close()
+      current = null
+    }
+  }
+}

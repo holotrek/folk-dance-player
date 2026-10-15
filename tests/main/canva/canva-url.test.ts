@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import {
+  isDeckView,
   isShortLink,
   normalizeDeckUrl,
   pageFromEditLink,
@@ -38,6 +39,14 @@ describe('Canva deck links', () => {
 
   test('opens the view at a slide position', () => {
     expect(viewAt(VIEW, 6)).toBe(`${VIEW}#6`)
+  })
+
+  test("a loaded page is the deck's view only on its own view path", () => {
+    expect(isDeckView(VIEW, `${VIEW}#6`)).toBe(true)
+    expect(isDeckView(VIEW, `${VIEW}?utm=x`)).toBe(true)
+    expect(isDeckView(VIEW, 'https://www.canva.com/login?redirect=x')).toBe(false)
+    expect(isDeckView(VIEW, 'http://captive.portal/login')).toBe(false)
+    expect(isDeckView(VIEW, 'not a url')).toBe(false)
   })
 })
 

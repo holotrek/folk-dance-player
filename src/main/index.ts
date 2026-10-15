@@ -39,7 +39,7 @@ import {
   type Rect
 } from './projector/projector-controller'
 import { createProjectorFeed } from './projector/projector-feed'
-import { LiveSlide } from './projector/live-slide'
+import { followProjectorWindow, LiveSlide } from './projector/live-slide'
 import { registerMediaKeys } from './remote/media-keys'
 import { checkProgramFiles } from './programs/file-check'
 import { getProgram } from './programs/programs'
@@ -80,7 +80,11 @@ function loadPage(win: BrowserWindow, page: 'index.html' | 'projector.html'): vo
 // `hooks` lets the live Canva view follow the window (spec §8.3).
 function createProjectorWindow(
   bounds: Rect,
-  hooks: { opened(win: BrowserWindow): void; resized(): void; closed(): void }
+  hooks: {
+    opened(win: BrowserWindow): void
+    resized(): void
+    closed(win: BrowserWindow): void
+  }
 ): ProjectorWindow {
   const win = new BrowserWindow({
     ...bounds,
@@ -98,8 +102,11 @@ function createProjectorWindow(
     }
   })
   hooks.opened(win)
+  // Read-only: the mouse passes through, so the operator's cursor never wakes Canva's controls.
+  // (Laptop mode still closes on mouse movement: ActivityWatcher polls the cursor.)
+  win.setIgnoreMouseEvents(true)
   win.on('resize', hooks.resized)
-  win.once('closed', hooks.closed)
+  win.once('closed', () => hooks.closed(win))
   win.setAlwaysOnTop(true, 'screen-saver')
   // skipTransformProcessType: without it, macOS briefly makes the whole app a background app on
   // every call, hiding the control window and the Dock icon, and after sleep it can stay that way.
@@ -287,13 +294,13 @@ app.whenReady().then(() => {
   })
 
   // The live Canva view lives in the projector window, over the saved image.
-  let projectorWindow: BrowserWindow | null = null
-  const live = new LiveSlide({
-    createView: () => createLiveView(projectorWindow!),
-    online: () => projectorWindow !== null && net.isOnline(),
-    size: () => projectorWindow?.getContentBounds() ?? null,
+  const live: LiveSlide = new LiveSlide({
+    createView: () => createLiveView(projectorWindows.current()!),
+    online: () => projectorWindows.current() !== null && net.isOnline(),
+    size: () => projectorWindows.current()?.getContentBounds() ?? null,
     onChange: () => updateProjector()
   })
+  const projectorWindows = followProjectorWindow<BrowserWindow>(live)
 
   const controller = new ProjectorController({
     displays: () => screen.getAllDisplays().map(toDisplay),
@@ -314,12 +321,9 @@ app.whenReady().then(() => {
     },
     createWindow: (bounds) =>
       createProjectorWindow(bounds, {
-        opened: (win) => (projectorWindow = win),
+        opened: projectorWindows.opened,
         resized: () => live.resize(),
-        closed: () => {
-          live.close()
-          projectorWindow = null
-        }
+        closed: projectorWindows.closed
       }),
     settings: {
       enabled: () => settings.get('projector.enabled'),

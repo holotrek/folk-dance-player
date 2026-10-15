@@ -81,6 +81,17 @@ describe('Canva service', () => {
     expect(queued[0].map((t) => t.position)).toEqual([1, 3])
   })
 
+  test("a deck that couldn't be read this time keeps its saved images (nothing is re-captured)", async () => {
+    const { db, service, queued, setOnline } = setup()
+    const deckId = await service.addDeck(VIEW)
+    service.linkSlide(addDance(db, { name: 'A' }), deckId, 1)
+    queued.length = 0
+    setOnline(false)
+    expect(await service.refreshSlides()).toMatchObject({ unreachable: 1 })
+    await service.startup(true)
+    expect(queued.flat()).toEqual([])
+  })
+
   test('at startup: nothing offline; online, decks are re-read and only missing images captured', async () => {
     const { db, service, queued, setOnline } = setup()
     const deckId = await service.addDeck(VIEW)

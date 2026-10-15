@@ -1,7 +1,7 @@
 // The two WebContents methods the guards need (Electron's WebContents satisfies this).
 export interface NavigableContents {
   on(
-    event: 'will-navigate',
+    event: 'will-navigate' | 'will-redirect',
     listener: (event: { preventDefault(): void; url: string }) => void
   ): unknown
   setWindowOpenHandler(handler: () => { action: 'deny' }): void
@@ -26,8 +26,11 @@ export function isCanvaUrl(url: string): boolean {
 // The Canva views (live and capture) show web content: they may move around canva.com, and
 // nothing else.
 export function guardCanva(contents: NavigableContents): void {
-  contents.on('will-navigate', (event) => {
-    if (!isCanvaUrl(event.url)) event.preventDefault()
-  })
+  // Server redirects too (a Wi-Fi login page): 'will-navigate' fires only for the page's own.
+  for (const event of ['will-navigate', 'will-redirect'] as const) {
+    contents.on(event, (e) => {
+      if (!isCanvaUrl(e.url)) e.preventDefault()
+    })
+  }
   contents.setWindowOpenHandler(() => ({ action: 'deny' }))
 }

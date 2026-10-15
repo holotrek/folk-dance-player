@@ -1,5 +1,5 @@
 import { CanvaError } from './decks'
-import { isShortLink, pageFromEditLink } from './canva-url'
+import { isDeckView, isShortLink, pageFromEditLink } from './canva-url'
 import { parseDeckPage, type ParsedDeck } from './deck-parser'
 
 // The subset of fetch the client uses (Electron's net.fetch, or a fake in tests).
@@ -8,6 +8,7 @@ export type Fetcher = (
   init: { redirect: 'follow' | 'manual'; headers: Record<string, string> }
 ) => Promise<{
   status: number
+  url?: string // where the request ended up, after redirects
   text(): Promise<string>
   headers: { get(name: string): string | null }
 }>
@@ -30,6 +31,11 @@ async function get(fetcher: Fetcher, url: string, redirect: 'follow' | 'manual')
 // Fetches and reads a deck's public view page (no Canva login).
 export async function fetchDeck(fetcher: Fetcher, viewUrl: string): Promise<ParsedDeck> {
   const response = await get(fetcher, viewUrl, 'follow')
+  if (response.url && !isDeckView(viewUrl, response.url)) {
+    throw new CanvaError(
+      "Couldn't reach Canva: the deck's page was redirected (a Wi-Fi login page, or the deck is no longer public)."
+    )
+  }
   if (response.status !== 200) {
     throw new CanvaError(
       `Canva didn't return the deck (HTTP ${response.status}). Is its link public?`

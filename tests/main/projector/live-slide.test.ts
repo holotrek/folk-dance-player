@@ -1,5 +1,9 @@
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import { LiveSlide, type LiveView } from '../../../src/main/projector/live-slide'
+import {
+  followProjectorWindow,
+  LiveSlide,
+  type LiveView
+} from '../../../src/main/projector/live-slide'
 
 const deckA = { deckId: 1, viewUrl: 'https://www.canva.com/design/A/x/view' }
 const slide = (pageId: string, position: number, deck = deckA) => ({ ...deck, pageId, position })
@@ -67,6 +71,20 @@ describe('the live Canva view over the saved slide image', () => {
     await vi.advanceTimersByTimeAsync(1)
     expect(log).toEqual(['hide', `load ${deckA.viewUrl}#7`, 'show'])
     expect(views).toHaveLength(1)
+  })
+
+  test('another slide of the same deck before the first has faded starts over, with a nudge', async () => {
+    const { live, log, load } = setup()
+    live.show(slide('P6', 6))
+    load()
+    await vi.advanceTimersByTimeAsync(4_000) // loaded, but Canva's controls are still showing
+    log.length = 0
+    live.show(slide('P7', 7))
+    load()
+    await vi.advanceTimersByTimeAsync(1_500)
+    expect(log).toEqual(['hide', `load ${deckA.viewUrl}#7`, 'nudge'])
+    await vi.advanceTimersByTimeAsync(9_500)
+    expect(log.at(-1)).toBe('show')
   })
 
   test('the same slide again changes nothing', async () => {
@@ -146,5 +164,21 @@ describe('the live Canva view over the saved slide image', () => {
     log.length = 0
     live.resize()
     expect(log).toEqual(['bounds 902x508'])
+  })
+})
+
+describe('following the projector window', () => {
+  test('a replacement window (laptop → projector) keeps the live view; the old one closing later changes nothing', () => {
+    let closes = 0
+    const tracker = followProjectorWindow<string>({ close: () => void closes++ })
+    tracker.opened('laptop')
+    tracker.opened('projector') // opened before the old window's 'closed' arrives
+    expect(closes).toBe(2) // the view leaves the old window
+    tracker.closed('laptop')
+    expect(tracker.current()).toBe('projector')
+    expect(closes).toBe(2)
+    tracker.closed('projector')
+    expect(tracker.current()).toBeNull()
+    expect(closes).toBe(3)
   })
 })

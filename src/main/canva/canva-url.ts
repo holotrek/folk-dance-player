@@ -59,3 +59,15 @@ export function pageFromEditLink(input: string): { designId: string; pageId: str
 
 // The view link opened at a slide position (1-based).
 export const viewAt = (viewUrl: string, position: number): string => `${viewUrl}#${position}`
+
+// Whether a page that loaded (after any redirects) is the deck's own view page, not a Wi-Fi login
+// page or Canva's sign-in page for a deck that is no longer public.
+export function isDeckView(viewUrl: string, url: string): boolean {
+  try {
+    const want = new URL(viewUrl)
+    const got = new URL(url)
+    return got.protocol === 'https:' && got.host === want.host && got.pathname === want.pathname
+  } catch {
+    return false
+  }
+}

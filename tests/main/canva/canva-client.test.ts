@@ -8,7 +8,9 @@ const VIEW = 'https://www.canva.com/design/DAHXoz6s10M/T9RGM0V3Sdllshv8NtdBrw/vi
 const ui = Buffer.from(JSON.stringify({ D: { T: { A: 'PBrWDbC9tVSzgzvW' } } })).toString('base64')
 const EDIT = `https://www.canva.com/design/DAHXoz6s10M/TLVQZ1x1so6_UjT7FH64DQ/edit?ui=${ui}`
 
-function fake(routes: Record<string, { status: number; body?: string; location?: string }>) {
+function fake(
+  routes: Record<string, { status: number; body?: string; location?: string; url?: string }>
+) {
   const calls: { url: string; redirect: string; agent?: string }[] = []
   const fetcher: Fetcher = async (url, init) => {
     calls.push({ url, redirect: init.redirect, agent: init.headers['User-Agent'] })
@@ -16,6 +18,7 @@ function fake(routes: Record<string, { status: number; body?: string; location?:
     if (!r) throw new Error('offline')
     return {
       status: r.status,
+      url: r.url ?? url,
       text: async () => r.body ?? '',
       headers: { get: (name: string) => (name === 'location' ? (r.location ?? null) : null) }
     }
@@ -30,6 +33,13 @@ describe('fetching from Canva', () => {
     expect(deck.title).toBe("Dance n' Jam Tunes")
     expect(deck.pages).toHaveLength(4)
     expect(calls[0].agent).toMatch(/Mozilla/)
+  })
+
+  test('a page redirected off the deck (a Wi-Fi login page, a deck made private) is unreachable, not a format change', async () => {
+    const { fetcher } = fake({
+      [VIEW]: { status: 200, body: '<html>Sign in</html>', url: 'http://captive.portal/login' }
+    })
+    await expect(fetchDeck(fetcher, VIEW)).rejects.toThrow("Couldn't reach Canva")
   })
 
   test('says why a deck could not be read', async () => {

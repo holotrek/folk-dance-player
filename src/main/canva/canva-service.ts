@@ -58,29 +58,41 @@ export class CanvaService {
   }
 
   async refreshDecks(): Promise<RefreshSummary> {
-    const summary = { decks: 0, formatChanged: 0, unreachable: 0 }
-    for (const deck of listDecks(this.deps.db)) {
-      const result = await this.refreshDeck(deck.id, deck.viewUrl)
-      summary.decks++
-      if (result === 'format-changed') summary.formatChanged++
-      if (result === 'unreachable') summary.unreachable++
-    }
-    this.deps.onChange()
-    return summary
+    return (await this.refreshAll()).summary
   }
 
   // "Refresh slides": re-read every deck, then re-capture every linked slide.
   async refreshSlides(): Promise<RefreshSummary> {
-    const summary = await this.refreshDecks()
-    this.deps.queue.enqueue(captureTargets(this.deps.db, 'all'))
+    const { summary, read } = await this.refreshAll()
+    this.captureFrom(read, 'all')
     return summary
   }
 
   // At startup, when online: re-read the decks and capture linked slides that have no image yet.
   async startup(online: boolean): Promise<void> {
     if (!online) return
-    await this.refreshDecks()
-    this.deps.queue.enqueue(captureTargets(this.deps.db, 'missing'))
+    this.captureFrom((await this.refreshAll()).read, 'missing')
+  }
+
+  // Only decks read fine this time are captured: one that wasn't may show a Wi-Fi login page or
+  // Canva's sign-in page, which must never replace a good saved image.
+  private captureFrom(read: Set<number>, which: 'all' | 'missing'): void {
+    const targets = captureTargets(this.deps.db, which).filter((t) => read.has(t.deckId))
+    if (targets.length) this.deps.queue.enqueue(targets)
+  }
+
+  private async refreshAll(): Promise<{ summary: RefreshSummary; read: Set<number> }> {
+    const summary = { decks: 0, formatChanged: 0, unreachable: 0 }
+    const read = new Set<number>()
+    for (const deck of listDecks(this.deps.db)) {
+      const result = await this.refreshDeck(deck.id, deck.viewUrl)
+      summary.decks++
+      if (result === 'ok') read.add(deck.id)
+      if (result === 'format-changed') summary.formatChanged++
+      if (result === 'unreachable') summary.unreachable++
+    }
+    this.deps.onChange()
+    return { summary, read }
   }
 
   private async refreshDeck(deckId: number, viewUrl: string) {

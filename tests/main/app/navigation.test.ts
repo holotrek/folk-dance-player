@@ -9,7 +9,7 @@ function fakeContents() {
     emitter,
     contents: {
       on: (
-        event: 'will-navigate',
+        event: 'will-navigate' | 'will-redirect',
         listener: (e: { preventDefault(): void; url: string }) => void
       ) => {
         emitter.on(event, listener)
@@ -60,5 +60,16 @@ describe('the Canva views', () => {
     expect(navigate('https://www.canva.com/design/DAH/TOK/view#7')).toBe(true)
     expect(navigate('https://example.com/')).toBe(false)
     expect(fake.open()).toEqual({ action: 'deny' })
+  })
+
+  test('a server redirect off Canva is stopped too (a Wi-Fi login page)', () => {
+    const fake = fakeContents()
+    guardCanva(fake.contents)
+    let prevented = false
+    fake.emitter.emit('will-redirect', {
+      url: 'http://captive.portal/login',
+      preventDefault: () => (prevented = true)
+    })
+    expect(prevented).toBe(true)
   })
 })
