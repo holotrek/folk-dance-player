@@ -22,6 +22,7 @@ function setup() {
     'player:getState': playerState(),
     'library:list': (query: LibraryQuery) => (query.filter.kind === 'holding' ? rows : []),
     'library:setHolding': undefined,
+    'library:setFavorite': undefined,
     'player:preview': undefined
   })
   renderWithLibrary(<HoldingPanel />, fake.api)
@@ -83,6 +84,14 @@ describe('holding panel', () => {
     fireEvent.dragOver(rowFor('Kolo'), files([202]))
     expect(rowFor('Kolo').className).toMatch(/dropBefore/)
     expect(region.className).not.toMatch(/panelActive/)
+  })
+
+  test('the star, on the left as in the library, adds a held song to favorites', async () => {
+    const { fake } = setup()
+    const star = await screen.findByRole('button', { name: 'Add Hora to favorites' })
+    expect(rowFor('Hora').firstElementChild).toBe(star)
+    await userEvent.click(star)
+    expect(fake.callsTo('library:setFavorite')).toEqual([[[101], true]])
   })
 
   test('double-click previews a held song', async () => {

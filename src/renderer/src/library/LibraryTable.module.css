@@ -30,11 +30,19 @@
   flex: 1;
   min-height: 0;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .body {
   position: relative;
+  flex: none;
   width: 100%;
+}
+
+/* The space below the last row (at least one row high): a drop target for the end. */
+.end {
+  flex: 1 0 32px;
 }
 
 .item {
@@ -70,4 +78,15 @@
 .compact .header,
 .compact .item {
   grid-template-columns: 28px minmax(160px, 3fr) minmax(70px, 1fr) minmax(70px, 1fr) 48px;
+}
+
+/* In a playlist, a narrow number column comes first. */
+.numbered .header,
+.numbered .item {
+  grid-template-columns: 32px 28px minmax(220px, 3fr) repeat(4, minmax(90px, 1fr)) 80px 56px;
+}
+
+.numbered.compact .header,
+.numbered.compact .item {
+  grid-template-columns: 32px 28px minmax(160px, 3fr) minmax(70px, 1fr) minmax(70px, 1fr) 48px;
 }

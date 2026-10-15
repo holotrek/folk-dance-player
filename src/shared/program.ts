@@ -21,6 +21,7 @@ export interface Track {
   teacher: string | null
   durationMs: number | null
   isMissing: boolean
+  isFavorite: boolean
   danceCount: number // dances linked to the song; > 1 offers the Dance menu
 }
 

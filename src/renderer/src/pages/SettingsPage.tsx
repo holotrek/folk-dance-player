@@ -2,24 +2,29 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Code,
+  Group,
   Loader,
   NumberInput,
+  SegmentedControl,
   Stack,
   Switch,
   TagsInput,
   Text,
-  Title
+  Title,
+  useMantineColorScheme
 } from '@mantine/core'
 import type { AppInfo, RendererApi } from '@shared/contract'
 import type { ImportMapping } from '@shared/import'
-import type { SettingKey, Settings } from '@shared/settings'
+import type { Appearance, SettingKey, Settings } from '@shared/settings'
+import { colorSchemeFor } from '../appearance'
+import Logo from '../components/Logo'
 import ProjectorDisplay from '../components/ProjectorDisplay'
 import RemoteSection from '../components/RemoteSection'
 import ImportMappingFields from '../import/ImportMappingFields'
 import { errorMessage } from '../ipc-error'
 
-type NumberKey = 'autoContinue.seconds' | 'countdown.seconds' | 'autoFullscreen.seconds'
-type BooleanKey = 'autoContinue.enabled' | 'autoFullscreen.enabled'
+type NumberKey = 'autoContinue.seconds' | 'countdown.seconds'
+type BooleanKey = 'autoContinue.enabled'
 
 export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.Element {
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -27,6 +32,7 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
   const [error, setError] = useState<string | null>(null)
   // Bumped after a rejected save so number inputs re-mount showing the saved value.
   const [revision, setRevision] = useState(0)
+  const { setColorScheme } = useMantineColorScheme()
 
   const reload = (): void => void api.invoke('settings:getAll').then(setSettings)
   useEffect(() => {
@@ -96,6 +102,23 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
         </Alert>
       )}
       <Stack gap="xs">
+        <Title order={4}>Appearance</Title>
+        <SegmentedControl
+          aria-label="Appearance"
+          w="fit-content"
+          data={[
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+            { value: 'system', label: 'System' }
+          ]}
+          value={settings.appearance}
+          onChange={(value) => {
+            setColorScheme(colorSchemeFor(value as Appearance))
+            void save('appearance', value)
+          }}
+        />
+      </Stack>
+      <Stack gap="xs">
         <Title order={4}>Import</Title>
         <Text size="sm" c="dimmed">
           The defaults for the mapping step shown before every import.
@@ -120,15 +143,13 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
       </Stack>
       <RemoteSection api={api} />
       <ProjectorDisplay api={api} value={settings['projector.displayId']} onSaved={reload} />
-      <Stack gap="xs">
-        <Title order={4}>Fullscreen on this screen</Title>
-        {toggle('autoFullscreen.enabled', 'Show fullscreen view when idle')}
-        {number('autoFullscreen.seconds', 'Idle time before fullscreen (seconds)', 5, 3600)}
-      </Stack>
       {info && (
         <Stack gap={4}>
           <Title order={4}>About</Title>
-          <Text size="sm">Version {info.version}</Text>
+          <Group gap="sm" wrap="nowrap">
+            <Logo size={48} />
+            <Text size="sm">Folk Dance Player, version {info.version}</Text>
+          </Group>
           <Text size="sm">Library database (schema {info.schemaVersion}):</Text>
           <Code>{info.dbPath}</Code>
         </Stack>

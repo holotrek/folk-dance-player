@@ -5,6 +5,7 @@ import DropZone from '../import/DropZone'
 import ImportDialog from '../import/ImportDialog'
 import { useImportFlow } from '../import/useImportFlow'
 import { errorMessage } from '../ipc-error'
+import LibraryFilterNote from '../library/LibraryFilterNote'
 import LibrarySearch from '../library/LibrarySearch'
 import LibraryTable from '../library/LibraryTable'
 import ReapplyDialog from '../library/ReapplyDialog'
@@ -128,6 +129,7 @@ export default function MusicPage(): React.JSX.Element {
         </Alert>
       )}
       <DropZone onFiles={flow.dropFiles} />
+      <LibraryFilterNote />
       <div className={classes.body}>
         <LibraryTable />
         {selected.length === 1 && (

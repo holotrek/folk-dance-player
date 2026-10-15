@@ -50,3 +50,29 @@ export const ChevronDownIcon = (p: IconProps): React.JSX.Element => (
     <path d="M4.5 8.5 12 16l7.5-7.5-1.8-1.8L12 12.4 6.3 6.7z" />
   </Icon>
 )
+
+const STAR = 'M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.4L12 17.2l-5.7 3.1 1.2-6.4-4.7-4.4 6.4-.8z'
+
+// ★ / ☆: a favorite, or not (yet).
+export const StarIcon = ({
+  filled = false,
+  ...p
+}: IconProps & { filled?: boolean }): React.JSX.Element =>
+  filled ? (
+    <Icon {...p}>
+      <path d={STAR} />
+    </Icon>
+  ) : (
+    <svg
+      width={p.size ?? 18}
+      height={p.size ?? 18}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={1.8}
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d={STAR} />
+    </svg>
+  )

@@ -161,6 +161,9 @@ describe('SongEditor', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Link a dance' })
     await userEvent.type(within(dialog).getByLabelText('Search dances'), 'lesn')
     await waitFor(() => expect(fake.callsTo('library:searchDances').at(-1)).toEqual(['lesn']))
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Clear search' }))
+    expect(within(dialog).getByLabelText('Search dances')).toHaveValue('')
+    await userEvent.type(within(dialog).getByLabelText('Search dances'), 'lesn')
     // Dances already linked to the song aren't offered.
     const options = await within(dialog).findAllByRole('button', { name: /^Link / })
     expect(options).toHaveLength(1)

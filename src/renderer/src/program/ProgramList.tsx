@@ -4,6 +4,8 @@ import type { SongDance } from '@shared/library'
 import type { ProgramItem } from '@shared/program'
 import { PauseIcon } from '../components/icons'
 import NamePrompt from '../components/NamePrompt'
+import FavoriteToggle from '../library/FavoriteToggle'
+import DanceChoiceDialog, { type DanceChoice } from './DanceChoiceDialog'
 import { errorMessage } from '../ipc-error'
 import {
   carriesFiles,
@@ -18,7 +20,8 @@ import { formatTime } from '../format-time'
 import { useProgram, useProgramStore } from './ProgramProvider'
 import classes from './ProgramList.module.css'
 
-// One program item's options: its dance (when the song has several), a STOP before it, remove.
+// One program item's options: its dance (when the song has several), favorite, a STOP before it,
+// remove.
 function ItemMenu(props: {
   item: ProgramItem
   onError: (message: string) => void
@@ -67,6 +70,13 @@ function ItemMenu(props: {
             <Menu.Divider />
           </>
         )}
+        {item.kind === 'track' && (
+          <Menu.Item
+            onClick={run(() => api.invoke('library:setFavorite', [item.fileId], !item.isFavorite))}
+          >
+            {item.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
+          </Menu.Item>
+        )}
         <Menu.Item onClick={run(() => api.invoke('programs:addStop', program!.id, item.id))}>
           Insert STOP before
         </Menu.Item>
@@ -93,6 +103,7 @@ export default function ProgramList(): React.JSX.Element {
   const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
   const [renaming, setRenaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [choices, setChoices] = useState<DanceChoice[]>([])
   const items = program?.items ?? []
 
   const act = (action: () => Promise<unknown>): void =>
@@ -101,10 +112,22 @@ export default function ProgramList(): React.JSX.Element {
       .catch((err) => setError(errorMessage(err)))
 
   // Songs from the library, holding, a playlist or "Previously played", placed before `before`.
+  // Each is added as its default dance; songs with several dances then ask which one.
   const addFiles = (fileIds: number[], before: number | null) =>
     act(async () => {
       const id = await programStore.getState().ensureProgram()
-      await api.invoke('programs:addTracks', id, fileIds, before)
+      const added = new Set(await api.invoke('programs:addTracks', id, fileIds, before))
+      const detail = await api.invoke('programs:get', id)
+      const several = (detail?.items ?? []).filter(
+        (i): i is DanceChoice['item'] => i.kind === 'track' && added.has(i.id) && i.danceCount > 1
+      )
+      const found = await Promise.all(
+        several.map(async (item) => ({
+          item,
+          dances: (await api.invoke('library:song', item.songId))?.dances ?? []
+        }))
+      )
+      setChoices(found.filter((c) => c.dances.length > 1))
     })
 
   const drop = (e: React.DragEvent, before: number | null): void => {
@@ -217,6 +240,11 @@ export default function ProgramList(): React.JSX.Element {
               </span>
             ) : (
               <>
+                <FavoriteToggle
+                  fileId={item.fileId}
+                  label={item.label}
+                  isFavorite={item.isFavorite}
+                />
                 {item.isMissing && (
                   <Text span c="red" aria-label="File missing" title="The file can't be found">
                     ⚠
@@ -255,6 +283,16 @@ export default function ProgramList(): React.JSX.Element {
           )}
         </div>
       </div>
+      <DanceChoiceDialog
+        choices={choices}
+        onClose={() => setChoices([])}
+        onDone={(changes) => {
+          setChoices([])
+          for (const { itemId, danceId } of changes) {
+            act(() => api.invoke('programs:setItemDance', itemId, danceId))
+          }
+        }}
+      />
       <NamePrompt
         opened={renaming}
         title="Rename program"

@@ -8,6 +8,7 @@ import { choreographerCountSql, shownPairingSql } from '../library/list'
 export const TRACK_COLUMNS = `f.id AS fileId, s.id AS songId, d.id AS danceId, s.title,
   d.name AS danceName, d.choreographer, d.country, dsp.teacher, f.duration_ms AS durationMs,
   f.is_missing AS isMissing,
+  COALESCE((SELECT fp.is_favorite FROM file_prefs fp WHERE fp.file_id = f.id), 0) AS isFavorite,
   (SELECT COUNT(*) FROM dance_songs c WHERE c.song_id = s.id) AS danceCount,
   ${choreographerCountSql('s.id')} AS choreographerCount`
 
@@ -31,6 +32,7 @@ export interface TrackRow {
   teacher: string | null
   durationMs: number | null
   isMissing: number
+  isFavorite: number
   danceCount: number
   choreographerCount: number
 }
@@ -53,6 +55,7 @@ export function toTrack(row: TrackRow): Track {
     teacher: row.teacher,
     durationMs: row.durationMs,
     isMissing: row.isMissing === 1,
+    isFavorite: row.isFavorite === 1,
     danceCount: row.danceCount
   }
 }

@@ -1,5 +1,8 @@
 export type TagTarget = 'artist' | 'teacher' | 'choreographer' | 'ignore'
 
+// The control window's colors: the Mac's light/dark choice, or always light or dark.
+export type Appearance = 'system' | 'light' | 'dark'
+
 export interface WindowBounds {
   x: number
   y: number
@@ -22,6 +25,7 @@ export interface Settings {
   'autoFullscreen.seconds': number
   'window.bounds': WindowBounds | null
   currentProgramId: number | null
+  appearance: Appearance
 }
 
 export type SettingKey = keyof Settings
@@ -49,7 +53,8 @@ export const DEFAULT_SETTINGS: Settings = {
   'autoFullscreen.enabled': true,
   'autoFullscreen.seconds': 15,
   'window.bounds': null,
-  currentProgramId: null
+  currentProgramId: null,
+  appearance: 'system'
 }
 
 export const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS) as readonly SettingKey[]
@@ -92,7 +97,8 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'autoFullscreen.enabled': isBool,
   'autoFullscreen.seconds': isIntIn(5, 3600),
   'window.bounds': isBoundsOrNull,
-  currentProgramId: isIdOrNull
+  currentProgramId: isIdOrNull,
+  appearance: (v) => v === 'system' || v === 'light' || v === 'dark'
 }
 
 export function isSettingKey(key: unknown): key is SettingKey {

@@ -27,6 +27,7 @@ const row = (songId: number, extra: Partial<LibraryRow> = {}): LibraryRow => ({
   danceCount: 1,
   label: `Song ${songId} | Dance ${songId}`,
   playlistItemId: null,
+  playlistNumber: null,
   ...extra
 })
 
@@ -101,6 +102,18 @@ describe('Music page library table', () => {
     await waitFor(() => expect(lastQuery(fake).search).toBe('hora'))
   })
 
+  test('✕ clears the search; it shows only while there is something to clear', async () => {
+    const fake = setup()
+    const box = await screen.findByRole('searchbox', { name: 'Search music' })
+    expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull()
+    await userEvent.type(box, 'hora')
+    await waitFor(() => expect(lastQuery(fake).search).toBe('hora'))
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(box).toHaveValue('')
+    expect(box).toHaveFocus()
+    await waitFor(() => expect(lastQuery(fake).search).toBe(''))
+  })
+
   test('selects with click, ⌘-click and shift-click', async () => {
     setup()
     await screen.findByText('Gone')
@@ -164,6 +177,33 @@ describe('Music page library table', () => {
     await waitFor(() => expect(screen.queryByDisplayValue('Hora Fetelor')).not.toBeInTheDocument())
   })
 
+  test('the star in each row adds or removes that song from favorites, leaving the selection alone', async () => {
+    const fake = setup()
+    await screen.findByText('Gone')
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Add Pusteno Ludo | Pravo Rhodopsko Oro to favorites' })
+    )
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Remove Hora Fetelor from favorites' })
+    )
+    expect(fake.callsTo('library:setFavorite')).toEqual([
+      [[101], true],
+      [[102], false]
+    ])
+    expect(screen.queryByRole('row', { selected: true })).toBeNull()
+  })
+
+  test('says when the list is narrowed to favorites, with a way back to all music', async () => {
+    const fake = setup({}, true)
+    await screen.findByText('Gone')
+    expect(screen.queryByText(/Showing/)).toBeNull()
+    await userEvent.click(screen.getByText('★ Favorites'))
+    expect(await screen.findByText('Showing Favorites')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Show all music' }))
+    await waitFor(() => expect(lastQuery(fake).filter).toEqual({ kind: 'all' }))
+    expect(screen.queryByText(/Showing/)).toBeNull()
+  })
+
   test('marks the selection as favorites', async () => {
     const fake = setup()
     await screen.findByText('Gone')
@@ -224,9 +264,9 @@ describe('Music page library table', () => {
 
 describe('Music page in a playlist', () => {
   const inPlaylist = [
-    row(1, { label: 'A', playlistItemId: 11 }),
-    row(2, { label: 'B', playlistItemId: 12 }),
-    row(3, { label: 'C', playlistItemId: 13 })
+    row(1, { label: 'A', playlistItemId: 11, playlistNumber: 1 }),
+    row(2, { label: 'B', playlistItemId: 12, playlistNumber: 2 }),
+    row(3, { label: 'C', playlistItemId: 13, playlistNumber: 3 })
   ]
 
   const playlist = [{ id: 7, name: 'Mine', source: 'local', itemCount: 3 }]
@@ -235,6 +275,26 @@ describe('Music page in a playlist', () => {
     await userEvent.click(await screen.findByText('Mine'))
     await screen.findByText('A')
   }
+
+  test('says which playlist the list shows, and numbers its songs', async () => {
+    setup({ 'library:list': inPlaylist, 'playlists:list': playlist }, true)
+    await openPlaylist()
+    expect(screen.getByText('Showing playlist “Mine”')).toBeInTheDocument()
+    expect(within(rowFor('A')).getByText('1')).toBeInTheDocument()
+    expect(within(rowFor('C')).getByText('3')).toBeInTheDocument()
+  })
+
+  test('dropping songs below the last row moves them to the end', async () => {
+    const fake = setup(
+      { 'library:list': inPlaylist, 'playlists:list': playlist, 'playlists:reorder': undefined },
+      true
+    )
+    await openPlaylist()
+    fireEvent.drop(screen.getByTestId('songs-end'), {
+      dataTransfer: { types: [FILES_MIME], getData: () => JSON.stringify([101]) }
+    })
+    await waitFor(() => expect(fake.callsTo('playlists:reorder')).toEqual([[7, [12, 13, 11]]]))
+  })
 
   test('removes the selected songs from the playlist', async () => {
     const fake = setup(

@@ -54,6 +54,18 @@ describe('SettingsPage', () => {
     expect(await screen.findByLabelText('Genre is Country')).toBeChecked()
     expect(screen.getByLabelText('Auto-continue after (seconds)')).toHaveValue('8')
     expect(await screen.findByText('/data/folk-dance-player.sqlite')).toBeInTheDocument()
+    expect(screen.getByTestId('logo')).toBeInTheDocument() // in About
+  })
+
+  test('Appearance switches between light, dark and the system setting at once, and saves it', async () => {
+    const { api, calls } = fakeApi()
+    renderWithMantine(<SettingsPage api={api} />)
+    expect(await screen.findByRole('radio', { name: 'System' })).toBeChecked()
+    await userEvent.click(screen.getByRole('radio', { name: 'Dark' }))
+    expect(calls).toContainEqual(['settings:set', 'appearance', 'dark'])
+    expect(document.documentElement).toHaveAttribute('data-mantine-color-scheme', 'dark')
+    await userEvent.click(screen.getByRole('radio', { name: 'Light' }))
+    expect(document.documentElement).toHaveAttribute('data-mantine-color-scheme', 'light')
   })
 
   test('saves a toggled setting', async () => {

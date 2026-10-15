@@ -41,6 +41,13 @@ describe('SettingsStore', () => {
     expect(store.get('danceTypeSuggestions')).toEqual(DEFAULT_SETTINGS.danceTypeSuggestions)
   })
 
+  test('appearance follows the system by default, and can be light or dark', () => {
+    expect(store.get('appearance')).toBe('system')
+    store.set('appearance', 'dark')
+    expect(store.get('appearance')).toBe('dark')
+    expect(() => store.set('appearance', 'blue')).toThrow(InvalidSettingError)
+  })
+
   test('rejects unknown keys', () => {
     expect(() => store.set('nope', 1)).toThrow(InvalidSettingError)
   })

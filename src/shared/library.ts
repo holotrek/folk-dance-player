@@ -49,6 +49,7 @@ export interface LibraryRow {
   danceCount: number
   label: string
   playlistItemId: number | null // set when listing a playlist
+  playlistNumber: number | null // its place in the playlist's own order (1, 2, …), in a playlist
 }
 
 // A dance linked to a song, as the side editor shows it (spec §6.3).

@@ -36,17 +36,27 @@ const libraryRow = (fileId: number, title: string): LibraryRow => ({
   difficulty: null,
   danceCount: 1,
   label: title,
-  playlistItemId: null
+  playlistItemId: null,
+  playlistNumber: null
 })
 
 afterEach(() => vi.useRealTimers())
 
-function setup(options: { loaded?: boolean; withLibrary?: boolean } = {}) {
+function setup(
+  options: {
+    loaded?: boolean
+    withLibrary?: boolean
+    programs?: ProgramDetail
+    programsGet?: () => ProgramDetail
+    addTracks?: () => number[]
+  } = {}
+) {
   const loaded = options.loaded ?? true
   const fake = createFakeApi({
     'player:getState': playerState({ programId: loaded ? 5 : null }),
-    'programs:get': loaded ? program : null,
-    'programs:addTracks': [9],
+    'programs:get': options.programsGet ?? (loaded ? (options.programs ?? program) : null),
+    'programs:addTracks': options.addTracks ?? [9],
+    'library:setFavorite': undefined,
     'programs:addStop': 10,
     'programs:reorder': undefined,
     'programs:removeItems': undefined,
@@ -196,6 +206,68 @@ describe('program list', () => {
       within(await menu('STOP / TEACHING')).getByRole('menuitem', { name: 'Remove' })
     )
     expect(fake.callsTo('programs:removeItems')).toEqual([[5, [2]]])
+  })
+
+  test('an item’s menu adds its song to favorites, or removes it', async () => {
+    const fake = setup({
+      programs: { ...program, items: [item(1, hora), item(3, { ...kolo, isFavorite: true })] }
+    })
+    const menu = (name: string) => screen.findByRole('menu', { name: `Options for ${name}` })
+    await screen.findByText('Kolo')
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Hora' }))
+    await userEvent.click(
+      within(await menu('Hora')).getByRole('menuitem', { name: 'Add to favorites' })
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Kolo' }))
+    await userEvent.click(
+      within(await menu('Kolo')).getByRole('menuitem', { name: 'Remove from favorites' })
+    )
+    expect(fake.callsTo('library:setFavorite')).toEqual([
+      [[101], true],
+      [[102], false]
+    ])
+  })
+
+  test('each song item has a favorite star on its left', async () => {
+    const fake = setup()
+    await screen.findByText('Kolo')
+    const star = screen.getByRole('button', { name: 'Add Hora to favorites' })
+    expect(rowFor('Hora').firstElementChild).toBe(star)
+    await userEvent.click(star)
+    expect(fake.callsTo('library:setFavorite')).toEqual([[[101], true]])
+    expect(
+      within(rowFor('STOP / TEACHING')).queryByRole('button', { name: /favorites/ })
+    ).toBeNull()
+  })
+
+  test('a song added with several dances asks which one; one dance doesn’t ask', async () => {
+    const added = item(9, track(201, 'Kolo', { songId: 1102, danceId: 2102, danceCount: 2 }))
+    let items = program.items
+    const fake = setup({
+      programsGet: () => ({ ...program, items }),
+      addTracks: () => {
+        items = [...program.items, added]
+        return [9]
+      }
+    })
+    await screen.findByText('Hora')
+    fireEvent.drop(screen.getByRole('region', { name: 'Program' }), files([201]))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Which dance?' }))
+    expect(dialog.getByRole('radio', { name: 'Kolo' })).toBeChecked() // the default
+    await userEvent.click(dialog.getByRole('radio', { name: 'Kolo | Užičko Kolo' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Done' }))
+    expect(fake.callsTo('programs:setItemDance')).toEqual([[9, 77]])
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  test('keeping the default dance changes nothing', async () => {
+    const added = item(9, track(201, 'Kolo', { songId: 1102, danceId: 2102, danceCount: 2 }))
+    const fake = setup({ programsGet: () => ({ ...program, items: [...program.items, added] }) })
+    await screen.findByText('Hora')
+    fireEvent.drop(screen.getByRole('region', { name: 'Program' }), files([201]))
+    const dialog = within(await screen.findByRole('dialog', { name: 'Which dance?' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Done' }))
+    expect(fake.callsTo('programs:setItemDance')).toEqual([])
   })
 
   test('+ STOP adds a marker at the end; the program can be renamed', async () => {

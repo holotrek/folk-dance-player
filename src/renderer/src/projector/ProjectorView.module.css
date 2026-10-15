@@ -197,6 +197,10 @@
 
 .empty {
   margin: auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4vh;
   font-size: 4vh;
   color: #555;
   letter-spacing: 0.1em;

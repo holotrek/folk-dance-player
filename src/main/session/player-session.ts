@@ -310,6 +310,7 @@ export class PlayerSession {
           teacher,
           durationMs: track.durationMs,
           isMissing: false,
+          isFavorite: track.isFavorite,
           danceCount: track.danceCount
         }
       }

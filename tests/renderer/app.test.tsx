@@ -46,4 +46,10 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Pause' }))
     expect(fake.callsTo('player:pause')).toHaveLength(1)
   })
+
+  test('the logo sits beside the page tabs', async () => {
+    setup()
+    const logo = await screen.findByRole('img', { name: 'Folk Dance Player' })
+    expect(logo.closest('header')).toBeInTheDocument()
+  })
 })

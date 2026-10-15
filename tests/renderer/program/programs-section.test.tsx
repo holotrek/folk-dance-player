@@ -77,6 +77,8 @@ describe('Programs in the sidebar', () => {
     await userEvent.type(screen.getByRole('searchbox', { name: 'Search programs' }), 'begin')
     await waitFor(() => expect(within(group()).queryByText('Tue Oct 14')).toBeNull())
     expect(within(group()).getByText('Beginner night')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(await within(group()).findByText('Tue Oct 14')).toBeInTheDocument()
   })
 
   test('+ asks for a name prefilled with today’s date, creates the program and loads it', async () => {

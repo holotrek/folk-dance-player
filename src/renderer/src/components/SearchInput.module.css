@@ -1,0 +1,4 @@
+/* Chromium's own clear button would sit beside ours. */
+.input::-webkit-search-cancel-button {
+  appearance: none;
+}
