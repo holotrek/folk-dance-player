@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { AppShell, Tabs } from '@mantine/core'
+import { AppShell, Group, Tabs } from '@mantine/core'
 import { useElementSize } from '@mantine/hooks'
 import { useAppearance } from './appearance'
+import Logo from './components/Logo'
 import Sidebar from './components/Sidebar'
 import { LibraryProvider } from './library/LibraryProvider'
 import { ProgramProvider } from './program/ProgramProvider'
@@ -33,13 +34,20 @@ export default function App(): React.JSX.Element {
           <AppShell.Header px="sm">
             <div ref={header.ref} className={classes.header}>
               <PlayerBar />
-              <Tabs value={page} onChange={(v) => v && setPage(v as Page)} variant="pills">
-                <Tabs.List>
-                  <Tabs.Tab value="program">Program</Tabs.Tab>
-                  <Tabs.Tab value="music">Music</Tabs.Tab>
-                  <Tabs.Tab value="settings">Settings</Tabs.Tab>
-                </Tabs.List>
-              </Tabs>
+              <Group gap="sm" wrap="nowrap">
+                <Logo
+                  size={40}
+                  label="Folk Dance Player"
+                  color="var(--mantine-primary-color-filled)"
+                />
+                <Tabs value={page} onChange={(v) => v && setPage(v as Page)} variant="pills">
+                  <Tabs.List>
+                    <Tabs.Tab value="program">Program</Tabs.Tab>
+                    <Tabs.Tab value="music">Music</Tabs.Tab>
+                    <Tabs.Tab value="settings">Settings</Tabs.Tab>
+                  </Tabs.List>
+                </Tabs>
+              </Group>
             </div>
           </AppShell.Header>
           <AppShell.Navbar p="sm">

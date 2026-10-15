@@ -17,6 +17,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { EventChannel, EventContract } from '@shared/contract'
 import { MEDIA_SCHEME, parseMediaUrl, parseSlideUrl } from '@shared/media'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
+import icon from '../../resources/icon.png?asset'
 import { CanvaService } from './canva/canva-service'
 import { CaptureQueue } from './canva/capture-queue'
 import { slideImagePath } from './canva/decks'
@@ -194,6 +195,9 @@ function startupErrorMessage(err: unknown): string {
 
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.folkdanceplayer.app')
+  // The packaged app gets its icon from the bundle (build/icon.icns); unpackaged, the Dock would
+  // show Electron's.
+  if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(icon)
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
   const dbPath = join(app.getPath('userData'), 'folk-dance-player.sqlite')

@@ -1,0 +1,6 @@
+.logo {
+  display: inline-block;
+  flex: none;
+  background-color: currentColor;
+  mask: var(--logo) center / contain no-repeat;
+}

@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+  <head>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1024px;
+        height: 1024px;
+        background: transparent;
+        overflow: hidden;
+      }
+      /* macOS icon grid: an 824px rounded square centered in 1024, with a soft shadow. */
+      .tile {
+        position: absolute;
+        left: 100px;
+        top: 92px;
+        width: 824px;
+        height: 824px;
+        border-radius: 186px;
+        background: linear-gradient(160deg, #ff6b6b 0%, #e03131 55%, #b02525 100%);
+        box-shadow:
+          0 10px 24px rgba(0, 0, 0, 0.28),
+          inset 0 2px 0 rgba(255, 255, 255, 0.25);
+      }
+      .logo {
+        position: absolute;
+        left: 100px;
+        top: 92px;
+        width: 824px;
+        height: 824px;
+        background: #fff;
+        -webkit-mask: url(../../src/renderer/src/assets/logo.svg) center / 82% no-repeat;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="tile"></div>
+    <div class="logo"></div>
+  </body>
+</html>

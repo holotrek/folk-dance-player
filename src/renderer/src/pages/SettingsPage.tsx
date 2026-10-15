@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   Alert,
   Code,
+  Group,
   Loader,
   NumberInput,
   SegmentedControl,
@@ -16,6 +17,7 @@ import type { AppInfo, RendererApi } from '@shared/contract'
 import type { ImportMapping } from '@shared/import'
 import type { Appearance, SettingKey, Settings } from '@shared/settings'
 import { colorSchemeFor } from '../appearance'
+import Logo from '../components/Logo'
 import ProjectorDisplay from '../components/ProjectorDisplay'
 import RemoteSection from '../components/RemoteSection'
 import ImportMappingFields from '../import/ImportMappingFields'
@@ -144,7 +146,10 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
       {info && (
         <Stack gap={4}>
           <Title order={4}>About</Title>
-          <Text size="sm">Version {info.version}</Text>
+          <Group gap="sm" wrap="nowrap">
+            <Logo size={48} />
+            <Text size="sm">Folk Dance Player, version {info.version}</Text>
+          </Group>
           <Text size="sm">Library database (schema {info.schemaVersion}):</Text>
           <Code>{info.dbPath}</Code>
         </Stack>

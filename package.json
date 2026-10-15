@@ -15,6 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
+    "icon": "env -u ELECTRON_RUN_AS_NODE electron scripts/make-icon.cjs",
     "postinstall": "install-electron"
   },
   "dependencies": {

@@ -28,6 +28,7 @@ npm run dev
 | `npm run typecheck` | TypeScript checks for main/preload and renderer |
 | `npm test`          | All tests (Vitest: node + renderer projects)    |
 | `npm run format`    | Prettier                                        |
+| `npm run icon`      | Rebuild the app icon from the logo (macOS)      |
 
 ## Workflow
 

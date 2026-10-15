@@ -7,6 +7,7 @@ import {
   type ProjectorSnapshot
 } from '@shared/projector'
 import { ChevronDownIcon } from '../components/icons'
+import Logo from '../components/Logo'
 import classes from './ProjectorView.module.css'
 
 // The large part of a label: the dance, and the choreographer when the label needs it (spec §4).
@@ -81,7 +82,10 @@ export default function ProjectorView({
   if (!snapshot.hasProgram && !middle) {
     return (
       <div className={classes.screen}>
-        <div className={classes.empty}>Folk Dance Player</div>
+        <div className={classes.empty}>
+          <Logo size="32vh" />
+          <div>Folk Dance Player</div>
+        </div>
       </div>
     )
   }
