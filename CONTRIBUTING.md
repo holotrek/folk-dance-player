@@ -60,10 +60,10 @@ npm run dev
 
 GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 
-- **PR Gate:** formatting, typecheck, unit tests and build on Linux; the end-to-end tests on macOS; and the CHANGELOG check. Branch protection requires all three before merging into main.
+- **PR Gate:** formatting, typecheck, unit tests and build on Linux; the end-to-end tests on macOS; and the CHANGELOG check. The `main` ruleset requires all three before a pull request can be merged (and changes reach main only through pull requests).
 - **The CHANGELOG check:** a pull request that changes `src/` must add a line to `CHANGELOG.md`. If nobody would notice the change, label the PR `no changelog`. Dependabot's PRs are skipped.
 - **Adding an OS:**
-  - **End-to-end tests:** add it to the `e2e` job's `matrix.os` in `pr-gate.yml` (for example `ubuntu-latest`, under a virtual display, or `windows-latest`), and add its check to branch protection.
+  - **End-to-end tests:** add it to the `e2e` job's `matrix.os` in `pr-gate.yml` (for example `ubuntu-latest`, under a virtual display, or `windows-latest`), and add its check to the required checks of the `main` ruleset (Settings → Rules).
   - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml`. Windows also needs its electron-builder target and a `dist` script without `env -u`, which is Unix-only.
 - **Pull requests from forks** run with read-only permissions and no secrets. GitHub asks a maintainer to approve a first-time contributor's runs.
 - **Dependabot** opens weekly update PRs (npm packages and the workflows' actions), only for releases at least 14 days old.
@@ -71,7 +71,7 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 ## Releasing
 
 1. Complete the manual hardware checklist in spec §10.2 (projector, Canva, offline slides, slowed audio).
-2. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version. It opens a "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Check the notes, and merge it once its checks pass.
+2. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version (for the very first release, `0.1.0`). It opens a "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Check the notes, and merge it once its checks pass.
 3. **Actions → Create Release → Run workflow** on main. It refuses a version that isn't higher than the last release or has no CHANGELOG section; otherwise it tests, builds the `.dmg`, checks it with the end-to-end tests, and publishes the GitHub release `vX.Y.Z` with the `.dmg` and the notes.
 4. To try a release without publishing, tick **Dry run** (any branch): the `.dmg` is kept as a workflow artifact for a week.
 

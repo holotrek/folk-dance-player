@@ -68,10 +68,9 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          fetch-depth: 0
+          fetch-depth: 2 # the PR's merge commit and its first parent, today's main
       - name: A change to the app adds a CHANGELOG line
         env:
-          BASE: ${{ github.event.pull_request.base.sha }}
           AUTHOR: ${{ github.event.pull_request.user.login }}
           LABELS: ${{ toJSON(github.event.pull_request.labels.*.name) }}
         run: |
@@ -79,7 +78,9 @@ jobs:
             echo "No CHANGELOG line needed (Dependabot, or labeled 'no changelog')."
             exit 0
           fi
-          changed=$(git diff --name-only "$BASE"...HEAD)
+          # The merge commit against today's main: exactly this PR's changes. (The event's base SHA
+          # goes stale when main moves, and would count other PRs' files.)
+          changed=$(git diff --name-only HEAD^1 HEAD)
           if echo "$changed" | grep -q '^src/' && ! echo "$changed" | grep -qx 'CHANGELOG.md'; then
             echo "::error::This PR changes the app (src/) but not CHANGELOG.md. Add a line under Unreleased, written for organizers, or label the PR 'no changelog' if nobody would notice the change."
             exit 1

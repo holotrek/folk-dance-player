@@ -7,9 +7,8 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: 'major, minor, patch, or an exact version such as 1.0.0'
+        description: 'major, minor, patch, or an exact version such as 1.0.0 (the first release: 0.1.0)'
         required: true
-        default: minor
 
 permissions:
   contents: write
