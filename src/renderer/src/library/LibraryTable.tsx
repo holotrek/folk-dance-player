@@ -25,12 +25,7 @@ const ALL_COLUMNS: Column[] = [
           ⚠
         </Text>
       ) : (
-        <FavoriteToggle
-          fileId={r.fileId}
-          label={r.label}
-          isFavorite={r.isFavorite}
-          className={r.isFavorite ? undefined : classes.unstarred}
-        />
+        <FavoriteToggle fileId={r.fileId} label={r.label} isFavorite={r.isFavorite} />
       )
   },
   {

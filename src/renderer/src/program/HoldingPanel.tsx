@@ -80,11 +80,11 @@ export default function HoldingPanel(): React.JSX.Element {
             }}
             onDoubleClick={() => void api.invoke('player:preview', r.fileId)}
           >
+            <FavoriteToggle fileId={r.fileId} label={r.label} isFavorite={r.isFavorite} />
             <span className={classes.label}>{r.label}</span>
             <Text span size="xs" c="dimmed">
               {r.country}
             </Text>
-            <FavoriteToggle fileId={r.fileId} label={r.label} isFavorite={r.isFavorite} />
             <ActionIcon
               variant="subtle"
               size="sm"

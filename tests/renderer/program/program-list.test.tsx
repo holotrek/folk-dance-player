@@ -228,6 +228,18 @@ describe('program list', () => {
     ])
   })
 
+  test('each song item has a favorite star on its left', async () => {
+    const fake = setup()
+    await screen.findByText('Kolo')
+    const star = screen.getByRole('button', { name: 'Add Hora to favorites' })
+    expect(rowFor('Hora').firstElementChild).toBe(star)
+    await userEvent.click(star)
+    expect(fake.callsTo('library:setFavorite')).toEqual([[[101], true]])
+    expect(
+      within(rowFor('STOP / TEACHING')).queryByRole('button', { name: /favorites/ })
+    ).toBeNull()
+  })
+
   test('a song added with several dances asks which one; one dance doesn’t ask', async () => {
     const added = item(9, track(201, 'Kolo', { songId: 1102, danceId: 2102, danceCount: 2 }))
     let items = program.items

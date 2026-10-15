@@ -86,9 +86,11 @@ describe('holding panel', () => {
     expect(region.className).not.toMatch(/panelActive/)
   })
 
-  test('the star adds a held song to favorites', async () => {
+  test('the star, on the left as in the library, adds a held song to favorites', async () => {
     const { fake } = setup()
-    await userEvent.click(await screen.findByRole('button', { name: 'Add Hora to favorites' }))
+    const star = await screen.findByRole('button', { name: 'Add Hora to favorites' })
+    expect(rowFor('Hora').firstElementChild).toBe(star)
+    await userEvent.click(star)
     expect(fake.callsTo('library:setFavorite')).toEqual([[[101], true]])
   })
 

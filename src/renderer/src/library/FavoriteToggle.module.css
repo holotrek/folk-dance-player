@@ -1,0 +1,10 @@
+/* Until a song is a favorite, its star shows only while its row is hovered (or focused). */
+.unstarred {
+  opacity: 0;
+}
+
+[role='row']:hover .unstarred,
+[role='listitem']:hover .unstarred,
+.unstarred:focus-visible {
+  opacity: 1;
+}

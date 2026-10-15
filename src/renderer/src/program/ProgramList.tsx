@@ -4,6 +4,7 @@ import type { SongDance } from '@shared/library'
 import type { ProgramItem } from '@shared/program'
 import { PauseIcon } from '../components/icons'
 import NamePrompt from '../components/NamePrompt'
+import FavoriteToggle from '../library/FavoriteToggle'
 import DanceChoiceDialog, { type DanceChoice } from './DanceChoiceDialog'
 import { errorMessage } from '../ipc-error'
 import {
@@ -239,6 +240,11 @@ export default function ProgramList(): React.JSX.Element {
               </span>
             ) : (
               <>
+                <FavoriteToggle
+                  fileId={item.fileId}
+                  label={item.label}
+                  isFavorite={item.isFavorite}
+                />
                 {item.isMissing && (
                   <Text span c="red" aria-label="File missing" title="The file can't be found">
                     ⚠

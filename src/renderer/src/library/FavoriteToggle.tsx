@@ -1,14 +1,14 @@
 import { ActionIcon } from '@mantine/core'
 import { StarIcon } from '../components/icons'
 import { useLibraryApi } from './LibraryProvider'
+import classes from './FavoriteToggle.module.css'
 
-// The star beside a song (library rows, holding): adds it to favorites or removes it. Clicks stay
-// here, so they never select the row or start a preview.
+// The star at the left of a song's row (library, holding, program): adds it to favorites or removes
+// it. Clicks stay here, so they never select the row or start a preview.
 export default function FavoriteToggle(props: {
   fileId: number
   label: string
   isFavorite: boolean
-  className?: string
 }): React.JSX.Element {
   const api = useLibraryApi()
   const { isFavorite } = props
@@ -17,7 +17,7 @@ export default function FavoriteToggle(props: {
       variant="subtle"
       size="sm"
       color={isFavorite ? 'yellow' : 'gray'}
-      className={props.className}
+      className={isFavorite ? undefined : classes.unstarred}
       aria-label={
         isFavorite ? `Remove ${props.label} from favorites` : `Add ${props.label} to favorites`
       }

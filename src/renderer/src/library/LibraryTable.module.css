@@ -45,16 +45,6 @@
   flex: 1 0 32px;
 }
 
-/* A song's star shows on hover until it's a favorite. */
-.unstarred {
-  opacity: 0;
-}
-
-.item:hover .unstarred,
-.unstarred:focus-visible {
-  opacity: 1;
-}
-
 .item {
   composes: row;
   position: absolute;
