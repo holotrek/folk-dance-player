@@ -318,6 +318,7 @@ PROGRAMS                  [+]
   1. Choose a deck from a dropdown that lists decks by title (for example "Dance n' Jam Tunes"), or "+ Add a deck…" to paste a deck's view link once.
   2. Enter a slide number. The app immediately converts it to the slide's page ID and shows a preview with the slide's title, if it has one, to confirm.
   3. Optionally, paste a page link copied from Canva's share menu instead.
+  - **The slide field** shows the saved image, "Deck · slide N: Title", Change… and Remove. It warns when the slide is no longer in its deck (link it again) or when its image couldn't be saved. The library table has no slide column in v1.
 - **Same-name suggestions:** when a dance shares its name with another dance that at least one song uses, the editor asks "Another dance called Lesnoto exists — same dance?". Dances no song uses (left over after unlinking) are never suggested.
   - **Same dance:** links this song to that dance and removes the automatic duplicate, if nothing else uses it.
   - **Different dance:** dismisses the suggestion for that pair, permanently (`distinct_dances`).
@@ -326,7 +327,8 @@ PROGRAMS                  [+]
   - **Notes:** when both dances have notes, the removed dance's notes are added after the kept dance's.
   - **"Different dance" answers** about the removed dance carry over to the kept dance, so dismissed suggestions stay dismissed.
   - **Difficulty and the Canva slide:** the kept dance's values win when both are set.
-- **Actions:** Add Music…, Import from Apple Music…, Favorite/Unfavorite (selection), Re-apply mapping… (selection), Refresh slides (plan 6).
+- **Actions:** Add Music…, Import from Apple Music…, Favorite/Unfavorite (selection), Re-apply mapping… (selection), Refresh slides.
+- **Refresh slides** sits in the header beside Add Music…, once a deck has been added. While images are being saved it shows "Saving slide images… N of M", and afterwards how many couldn't be saved. A "Canva links need checking" notice shows below while a deck's page can't be read, and a refresh that couldn't reach Canva says so.
 - **Re-apply mapping** opens a dialog that shows the selected songs' Artist, Album Artist and Genre tags, with the mapping fields from the import step. They start from the import mapping in Settings, and the choice applies to this run only. It overwrites only the fields the chosen mapping targets: the song's artist, the default pairing's teacher, and the default dance's choreographer and country. If Genre → Country is off, countries are left alone. A default dance shared with other songs is left unchanged (it would change every song using it), and the result reports how many were skipped.
 - **Missing and unsupported files** are visibly flagged.
 
@@ -485,11 +487,12 @@ UP NEXT
 - **The Teaching marker on the next dance** lasts only while the halted program's next item is the dance after the STOP; loading another program or removing that dance clears it.
 - **Songs whose file is missing** are left out of the lists, since they will be skipped.
 - **With no program loaded and nothing playing,** the view shows only the app's name.
-- **Previously played** shows titles only when a slide is beside it, because the column is narrow. With no slide it shows the country too. Newest is at the top.
+- **Previously played** shows titles only (the dance, without the song or country) when a slide is beside it, because the column is narrow. With no slide it shows the country too. Newest is at the top.
 - **A missing country** leaves the right side empty.
 
 - **Read-only.** The view renders state snapshots from main (`projector:snapshot`, plus `projector:progress` about 4 times a second for the red line) and sends nothing back. Its own preload exposes only `getSnapshot`, `onSnapshot` and `onProgress`.
-- **Without Canva slides (until plan 6),** the view always uses the no-slide layout.
+- **The slide box** (`slideBox` in `shared/projector.ts`): 16:9, fitted within two-thirds of the content width and the top half of the screen (inside the view's 4 % / 3 % margins), aligned top right. The projector page draws the saved image in it, and main lays the live view over exactly the same box. Previously played fills the space to its left.
+- **The slide layout is used** whenever the middle dance (Now playing, or Up next when nothing is loaded) has a slide: a saved image, or the live view. Otherwise the no-slide layout.
 - **Errors** are never shown on the projector, only in the control window.
 
 ### 8.3 Canva slides
@@ -523,7 +526,10 @@ Verified in the spike with a real 42-slide deck (§11):
   - **How:** the view is loaded off-screen, nudged, allowed to fade, then captured with `webContents.capturePage()`.
   - **Storage:** saved under the app data folder, keyed by deck and page ID in `slide_cache`, so a moved slide keeps its image.
   - **On failure:** the previous image is kept and `last_error` is recorded, shown as ⚠ on the dance.
-- **What is shown:** the live view when online and it loads within a timeout. Otherwise the saved image. Otherwise the no-slide layout. The projector never shows "Loading…".
+- **What is shown: the saved image first, then live.** The projector shows the saved image at once. The live view loads hidden and is shown only once Canva's controls have faded: 11 s after a new deck loads (after the mouse pass), 1.5 s after another slide of the loaded deck. Switching away before then never shows it. Offline, or when the page fails to load, the saved image stays. With no saved image the slide area stays black until the live view appears. The projector never shows "Loading…" or Canva's controls.
+- **Capturing details:** at startup when online, only linked slides without a saved image are captured; "Refresh slides" re-captures all of them. Captures run one at a time in an off-screen 1920×1080 window, reused within a deck (12 s for a new deck, 1.5 s for another slide of it), and give up after 45 s.
+- **Canva's pages are untrusted.** The live view and the capture window use their own `persist:canva` session, sandboxed, muted and without a preload. They may navigate only within `https://*.canva.com` and never open windows. The app's own windows are sandboxed too, and only one copy of the app runs.
+- **A slide gone from its deck** keeps its saved image on the projector but is never loaded live (it has no position).
 
 ## 9. Architecture
 
@@ -535,8 +541,8 @@ Approach A (chosen): **the main process owns all state; the control window plays
 │  import/    utilityProcess: folder scan, music-metadata, Apple XML (plist)       │
 │  session/   PlayerSession: pure TS state machine (cursor, now playing,           │
 │             auto-continue + countdown timers, preview/replay rules, play_log)     │
-│  displays/  projector window lifecycle, display events, laptop-mode rule         │
-│  slides/    Canva WebContentsView host, mouse nudge, capture → slide_cache       │
+│  canva/     decks + slide links, CanvaService, CaptureQueue → slide_cache        │
+│  projector/ window control, snapshot feed, LiveSlide (Canva WebContentsView)     │
 │  ipc/       typed commands + one "state" broadcast                               │
 └───────────────▲─────────────────────────────────────────────┬──────────────────┘
       commands  │                                             │ state snapshots
@@ -552,6 +558,8 @@ Approach A (chosen): **the main process owns all state; the control window plays
   - It reaches the database through small "ports".
   - The control window's `<audio>` reports only "ended" and "failed", each tagged with the play's id, so a late event from an earlier song is ignored.
 - **Audio reaches `<audio>` through an `fdp-media://file/<id>` scheme.** It looks up the path by file id, so the renderer never names a path. It answers Range requests itself, because seeking needs them.
+- **Saved Canva slides are served as `fdp-media://slide/<deck>/<page>?v=<captured at>`.** The version makes a re-captured image load fresh.
+- **Canva in main** (`src/main/canva/`): pure modules with injected pieces (a `Fetcher`, a `SlideCapturer`, a `LiveView`), and one Electron file, `electron-canva.ts`. A slide's position is always looked up from its page ID.
 - **`FDP_USER_DATA`:** setting it points the app at another data folder, so end-to-end tests and smoke runs never touch the real library.
 - **The typed IPC contract** lives in one shared `contract.ts`, used by main, the preloads and the renderers. Preloads expose only that API (`contextIsolation: true`, no `nodeIntegration`).
 - **Tooling:**

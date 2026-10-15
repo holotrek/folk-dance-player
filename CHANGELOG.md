@@ -40,3 +40,5 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Holding: drop songs on the holding panel to keep them handy for the session, slotting them in between held songs or at the end, and drag held songs to reorder them.
 - Previously played lists what was played in the program, newest first. Played items leave the program but are kept, so a saved program records what was danced.
 - When a program is loaded, its files are checked, and missing ones are flagged before the event. A missing file is skipped at play time with a warning.
+- Canva slides: link a dance to a slide of a Canva presentation, by its number in the deck (add the deck once, with its public view link) or with a link to the slide. The projector shows the slide beside the program while that dance is up: the saved image at once, then the live slide once Canva's buttons have faded.
+- Slide images are saved in the background, so slides still show without internet. **Refresh slides** on the Music page re-reads your decks and saves the images again, showing its progress, and a notice says when Canva's links need checking.
