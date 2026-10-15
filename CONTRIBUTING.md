@@ -20,15 +20,18 @@ npm run dev
 
 ## Scripts
 
-| Script              | What it does                                    |
-| ------------------- | ----------------------------------------------- |
-| `npm run dev`       | Run the app with hot reload                     |
-| `npm start`         | Run the last production build                   |
-| `npm run build`     | Typecheck, then build to `out/`                 |
-| `npm run typecheck` | TypeScript checks for main/preload and renderer |
-| `npm test`          | All tests (Vitest: node + renderer projects)    |
-| `npm run format`    | Prettier                                        |
-| `npm run icon`      | Rebuild the app icon from the logo (macOS)      |
+| Script                  | What it does                                    |
+| ----------------------- | ----------------------------------------------- |
+| `npm run dev`           | Run the app with hot reload                     |
+| `npm start`             | Run the last production build                   |
+| `npm run build`         | Typecheck, then build to `out/`                 |
+| `npm run typecheck`     | TypeScript checks for main/preload and renderer |
+| `npm test`              | All tests (Vitest: node + renderer projects)    |
+| `npm run format`        | Prettier                                        |
+| `npm run icon`          | Rebuild the app icon from the logo (macOS)      |
+| `npm run dist`          | Build the Universal .dmg into `dist/`           |
+| `npm run test:e2e`      | End-to-end tests (Playwright) on the build      |
+| `npm run test:e2e:dist` | The same tests on the packaged app              |
 
 ## Workflow
 
@@ -55,8 +58,22 @@ npm run dev
 
 ## Releasing
 
-1. `npm test` and `npm run build` pass. Complete the manual hardware checklist in spec §10.2 (projector, Canva, offline slides, slowed audio).
+1. `npm test` and `npm run test:e2e` pass. Complete the manual hardware checklist in spec §10.2 (projector, Canva, offline slides, slowed audio).
 2. Bump `version` in `package.json` (semver).
 3. In `CHANGELOG.md`, move the `Unreleased` entries under `## [x.y.z] - YYYY-MM-DD`.
 4. Commit as `chore(release): vx.y.z` and tag `vx.y.z`.
-5. Build the signed `.dmg` (see the packaging plan).
+5. Build the `.dmg` with `npm run dist`, check it with `npm run test:e2e:dist`, and attach `dist/Folk Dance Player-x.y.z-universal.dmg` to the GitHub release.
+
+### Signing and notarizing
+
+Until there's an Apple Developer ID, `npm run dist` makes an **ad-hoc signed** app (`identity: '-'` in `electron-builder.yml`): it runs on Apple silicon, and a downloaded copy opens with System Settings → Privacy & Security → Open Anyway. To sign and notarize instead (not yet tested):
+
+1. Install the "Developer ID Application" certificate in your keychain.
+2. Set `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` (for notarization).
+3. Run:
+
+   ```bash
+   npm run build && env -u ELECTRON_RUN_AS_NODE npx electron-builder --mac \
+     -c.mac.identity="Developer ID Application: <name> (<team>)" \
+     -c.mac.hardenedRuntime=true -c.mac.notarize=true
+   ```

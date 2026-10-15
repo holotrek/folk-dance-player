@@ -6,3 +6,7 @@ out/
 
 # Written when the remote spike runs
 docs/spikes/remote-spike/remote-log.txt
+
+# Playwright
+test-results/
+playwright-report/
