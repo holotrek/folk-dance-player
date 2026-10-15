@@ -614,12 +614,13 @@ The music never stops because of a side failure, and the projector never shows a
   - save and load a program, also after a restart
   - Settings… in the app menu opens the Settings page
   - each start backs up the library, and the log says so
-- **Manual pre-release checklist (real hardware):**
-  - projector plug and unplug mid-song
-  - mirror vs. extended mode
-  - Canva live slide and its fade
-  - offline slide images
+- **Manual pre-release checklist (real hardware):** `docs/manual-testing/pre-release-hardware.md`, a step-by-step list with checkboxes, run on the packaged app. It covers:
+  - the view over the laptop (Esc, the mouse, auto-show)
+  - extended mode with a projector, and mirror mode
+  - the Canva live slide and its fade, and offline slide images
   - how audio sounds at 0.75× and 0.5× speed
+  - sleep and wake, and keeping the Mac awake
+  - unplugging the projector
 
 ## 11. Spike findings (2026-10-13)
 
@@ -708,8 +709,8 @@ How to work on the project:
   - **Changing the database:** add a new numbered migration. A migration that has been released is never edited.
   - **Adding an IPC channel:** add it to the contract, to `INVOKE_CHANNELS`, and to the handlers.
 - **Release checklist** (the workflows do steps 2–4, §13.4):
-  1. The manual hardware checklist (§10.2) passes.
-  2. **Prepare Release** bumps the version and moves `Unreleased` into a dated version section of `CHANGELOG.md`, in a release pull request. Merge it once the PR Gate passes.
+  1. **Prepare Release** bumps the version and moves `Unreleased` into a dated version section of `CHANGELOG.md`, in a draft release pull request whose description carries the manual hardware checklist (§10.2).
+  2. While the pull request is a draft, the maintainer runs the checklist on that version's `.dmg` and ticks it in the description, then marks it ready and merges it once the PR Gate passes.
   3. **Create Release** on main checks the version, tests, builds the installers, checks them with the end-to-end tests, and tags and publishes the GitHub release.
 
 ### 13.3 `AGENTS.md`: decision log and agent guide
@@ -743,7 +744,7 @@ The repo is public, so GitHub's standard hosted runners (Linux, Windows and macO
   - **End-to-end (<os>)**: the end-to-end tests on a matrix of systems, starting with `macos-latest`. Linux (under a virtual display) and Windows join by adding them to the matrix.
   - **CHANGELOG**: a pull request that changes `src/` must change `CHANGELOG.md`, unless it's labeled `no changelog` or comes from Dependabot. It compares the PR's merge commit with today's main, so it sees exactly the PR's changes.
   - Pull requests from forks run with read-only permissions and no secrets (`pull_request`, never `pull_request_target`); GitHub asks before running a first-time contributor's workflows.
-- **Prepare Release** (manual, main only; input, with no default: `major`, `minor`, `patch` or an exact version; the first release is `0.1.0`). It runs `scripts/release.mts prepare`, which bumps the version (`npm version`) and moves the Unreleased notes under a dated `## [x.y.z]` heading, leaving Unreleased empty. The current version is allowed, for the first release. Then it pushes `release/vx.y.z` and opens "Release vx.y.z" **as a draft**. A pull request opened with the workflow's own token starts no workflows, and checks from a separately started (dispatched) run don't count toward a pull request's required checks. So the maintainer reads the version and notes and clicks **Ready for review**: that is a person's action, which starts the PR Gate (`ready_for_review`).
+- **Prepare Release** (manual, main only; input, with no default: `major`, `minor`, `patch` or an exact version; the first release is `0.1.0`). It runs `scripts/release.mts prepare`, which bumps the version (`npm version`) and moves the Unreleased notes under a dated `## [x.y.z]` heading, leaving Unreleased empty. The current version is allowed, for the first release. Then it pushes `release/vx.y.z` and opens "Release vx.y.z" **as a draft**. A pull request opened with the workflow's own token starts no workflows, and checks from a separately started (dispatched) run don't count toward a pull request's required checks. Its description is the hardware checklist (`docs/manual-testing/pre-release-hardware.md`, without its title), so the boxes can be ticked there. So the maintainer runs the checklist, reads the version and notes and clicks **Ready for review**: that is a person's action, which starts the PR Gate (`ready_for_review`).
 - **Create Release** (manual, main only), as three jobs, so a release is all or nothing:
   1. **Check the version** (Linux): `scripts/release.mts check` refuses a version that isn't higher than the latest `vx.y.z` tag, or that has no CHANGELOG section.
   2. **Build (<os>)**, a matrix: the unit tests, `npm run dist` (electron-builder never publishes by itself: `--publish never`), the end-to-end tests on the packaged app, and the installer kept as an artifact. Today: `macos-latest`, the Universal `.dmg`. Windows joins as `{ os: windows-latest, installer: 'dist/*.exe' }`, with its electron-builder target and a cross-platform `dist` script (`env -u` is Unix-only).
