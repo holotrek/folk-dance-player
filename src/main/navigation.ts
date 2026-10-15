@@ -1,3 +1,4 @@
+// SPIKE: a change to src/ with no CHANGELOG line (reverted before merging).
 // The two WebContents methods the guards need (Electron's WebContents satisfies this).
 export interface NavigableContents {
   on(
