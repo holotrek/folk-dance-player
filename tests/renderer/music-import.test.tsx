@@ -30,6 +30,24 @@ describe('Music page import', () => {
     expect(await screen.findByText('42 songs in your library')).toBeInTheDocument()
   })
 
+  test('Refresh slides is offered once a Canva deck has been added', async () => {
+    const fake = createFakeApi({
+      'canva:decks': [
+        {
+          id: 1,
+          viewUrl: 'https://www.canva.com/design/DAH/TOK/view',
+          designId: 'DAH',
+          title: 'Deck',
+          pageCount: 3,
+          syncedAt: null,
+          lastError: null
+        }
+      ]
+    })
+    renderWithLibrary(<MusicPage />, fake.api)
+    expect(await screen.findByRole('button', { name: 'Refresh slides' })).toBeInTheDocument()
+  })
+
   test('Add Music: pick, confirm the mapping, import, and see the summary', async () => {
     const fake = createFakeApi({
       'library:stats': { fileCount: 0 },

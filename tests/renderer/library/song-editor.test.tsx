@@ -127,6 +127,13 @@ describe('SongEditor', () => {
     expect(fake.callsTo('library:setTeacher')).toEqual([[21, '']])
   })
 
+  test('each dance has its Canva slide field', async () => {
+    setup()
+    await screen.findByDisplayValue('Pusteno Ludo')
+    const card = within(danceCard('Pusteno Ludo | Lesnoto (Someone)'))
+    expect(card.getByRole('button', { name: 'Link a slide…' })).toBeInTheDocument()
+  })
+
   test('sets the difficulty', async () => {
     const fake = setup()
     await screen.findByDisplayValue('Pusteno Ludo')

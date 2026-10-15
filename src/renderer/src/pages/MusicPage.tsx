@@ -8,6 +8,7 @@ import { errorMessage } from '../ipc-error'
 import LibrarySearch from '../library/LibrarySearch'
 import LibraryTable from '../library/LibraryTable'
 import ReapplyDialog from '../library/ReapplyDialog'
+import { SlidesNotices, SlidesRefreshButton, useSlidesRefresh } from '../library/SlidesRefresh'
 import SongEditor from '../library/SongEditor'
 import { useLibrary, useLibraryApi, useLibraryStore } from '../library/LibraryProvider'
 import classes from './MusicPage.module.css'
@@ -22,7 +23,7 @@ function reapplyMessage(result: ReapplyResult): string {
   return `${songs} ${n} ${n === 1 ? 'dance used by other songs was' : 'dances used by other songs were'} left unchanged.`
 }
 
-// Spec §6.3: browse, search and organize the library; import music.
+// Spec §6.3: browse, search and organize the library; import music; refresh Canva slides.
 export default function MusicPage(): React.JSX.Element {
   const api = useLibraryApi()
   const store = useLibraryStore()
@@ -40,6 +41,7 @@ export default function MusicPage(): React.JSX.Element {
   }, [api])
   useEffect(refresh, [refresh])
   const flow = useImportFlow(api, refresh)
+  const slides = useSlidesRefresh()
 
   const chosen = new Set(selected)
   const selectedRows = rows.filter((r) => chosen.has(r.songId))
@@ -61,12 +63,14 @@ export default function MusicPage(): React.JSX.Element {
           {fileCount !== null && <Text c="dimmed">{songCount(fileCount)}</Text>}
         </div>
         <Group>
+          <SlidesRefreshButton state={slides} />
           <Button onClick={flow.addMusic}>Add Music…</Button>
           <Button variant="default" onClick={flow.importFromApple}>
             Import from Apple Music…
           </Button>
         </Group>
       </Group>
+      <SlidesNotices state={slides} />
       <Group>
         <LibrarySearch style={{ flex: 1 }} />
         {selected.length > 0 && (
