@@ -2,12 +2,14 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
-import { mediaUrl, parseMediaUrl } from '@shared/media'
+import { mediaUrl, parseMediaUrl, parseSlideUrl, slideUrl } from '@shared/media'
 import { mediaResponse, parseRange } from '../../../src/main/media/media-response'
 
 const dir = mkdtempSync(join(tmpdir(), 'fdp-media-'))
 const song = join(dir, 'song.mp3')
 writeFileSync(song, Buffer.from('0123456789'))
+const image = join(dir, 'slide.png')
+writeFileSync(image, Buffer.from('png'))
 
 describe('media URLs', () => {
   test('round-trip a file id, and reject anything else', () => {
@@ -16,6 +18,16 @@ describe('media URLs', () => {
     expect(parseMediaUrl('fdp-media://file/42/')).toBe(42)
     expect(parseMediaUrl('fdp-media://file/../etc/passwd')).toBeNull()
     expect(parseMediaUrl('file:///etc/passwd')).toBeNull()
+  })
+})
+
+describe('slide image URLs', () => {
+  test('name a deck and page, with a version so a new capture reloads', () => {
+    const url = slideUrl(3, 'PBrWDbC9tVSzgzvW', '2026-10-14 10:00:00')
+    expect(url).toBe('fdp-media://slide/3/PBrWDbC9tVSzgzvW?v=2026-10-14%2010%3A00%3A00')
+    expect(parseSlideUrl(url)).toEqual({ deckId: 3, pageId: 'PBrWDbC9tVSzgzvW' })
+    expect(parseSlideUrl('fdp-media://slide/3/../../etc')).toBeNull()
+    expect(parseSlideUrl(mediaUrl(42))).toBeNull()
   })
 })
 
@@ -57,5 +69,10 @@ describe('mediaResponse', () => {
     expect((await mediaResponse(join(dir, 'gone.mp3'), null)).status).toBe(404)
     expect((await mediaResponse(null, null)).status).toBe(404)
     expect((await mediaResponse(dir, null)).status).toBe(404)
+  })
+
+  test('serves a saved slide as a PNG', async () => {
+    const res = await mediaResponse(image, null)
+    expect(res.headers.get('content-type')).toBe('image/png')
   })
 })

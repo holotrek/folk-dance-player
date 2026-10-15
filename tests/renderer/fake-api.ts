@@ -1,4 +1,5 @@
 import type { EventChannel, EventContract, InvokeChannel, RendererApi } from '@shared/contract'
+import { CAPTURES_IDLE } from '@shared/canva'
 import { IDLE_PLAYER_STATE, NO_REMOTE } from '@shared/program'
 import { PROJECTOR_OFF } from '@shared/projector'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
@@ -49,6 +50,9 @@ export function createFakeApi(
         if (channel === 'projector:status') return PROJECTOR_OFF
         if (channel === 'projector:displays') return []
         if (channel === 'projector:reportProgress') return undefined
+        // No Canva decks, and no slide images being saved.
+        if (channel === 'canva:decks') return []
+        if (channel === 'canva:captureStatus') return CAPTURES_IDLE
         if (channel === 'settings:getAll') return fake.settings
         if (channel === 'settings:set') {
           const [key, value] = args as [keyof Settings, unknown]

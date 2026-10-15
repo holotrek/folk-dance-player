@@ -12,16 +12,56 @@ export interface ProjectorEntry {
 // The upcoming list: dances, and "Teaching" before a dance that will be taught (a STOP marker).
 export type UpcomingRow = { kind: 'dance'; entry: ProjectorEntry } | { kind: 'teaching' }
 
+// The middle dance's Canva slide (spec §8.3): its saved image, and whether main's live view of it
+// is showing over the slide area. The projector uses the slide layout when either is available.
+export interface ProjectorSlide {
+  deckId: number
+  pageId: string
+  imageUrl: string | null // fdp-media://slide/<deck>/<page>, when an image is saved
+  live: boolean
+}
+
 export type ProjectorMiddle =
   // The song that's loaded: playing, paused, or stopped (rewound, ▶ plays it again).
-  | { kind: 'now'; entry: ProjectorEntry; playId: number; paused: boolean }
-  // Nothing loaded: the next dance, with the countdown before it, if one is running.
-  | {
-      kind: 'next'
-      entry: ProjectorEntry
-      countdown: { secondsLeft: number; reason: 'start' | 'continue' } | null
-      teaching: boolean // a STOP comes before it: it's the dance to be taught
-    }
+  (
+    | { kind: 'now'; entry: ProjectorEntry; playId: number; paused: boolean }
+    // Nothing loaded: the next dance, with the countdown before it, if one is running.
+    | {
+        kind: 'next'
+        entry: ProjectorEntry
+        countdown: { secondsLeft: number; reason: 'start' | 'continue' } | null
+        teaching: boolean // a STOP comes before it: it's the dance to be taught
+      }
+  ) & { slide?: ProjectorSlide }
+
+export interface Rect {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
+// Where the slide sits on the projector (spec §8.2): top right, 16:9, filling up to two-thirds of
+// the width and the top half of the height, inside the view's margins. The projector page draws
+// the saved image there, and main lays its live Canva view over exactly the same box.
+export function slideBox(width: number, height: number): Rect {
+  const padX = width * 0.04
+  const padY = height * 0.03
+  const areaWidth = ((width - 2 * padX) * 2) / 3
+  const areaHeight = height * 0.5 - padY
+  let w = areaWidth
+  let h = (w * 9) / 16
+  if (h > areaHeight) {
+    h = areaHeight
+    w = (h * 16) / 9
+  }
+  return {
+    x: Math.round(width - padX - w),
+    y: Math.round(padY),
+    width: Math.round(w),
+    height: Math.round(h)
+  }
+}
 
 export interface ProjectorSnapshot {
   hasProgram: boolean

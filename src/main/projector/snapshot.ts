@@ -1,5 +1,10 @@
 import type { PlayedEntry, PlayerState, ProgramItem, Track } from '@shared/program'
-import type { ProjectorEntry, ProjectorSnapshot, UpcomingRow } from '@shared/projector'
+import type {
+  ProjectorEntry,
+  ProjectorSlide,
+  ProjectorSnapshot,
+  UpcomingRow
+} from '@shared/projector'
 
 const entry = (track: Track): ProjectorEntry => ({ parts: track.parts, country: track.country })
 
@@ -22,12 +27,17 @@ function upcomingRows(items: ProgramItem[]): UpcomingRow[] {
 }
 
 // Spec §8.2: what the projector shows, from the player, the loaded program's unplayed items and its
-// play log (which includes previews and replays).
+// play log (which includes previews and replays). `slideFor` gives the middle dance's Canva slide.
 export function buildProjectorSnapshot(
   player: PlayerState,
   unplayed: ProgramItem[],
-  played: PlayedEntry[]
+  played: PlayedEntry[],
+  slideFor: (danceId: number | null) => ProjectorSlide | null = () => null
 ): ProjectorSnapshot {
+  const withSlide = (track: Track) => {
+    const slide = slideFor(track.danceId)
+    return slide ? { slide } : {}
+  }
   const { current } = player
   const loaded = current && player.status !== 'idle' && player.status !== 'countdown'
   // The song playing now is the newest log entry; it shows in the middle, not twice.
@@ -41,7 +51,8 @@ export function buildProjectorSnapshot(
         kind: 'now',
         entry: entry(current.track),
         playId: current.playId,
-        paused: player.status !== 'playing'
+        paused: player.status !== 'playing',
+        ...withSlide(current.track)
       },
       upcoming: upcomingRows(unplayed),
       played: history
@@ -57,7 +68,8 @@ export function buildProjectorSnapshot(
       kind: 'next',
       entry: entry(next),
       countdown: player.countdown,
-      teaching: player.atStop || stopBefore
+      teaching: player.atStop || stopBefore,
+      ...withSlide(next)
     },
     upcoming: next ? upcomingRows(unplayed.slice(index + 1)) : [],
     played: history

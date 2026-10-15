@@ -1,5 +1,11 @@
+import { useEffect, useState } from 'react'
 import type { LabelParts } from '@shared/labels'
-import type { ProjectorEntry, ProjectorProgress, ProjectorSnapshot } from '@shared/projector'
+import {
+  slideBox,
+  type ProjectorEntry,
+  type ProjectorProgress,
+  type ProjectorSnapshot
+} from '@shared/projector'
 import { ChevronDownIcon } from '../components/icons'
 import classes from './ProjectorView.module.css'
 
@@ -8,15 +14,23 @@ const dance = (parts: LabelParts): string =>
   parts.choreographer ? `${parts.dance} (${parts.choreographer})` : parts.dance
 
 // A list row: the dance and (smaller, only when it differs) ♪ the song on the left; the country on
-// the right.
-function Row({ entry }: { entry: ProjectorEntry }): React.JSX.Element {
+// the right. `titleOnly` (previously played beside a slide, a narrow column) shows just the dance.
+function Row({
+  entry,
+  titleOnly = false
+}: {
+  entry: ProjectorEntry
+  titleOnly?: boolean
+}): React.JSX.Element {
   return (
     <li className={classes.row}>
       <span className={classes.name}>
         <span className={classes.dance}>{dance(entry.parts)}</span>
-        {entry.parts.song && <span className={classes.song}>♪ {entry.parts.song}</span>}
+        {!titleOnly && entry.parts.song && (
+          <span className={classes.song}>♪ {entry.parts.song}</span>
+        )}
       </span>
-      <span className={classes.country}>{entry.country}</span>
+      {!titleOnly && <span className={classes.country}>{entry.country}</span>}
     </li>
   )
 }
@@ -41,8 +55,20 @@ function percent(snapshot: ProjectorSnapshot, progress: ProjectorProgress | null
   return Math.min(100, Math.max(0, (progress.positionMs / progress.durationMs) * 100))
 }
 
-// Spec §8.2, without a slide (Canva slides arrive in plan 6): previously played across the top,
-// then what's playing (or the next dance), then the rest of the program. It only renders.
+function useWindowSize(): { width: number; height: number } {
+  const read = () => ({ width: window.innerWidth, height: window.innerHeight })
+  const [size, setSize] = useState(read)
+  useEffect(() => {
+    const update = () => setSize(read())
+    window.addEventListener('resize', update)
+    return () => window.removeEventListener('resize', update)
+  }, [])
+  return size
+}
+
+// Spec §8.2: previously played across the top, then what's playing (or the next dance), then the
+// rest of the program. With a Canva slide (§8.3) the top half is shared: previously played on the
+// left, the slide on the right, in the box main lays its live view over. It only renders.
 export default function ProjectorView({
   snapshot,
   progress
@@ -51,6 +77,7 @@ export default function ProjectorView({
   progress: ProjectorProgress | null
 }): React.JSX.Element {
   const { middle, upcoming, played } = snapshot
+  const size = useWindowSize()
   if (!snapshot.hasProgram && !middle) {
     return (
       <div className={classes.screen}>
@@ -64,17 +91,39 @@ export default function ProjectorView({
         ? `Starting in ${middle.countdown.secondsLeft}…`
         : `Next in ${middle.countdown.secondsLeft}…`
       : 'Up next'
+  const slide = middle?.slide
+  const box = slide ? slideBox(size.width, size.height) : null
+  const playedList = played.length > 0 && (
+    <section className={classes.played} aria-label="Previously played">
+      <h2 className={classes.heading}>Previously played</h2>
+      <ul className={classes.list}>
+        {played.map((entry, i) => (
+          <Row key={i} entry={entry} titleOnly={box !== null} />
+        ))}
+      </ul>
+    </section>
+  )
   return (
     <div className={classes.screen}>
-      {played.length > 0 && (
-        <section className={classes.played} aria-label="Previously played">
-          <h2 className={classes.heading}>Previously played</h2>
-          <ul className={classes.list}>
-            {played.map((entry, i) => (
-              <Row key={i} entry={entry} />
-            ))}
-          </ul>
-        </section>
+      {slide && box ? (
+        <div className={classes.slideRow} style={{ height: box.height }} data-testid="slide-row">
+          {playedList || <div />}
+          <div
+            className={classes.slideArea}
+            style={{ width: box.width, height: box.height }}
+            data-testid="slide-area"
+          >
+            {slide.imageUrl && (
+              <img
+                className={classes.slideImage}
+                src={slide.imageUrl}
+                alt={`Slide for ${middle.entry.parts.dance}`}
+              />
+            )}
+          </div>
+        </div>
+      ) : (
+        playedList
       )}
       {middle && (
         <section

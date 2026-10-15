@@ -18,6 +18,7 @@ import {
 import { addDance, addLibrarySong, link, searchSongs } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 import { toFtsQuery } from '../../../src/main/db/fts'
+import { saveDeck, setDanceSlide } from '../../../src/main/canva/decks'
 
 let db: DatabaseSync
 
@@ -55,6 +56,22 @@ describe('getSongDetail', () => {
     const b = addLibrarySong(db, { title: 'Lesnoto 2' })
     link(db, a.danceId!, b.songId)
     expect(detail(a.songId).dances[0].songCount).toBe(2)
+  })
+
+  test("carries each dance's Canva slide, when it has one", () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    const lesnoto = addDance(db, { name: 'Lesnoto' })
+    link(db, lesnoto, songId)
+    const deckId = saveDeck(
+      db,
+      { viewUrl: 'https://www.canva.com/design/DAH/TOK/view', designId: 'DAH' },
+      { title: 'Deck', pages: [{ id: 'P1', title: 'Hora' }] }
+    )
+    setDanceSlide(db, danceId!, deckId, 1)
+    expect(detail(songId).dances.map((d) => d.slide)).toEqual([
+      expect.objectContaining({ deckId, pageId: 'P1', title: 'Hora', status: 'ok' }),
+      null
+    ])
   })
 
   test('returns null for an unknown song', () => {

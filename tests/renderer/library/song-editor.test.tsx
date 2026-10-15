@@ -28,7 +28,8 @@ const detail = (overrides: Partial<SongDetail> = {}): SongDetail => ({
       teacher: 'Sonia Dion',
       songCount: 3,
       isDefault: true,
-      label: 'Pusteno Ludo | Pravo Rhodopsko Oro (Yves Moreau)'
+      label: 'Pusteno Ludo | Pravo Rhodopsko Oro (Yves Moreau)',
+      slide: null
     },
     {
       danceId: 12,
@@ -42,7 +43,8 @@ const detail = (overrides: Partial<SongDetail> = {}): SongDetail => ({
       teacher: null,
       songCount: 1,
       isDefault: false,
-      label: 'Pusteno Ludo | Lesnoto (Someone)'
+      label: 'Pusteno Ludo | Lesnoto (Someone)',
+      slide: null
     }
   ],
   suggestions: [],
@@ -123,6 +125,13 @@ describe('SongEditor', () => {
       ])
     )
     expect(fake.callsTo('library:setTeacher')).toEqual([[21, '']])
+  })
+
+  test('each dance has its Canva slide field', async () => {
+    setup()
+    await screen.findByDisplayValue('Pusteno Ludo')
+    const card = within(danceCard('Pusteno Ludo | Lesnoto (Someone)'))
+    expect(card.getByRole('button', { name: 'Link a slide…' })).toBeInTheDocument()
   })
 
   test('sets the difficulty', async () => {

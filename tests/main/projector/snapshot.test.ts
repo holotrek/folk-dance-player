@@ -160,6 +160,25 @@ describe('projector snapshot', () => {
     expect(snap.played.map((e) => e.parts.dance)).toEqual(['Kolo', 'Hora Mare'])
   })
 
+  test('the middle dance carries its slide, when it has one', () => {
+    const slide = { deckId: 1, pageId: 'P6', imageUrl: 'fdp-media://slide/1/P6', live: false }
+    const slideFor = (danceId: number | null) => (danceId === kolo.danceId ? slide : null)
+    const playingKolo = buildProjectorSnapshot(
+      state({
+        status: 'playing',
+        current: { playId: 7, source: 'program', itemId: 1, track: kolo, restarts: 0, logId: null }
+      }),
+      [],
+      [],
+      slideFor
+    )
+    expect(playingKolo.middle).toMatchObject({ kind: 'now', slide })
+    const nextKolo = buildProjectorSnapshot(state(), [item(2, kolo)], [], slideFor)
+    expect(nextKolo.middle).toMatchObject({ kind: 'next', slide })
+    const noSlide = buildProjectorSnapshot(state(), [item(3, tfilati)], [], slideFor)
+    expect(noSlide.middle).not.toHaveProperty('slide')
+  })
+
   test('no program and nothing playing: an empty snapshot', () => {
     expect(buildProjectorSnapshot(state({ programId: null }), [], [])).toEqual({
       hasProgram: false,

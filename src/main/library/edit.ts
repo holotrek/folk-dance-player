@@ -9,6 +9,7 @@ import type {
   SongDetail,
   SongPatch
 } from '@shared/library'
+import { getDanceSlide } from '../canva/decks'
 import { foldSearchText } from '../db/fts'
 import { inTransaction } from '../db/transaction'
 import { shownPairingSql } from './list'
@@ -98,6 +99,7 @@ export function getSongDetail(db: DatabaseSync, songId: number): SongDetail | nu
   const dances: SongDance[] = rows.map((r) => ({
     ...r,
     isDefault: r.isDefault === 1,
+    slide: getDanceSlide(db, r.danceId),
     label: formatLabel(
       labelParts({
         songTitle: song.title,
