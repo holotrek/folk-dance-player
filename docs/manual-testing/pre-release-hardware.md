@@ -7,13 +7,8 @@ sounds. Spec §10.2 and §13.2.
 The app backs up the library every time it starts (Help → Reveal Library Backups in Finder), so
 the check can run on a real library.
 
-- **Version:**
-- **Date:**
-- **Mac and macOS:**
-- **Projector or display:**
-
-Tick each step that behaves as described, and note anything that doesn't under **Notes** at the
-end.
+Each step says what should happen; anything that behaves differently is a finding to fix (or to
+list as a known issue) before the release.
 
 ## Before you start
 
@@ -69,7 +64,3 @@ System Settings → Displays: not mirrored, with the laptop as the main display.
 
 - [ ] 15. Turn the Projector switch **off**, then unplug the projector: nothing is left behind and the music keeps playing.
 - [ ] 16. Optional: unplug with the view **up**, a few times. Known issue (`docs/spikes/projector-unplug.md`): about 1 unplug in 4 leaves a grey window until the app quits. The music should keep playing; quitting and reopening the app clears it.
-
-## Notes
-
--
