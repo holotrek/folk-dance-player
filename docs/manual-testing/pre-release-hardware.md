@@ -4,6 +4,10 @@ Run before every release, on the packaged app (the `.dmg`), with a real projecto
 the automated tests can't: a second display, Canva's live slide, sleep, and how slowed audio
 sounds. Spec §10.2 and §13.2.
 
+**Prepare Release copies this list into the release pull request's description,** where the boxes
+can be ticked (GitHub doesn't make them clickable in a file). Edit the list here; each release PR
+keeps the ticked copy.
+
 The app backs up the library every time it starts (Help → Reveal Library Backups in Finder), so
 the check can run on a real library.
 
