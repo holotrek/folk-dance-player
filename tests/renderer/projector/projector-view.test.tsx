@@ -113,6 +113,17 @@ describe('projector view (spec §8.2)', () => {
     expect(within(region('Up next')).getByText('Teaching')).toBeInTheDocument()
   })
 
+  test('a loaded program with nothing left, played or playing shows the logo, not a blank screen', () => {
+    render(
+      <ProjectorView
+        snapshot={{ hasProgram: true, middle: null, upcoming: [], played: [] }}
+        progress={null}
+      />
+    )
+    expect(screen.getByTestId('logo')).toBeInTheDocument()
+    expect(screen.getByText('Folk Dance Player')).toBeInTheDocument()
+  })
+
   test('with no program and nothing playing, only the app’s name', () => {
     render(
       <ProjectorView
@@ -121,6 +132,7 @@ describe('projector view (spec §8.2)', () => {
       />
     )
     expect(screen.getByText('Folk Dance Player')).toBeInTheDocument()
+    expect(screen.getByTestId('logo')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Now playing' })).toBeNull()
   })
 

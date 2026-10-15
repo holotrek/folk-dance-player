@@ -54,6 +54,7 @@ describe('SettingsPage', () => {
     expect(await screen.findByLabelText('Genre is Country')).toBeChecked()
     expect(screen.getByLabelText('Auto-continue after (seconds)')).toHaveValue('8')
     expect(await screen.findByText('/data/folk-dance-player.sqlite')).toBeInTheDocument()
+    expect(screen.getByTestId('logo')).toBeInTheDocument() // in About
   })
 
   test('Appearance switches between light, dark and the system setting at once, and saves it', async () => {

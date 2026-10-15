@@ -79,7 +79,9 @@ export default function ProjectorView({
 }): React.JSX.Element {
   const { middle, upcoming, played } = snapshot
   const size = useWindowSize()
-  if (!snapshot.hasProgram && !middle) {
+  // Nothing to show (no program, or one with nothing left, played or playing): the logo, never
+  // a blank screen.
+  if (!middle && upcoming.length === 0 && played.length === 0) {
     return (
       <div className={classes.screen}>
         <div className={classes.empty}>

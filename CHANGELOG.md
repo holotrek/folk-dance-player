@@ -45,7 +45,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Favorite or unfavorite a song from anywhere: the star at the left of a library row, a held song or a program item (it shows on hover until the song is a favorite), or a program item's ⋯ menu.
 - ✕ clears a search box: the library search, the program search and the dance search.
 - Settings → Appearance: light, dark, or follow the Mac's setting.
-- The Folk Dance Player logo: beside the page tabs, on the projector before a program is loaded, and in Settings → About; and an app icon (the logo on a red tile).
+- The Folk Dance Player logo: beside the page tabs, on the projector whenever there's nothing to show (instead of a blank screen), and in Settings → About; and an app icon (the logo on a red tile).
 - The player bar has two rows: the controls, song, speed, volume, Projector switch and **Auto-show when playing … after N s** (the view over the laptop, moved here from Settings) on top; the position, time and **Auto-continue … after N s** below.
 - When the library list shows a playlist or your favorites, a note above it says so, with **Show all music** to go back.
 - Playlist songs are numbered in the playlist's order, and songs can be dragged below the last one to move them to the end.
