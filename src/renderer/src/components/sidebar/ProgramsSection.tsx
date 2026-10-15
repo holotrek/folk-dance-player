@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { ActionIcon, Group, Menu, NavLink, ScrollArea, Text, TextInput } from '@mantine/core'
+import { ActionIcon, Group, Menu, NavLink, ScrollArea, Text } from '@mantine/core'
+import SearchInput from '../SearchInput'
 import { useDebouncedValue } from '@mantine/hooks'
 import type { ProgramSummary } from '@shared/program'
 import { useLibraryApi } from '../../library/LibraryProvider'
@@ -102,14 +103,13 @@ export default function ProgramsSection(): React.JSX.Element {
           +
         </ActionIcon>
       </Group>
-      <TextInput
+      <SearchInput
         size="xs"
-        type="search"
         placeholder="Search programs…"
         aria-label="Search programs"
         my="xs"
         value={text}
-        onChange={(e) => setText(e.currentTarget.value)}
+        onValueChange={setText}
       />
       <ScrollArea className={classes.programs}>
         <div role="group" aria-label="Programs">

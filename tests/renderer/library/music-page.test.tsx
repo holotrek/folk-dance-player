@@ -102,6 +102,18 @@ describe('Music page library table', () => {
     await waitFor(() => expect(lastQuery(fake).search).toBe('hora'))
   })
 
+  test('✕ clears the search; it shows only while there is something to clear', async () => {
+    const fake = setup()
+    const box = await screen.findByRole('searchbox', { name: 'Search music' })
+    expect(screen.queryByRole('button', { name: 'Clear search' })).toBeNull()
+    await userEvent.type(box, 'hora')
+    await waitFor(() => expect(lastQuery(fake).search).toBe('hora'))
+    await userEvent.click(screen.getByRole('button', { name: 'Clear search' }))
+    expect(box).toHaveValue('')
+    expect(box).toHaveFocus()
+    await waitFor(() => expect(lastQuery(fake).search).toBe(''))
+  })
+
   test('selects with click, ⌘-click and shift-click', async () => {
     setup()
     await screen.findByText('Gone')

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button, Modal, ScrollArea, Stack, Text, TextInput } from '@mantine/core'
+import { Button, Modal, ScrollArea, Stack, Text } from '@mantine/core'
+import SearchInput from '../components/SearchInput'
 import { useDebouncedValue } from '@mantine/hooks'
 import type { DanceSearchResult } from '@shared/library'
 import { useLibraryApi } from './LibraryProvider'
@@ -43,11 +44,11 @@ export default function DancePicker(props: {
   return (
     <Modal opened={props.opened} onClose={props.onClose} title={props.title}>
       <Stack>
-        <TextInput
+        <SearchInput
           label="Search dances"
           placeholder="Name, choreographer or country"
           value={text}
-          onChange={(e) => setText(e.currentTarget.value)}
+          onValueChange={setText}
           data-autofocus
         />
         <ScrollArea.Autosize mah={320}>

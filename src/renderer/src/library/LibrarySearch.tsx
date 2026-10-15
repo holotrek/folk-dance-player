@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { TextInput } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
+import SearchInput from '../components/SearchInput'
 import { useLibrary, useLibraryStore } from './LibraryProvider'
 
 // The library search box (spec §6.2, §6.3), shared by the Music and Program pages. It starts from
@@ -14,13 +14,11 @@ export default function LibrarySearch(props: { style?: React.CSSProperties }): R
     if (debounced !== store.getState().search) void setSearch(debounced)
   }, [debounced, setSearch, store])
   return (
-    <TextInput
-      type="search"
-      role="searchbox"
+    <SearchInput
       aria-label="Search music"
       placeholder="Search song, dance, teacher, choreographer or country"
       value={text}
-      onChange={(e) => setText(e.currentTarget.value)}
+      onValueChange={setText}
       style={props.style}
     />
   )
