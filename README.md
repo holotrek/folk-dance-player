@@ -5,7 +5,7 @@ your music library, play it with auto-continue and teaching stops, and show danc
 **projector view** of what was played, what's playing (with the dance's Canva slide) and what's
 coming up — while you keep programming on your laptop.
 
-> **Status:** early development (v0.x). macOS first; Windows later.
+> **Status:** v0.x, feature-complete for v1 and in testing. macOS first; Windows later.
 
 ## Features
 
@@ -16,6 +16,20 @@ coming up — while you keep programming on your laptop.
 - **Play.** Auto-continue with an adjustable delay, a countdown, preview any song by double-clicking, and slow songs down for teaching without changing their pitch. A media remote works too: play/pause, next and back.
 - **Projector view.** A borderless, large-font display on a second screen or projector, with each dance's Canva slide. Slides are saved for use offline.
 - **Fullscreen on one screen.** When no projector is connected, the same view can cover the laptop screen after an idle timeout.
+
+## Install
+
+1. Download `Folk Dance Player-<version>-universal.dmg` (it runs on Apple silicon and Intel Macs).
+2. Open it and drag **Folk Dance Player** to **Applications**.
+3. Open the app. The first time, macOS says it's from an unidentified developer, because the app
+   isn't signed with an Apple Developer ID yet: open **System Settings → Privacy & Security** and
+   click **Open Anyway**.
+
+Where your things live:
+
+- **Your library:** `~/Library/Application Support/Folk Dance Player`
+- **Backups** (one per start, the last 5): its `backups` folder (Help → Reveal Library Backups in Finder)
+- **The app log:** `~/Library/Logs/Folk Dance Player` (Help → Reveal Logs in Finder)
 
 ## Getting started (developers)
 

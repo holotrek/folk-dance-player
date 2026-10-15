@@ -231,7 +231,7 @@ The Music page has **Re-apply mapping to selected**. Its dialog shows the select
 
 Three pages: **Program**, **Music**, **Settings**. A left sidebar (styled like Apple Music) appears on Program and Music.
 
-The **player bar** (§6.2) sits above the page tabs and stays on every page. A song started anywhere, such as a preview double-clicked on the Music page, can be paused, stopped or skipped without going to the Program page. The control window's `<audio>` element lives in the player bar, which is mounted once, so changing pages never cuts the music.
+The **player bar** (§6.2) sits above the page tabs and stays on every page. A song started anywhere, such as a preview double-clicked on the Music page, can be paused, stopped or skipped without going to the Program page. The control window's `<audio>` element lives in the player bar, which is mounted once, so changing pages never cuts the music. The **logo** sits at the left of the page tabs, in the app's red. (The logo is one all-black SVG, drawn as a mask in whatever color a place needs: red here, the text color in Settings → About, dim gray on the projector.)
 
 ### 6.1 Sidebar
 
@@ -346,6 +346,7 @@ PROGRAMS                  [+]
 - Appearance: Light, Dark or System (applied at once)
 - Countdown seconds
 - Remote control: whether the remote's media keys work, and a button that asks macOS for Accessibility permission when they don't (§7.4)
+- About: the logo, the version and the library's location
 - "Reveal logs"
 
 ## 7. Playback and program flow
@@ -575,7 +576,8 @@ Approach A (chosen): **the main process owns all state; the control window plays
   - **State:** Zustand, for UI-local state only (selection, search text)
   - **Drag and drop:** native HTML5 drag and drop, with the app's own data types (songs, program items). dnd-kit wasn't needed.
   - **Libraries:** `node:sqlite` (built in), music-metadata, plist
-  - **Packaging:** electron-builder (a signed macOS `.dmg`)
+  - **Packaging:** electron-builder 26 (`npm run dist`) makes one Universal `.dmg` (Apple silicon and Intel, about 230 MB). Until there's an Apple Developer ID it is **ad-hoc signed** (`identity: '-'`): Apple silicon needs a signature, and a consistent one makes a downloaded copy "from an unidentified developer" (System Settings → Open Anyway) rather than "damaged". CONTRIBUTING.md has the steps to sign and notarize.
+  - **App icon:** the logo in white on the app's red tile (`build/icon/icon.html`). `npm run icon` renders it into `build/icon.png`, `build/icon.icns` (for the `.dmg`) and `resources/icon.png` (the Dock when unpackaged).
 - **Dev gotcha:** VS Code's terminal sets `ELECTRON_RUN_AS_NODE=1`, so npm scripts run Electron with that variable unset.
 
 ## 10. Errors, edge cases, and testing
@@ -587,11 +589,12 @@ The music never stops because of a side failure, and the projector never shows a
 - **Program pre-check:** when a program is loaded and at startup, every file in it is checked for existence, so missing files are flagged before the event.
 - **Database safety:**
   - Writes use transactions.
-  - At startup, the database file is copied to a rotating backup, keeping the last 5.
+  - At startup, before migrations, the library is copied (`VACUUM INTO`, a consistent copy) to `backups/folk-dance-player-<date>_<time>.sqlite` in the app data folder, keeping the newest 5. A brand-new library isn't backed up. A failed backup is logged and startup goes on.
   - Migrations run in a transaction and abort startup with a clear message on failure.
 - **Crash or restart:** the program position is restored from `played_at`, and playback does not auto-resume.
 - **Import errors** are per file and never abort the batch (§5.4).
-- **Logging:** the app log is written to `~/Library/Logs/Folk Dance Player`, with Help → Reveal logs.
+- **Logging:** the app log is `main.log` in `~/Library/Logs/Folk Dance Player` (beside the library when `FDP_USER_DATA` is set). It rolls over at 1 MB, keeping 3 old files, and writing it never throws. It records each start (with the version), backups, finished imports, failed slide captures, uncaught errors, crashed windows or utility processes, and errors in the windows' consoles.
+- **The app menu:** About; Settings… (⌘,), which opens the Settings page; the standard Edit (copy and paste in text fields) and Window menus; and Help → Reveal Logs in Finder and Reveal Library Backups in Finder. The developer tools are offered only in development.
 
 ### 10.2 Testing
 
@@ -604,11 +607,13 @@ The music never stops because of a side failure, and the projector never shows a
   - Songs and dances: the automatic one-to-one dance on import, never linking by name, default-dance fallback, linking and unlinking, merging dances.
   - Labels: song omitted when it equals the dance name; choreographer shown only when a song's dances have more than one choreographer; no empty parentheses for traditional dances. Cover all four examples in §4.
 - **Database (in-memory SQLite):** migrations, repositories, `library_fts` search across songs and their dances (it must stay current when a dance or teacher changes), autocomplete queries, the playlist overwrite-protection decision.
-- **End-to-end (Playwright + Electron):**
-  - import a fixture folder, then search
-  - drag into a program and reorder
-  - play, then check that the projector window snapshot updates
-  - save and load a program
+- **End-to-end (Playwright + Electron, `e2e/`):** each test starts the app on a throwaway library of silent MP3s. They run on the build (`npm run test:e2e`) and on the packaged app (`npm run test:e2e:dist`):
+  - import a folder, then search
+  - drag into a program and reorder (drags move in steps, as a person's do; a single jump can lose the drop)
+  - play, then check that the projector's snapshot follows
+  - save and load a program, also after a restart
+  - Settings… in the app menu opens the Settings page
+  - each start backs up the library, and the log says so
 - **Manual pre-release checklist (real hardware):**
   - projector plug and unplug mid-song
   - mirror vs. extended mode
@@ -707,7 +712,7 @@ How to work on the project:
   2. Bump the version.
   3. Move `Unreleased` into a version section in `CHANGELOG.md`.
   4. Tag the commit.
-  5. Build the signed `.dmg` (plan 7).
+  5. Build the `.dmg` (`npm run dist`), check it (`npm run test:e2e:dist`) and attach it to the GitHub release.
 
 ### 13.3 `AGENTS.md`: decision log and agent guide
 
