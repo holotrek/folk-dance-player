@@ -11,7 +11,8 @@ const MIME: Record<string, string> = {
   '.flac': 'audio/flac',
   '.ogg': 'audio/ogg',
   '.oga': 'audio/ogg',
-  '.opus': 'audio/ogg'
+  '.opus': 'audio/ogg',
+  '.png': 'image/png'
 }
 
 // One byte range from a Range header ("bytes=a-b", "bytes=a-" or "bytes=-n"), clamped to the
@@ -29,7 +30,7 @@ export function parseRange(header: string, size: number): { start: number; end: 
   return start < size && start <= end ? { start, end } : null
 }
 
-// Serves an audio file to <audio>, honoring Range requests so seeking works (spec §9).
+// Serves an audio file to <audio> (or a saved slide image to the projector), honoring Range requests so seeking works (spec §9).
 export async function mediaResponse(path: string | null, range: string | null): Promise<Response> {
   if (!path) return new Response('Not found', { status: 404 })
   let size: number
