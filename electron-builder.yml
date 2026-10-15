@@ -1,0 +1,24 @@
+# Packaging (spec §9): a Universal macOS .dmg. Build with `npm run dist`; the result is in dist/.
+appId: com.folkdanceplayer.app
+productName: Folk Dance Player
+copyright: Copyright © 2026 Evan Kaiser
+directories:
+  buildResources: build
+  output: dist
+# electron-vite's output; production dependencies are added by electron-builder.
+files:
+  - out/**
+  - package.json
+mac:
+  target:
+    - target: dmg
+      arch: universal
+  category: public.app-category.music
+  icon: build/icon.icns
+  # Ad-hoc signed until there's a Developer ID: Apple silicon needs a signature, and a consistent
+  # one lets macOS offer "Open Anyway" for a downloaded copy. See CONTRIBUTING.md to sign and
+  # notarize.
+  identity: '-'
+  hardenedRuntime: false
+dmg:
+  title: Folk Dance Player

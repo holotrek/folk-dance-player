@@ -3,6 +3,7 @@
   "productName": "Folk Dance Player",
   "version": "0.1.0",
   "description": "A music player for folk dance organizers",
+  "author": "Evan Kaiser",
   "main": "./out/main/index.js",
   "private": true,
   "scripts": {
@@ -15,6 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "format": "prettier --write .",
+    "dist": "npm run build && env -u ELECTRON_RUN_AS_NODE electron-builder --mac",
     "icon": "env -u ELECTRON_RUN_AS_NODE electron scripts/make-icon.cjs",
     "postinstall": "install-electron"
   },
@@ -36,6 +38,7 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "5.2.0",
     "electron": "44.4.5",
+    "electron-builder": "26.15.3",
     "electron-vite": "5.0.0",
     "jsdom": "30.1.1",
     "music-metadata": "11.16.1",
