@@ -1,0 +1,24 @@
+# Dependabot (spec §13.4): weekly update PRs for npm packages and the workflows' actions, only
+# for releases at least 14 days old (the project's pinning rule). Minor and patch updates of
+# development tools come together in one PR.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
+    versioning-strategy: increase
+    groups:
+      dev-tools:
+        dependency-type: development
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 14
