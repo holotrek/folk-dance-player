@@ -20,12 +20,8 @@
   white-space: nowrap;
 }
 
-/* The switch, and under it where the view is (or why it isn't on a projector): one line, the rest
-   on hover. */
-.projector {
-  margin-left: var(--mantine-spacing-sm);
-}
-
+/* Under the Projector switch, where the view is (or why it isn't on a projector): one line, the
+   rest on hover. */
 .projectorNote {
   max-width: 160px;
   overflow: hidden;

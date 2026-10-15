@@ -4,6 +4,7 @@ import {
   Alert,
   Badge,
   Checkbox,
+  Divider,
   Group,
   NumberInput,
   Paper,
@@ -233,7 +234,8 @@ export default function PlayerBar(): React.JSX.Element {
             style={{ flex: 1 }}
           />
         </Group>
-        <div className={classes.projector}>
+        <Divider orientation="vertical" mx="xs" />
+        <div>
           <Switch
             label="Projector"
             checked={projector.enabled}
@@ -251,6 +253,7 @@ export default function PlayerBar(): React.JSX.Element {
             </Text>
           )}
         </div>
+        <Divider orientation="vertical" mx="xs" />
         <DelayOption
           label="Auto-show when playing"
           checked={autoShow.enabled}
@@ -280,6 +283,7 @@ export default function PlayerBar(): React.JSX.Element {
         <Text size="sm" className={classes.time}>
           {loaded ? `${formatTime(seeking ?? audio.positionMs)} / ${formatTime(duration)}` : ''}
         </Text>
+        <Divider orientation="vertical" mx="xs" />
         <DelayOption
           label="Auto-continue"
           checked={player.autoContinue.enabled}
