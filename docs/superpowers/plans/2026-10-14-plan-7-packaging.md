@@ -2054,3 +2054,24 @@ git commit -m "docs: packaging, backups, logs and end-to-end tests in the spec, 
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
+
+## Changes after execution
+
+- **The e2e drag (Task 6):** `Locator.dragTo` lost a drop about 1 run in 8–16. It sends one or two `dragover` events, and one could land while the window was re-rendering. `drag()` in `e2e/app.ts` moves in ten steps, and the test passed 32 runs in a row.
+- **Final review:** nothing Critical; two Important findings, both fixed. The suite grew from 601 to 602.
+  - **An older app's failed starts rotated out the backups taken before the upgrade.** `backupDatabase` takes the newest schema the app knows, and skips a library from a newer version.
+  - **Startup failures were only logged,** leaving a windowless copy that held the single-instance lock. Startup now runs in `startApp()`; anything it throws is logged, shown in a dialog, and ends the app. No automated test was possible for the dialog; the e2e suite confirms normal startup.
+- **Minor wording fix:** the menu comment and its test no longer claim ⌘W. On macOS, Electron's Window menu has Minimize and Zoom but no Close, and that's kept deliberately: closing the control window quits the app mid-dance.
+- **Found while installing:** a Dock pin left by the old Flutter app (a different bundle ID at the same path) kept the new app from showing in the Dock. Removing the pin fixed it; a fresh install isn't affected. The first open of the unsigned app took about 15 s before the app's code ran, while macOS checked it; later starts are quick, and the backup takes about 0.1 s on a real library.
+
+**Deferred minors from the final review:**
+- Settings… only shows the window (`second-instance` also restores and focuses it).
+- Canva pages' console errors are logged too, adding noise during captures.
+- A failed `VACUUM INTO` can leave a partial file with a valid backup name.
+- Backup names use local time, so DST or a time-zone change can misorder them.
+- Five backups cover only a handful of launches (consider one per day for a week).
+- How long the backup took isn't logged.
+- Renderer-only packages ship as unused `node_modules` in `app.asar`.
+- e2e cleanup gaps: a failed launch isn't closed, and a failed close skips temp cleanup.
+- Re-signing an update ad hoc may silently break the remote's Accessibility permission.
+
