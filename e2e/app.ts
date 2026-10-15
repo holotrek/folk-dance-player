@@ -1,7 +1,12 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import { _electron as electron, type ElectronApplication, type Page } from '@playwright/test'
+import {
+  _electron as electron,
+  type ElectronApplication,
+  type Locator,
+  type Page
+} from '@playwright/test'
 import { mp3Bytes, type Id3Tags } from '../tests/main/helpers/audio-fixtures'
 
 export interface Running {
@@ -47,4 +52,18 @@ export async function launch(userData: string): Promise<Running> {
         [channel, args] as const
       )
   }
+}
+
+// Drags `source` onto `target` the way a person does: press, then move over in small steps.
+// Locator.dragTo sends only one or two dragover events; if one lands while the window is still
+// re-rendering (just after an import or a drop), the drop target never accepts the drag and the
+// drop is lost. Ten steps give it the dragover it needs.
+export async function drag(page: Page, source: Locator, target: Locator): Promise<void> {
+  const from = await source.boundingBox()
+  const to = await target.boundingBox()
+  if (!from || !to) throw new Error('drag: source or target is not visible')
+  await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
+  await page.mouse.up()
 }

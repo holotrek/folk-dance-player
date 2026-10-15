@@ -1,7 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { launch, workspace, type Running } from './app'
+import { drag, launch, workspace, type Running } from './app'
 
 // Spec §10.2's end-to-end tests. The file dialog is native, so music is imported through the
 // app's own import channel; everything after that goes through the windows.
@@ -45,19 +45,21 @@ test('import a folder, then search', async () => {
 test('drag songs into a program, then reorder them', async () => {
   const { page } = running
   const program = page.getByRole('region', { name: 'Program' })
-  await libraryRow('Hora').dragTo(program)
+  await drag(running.page, libraryRow('Hora'), program)
   await expect(programItems()).toHaveCount(1)
-  await libraryRow('Kolo').dragTo(program)
+  await drag(running.page, libraryRow('Kolo'), program)
   await expect(programItems()).toHaveText([/Hora/, /Kolo/])
-  await programItems()
-    .filter({ hasText: 'Kolo' })
-    .dragTo(programItems().filter({ hasText: 'Hora' }))
+  await drag(
+    running.page,
+    programItems().filter({ hasText: 'Kolo' }),
+    programItems().filter({ hasText: 'Hora' })
+  )
   await expect(programItems()).toHaveText([/Kolo/, /Hora/])
 })
 
 test('play, and the projector’s snapshot follows', async () => {
   const { page, invoke } = running
-  await libraryRow('Tfilati').dragTo(page.getByRole('region', { name: 'Program' }))
+  await drag(running.page, libraryRow('Tfilati'), page.getByRole('region', { name: 'Program' }))
   await expect(page.getByTestId('player-title')).toHaveText('Next up: Tfilati')
   type Snapshot = { middle: { kind: string; entry: { parts: { dance: string } } } | null }
   expect((await invoke<Snapshot>('projector:getSnapshot')).middle).toMatchObject({ kind: 'next' })
@@ -72,8 +74,8 @@ test('play, and the projector’s snapshot follows', async () => {
 test('a program is saved, and loads again, also after a restart', async () => {
   const { page } = running
   const program = page.getByRole('region', { name: 'Program' })
-  await libraryRow('Hora').dragTo(program)
-  await libraryRow('Kolo').dragTo(program)
+  await drag(running.page, libraryRow('Hora'), program)
+  await drag(running.page, libraryRow('Kolo'), program)
   await page.getByRole('button', { name: 'Rename program' }).click()
   await page.getByRole('dialog', { name: 'Rename program' }).getByLabel('Name').fill('Tuesday')
   await page.getByRole('button', { name: 'Save' }).click()
