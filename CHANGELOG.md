@@ -10,8 +10,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- Program, Music and Settings pages, with a library sidebar (playlists and programs arrive in later releases).
-- Settings for import (Genre is Country), auto-continue, the countdown before the first song, and the idle fullscreen view. They are saved between launches.
+- Program, Music and Settings pages, with a sidebar for the library, playlists and programs.
+- Settings for import (Genre is Country), auto-continue and the countdown before the first song. They are saved between launches.
 - Folk Dance Player won't open a music library created by a newer version of the app, and leaves that library unchanged.
 - Import music with **Add Music…** (files and folders, including folders inside folders) or by dragging them onto the Music page.
 - Import from Apple Music: choose the `Library.xml` you exported from Music and import the whole library or just the playlists you pick. Playlists are recreated in the same order.
@@ -50,7 +50,12 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Your library is backed up every time the app starts (the last 5 backups are kept). Help → Reveal Library Backups in Finder shows them.
 - The app keeps a log for troubleshooting: Help → Reveal Logs in Finder.
 - A full app menu: About, Settings… (⌘,), copy and paste in text fields, and Window.
-- The player bar has two rows: the controls, song, speed, volume, Projector switch and **Auto-show when playing … after N s** (the view over the laptop, moved here from Settings) on top; the position, time and **Auto-continue … after N s** below.
+- The player bar has two rows: the controls, song, speed, volume, Projector switch and **Auto-show when playing … after N s** (the view over the laptop) on top; the position, time and **Auto-continue … after N s** below.
 - When the library list shows a playlist or your favorites, a note above it says so, with **Show all music** to go back.
 - Playlist songs are numbered in the playlist's order, and songs can be dragged below the last one to move them to the end.
 - Adding a song that has several dances to the program asks which dance it's for (the default is preselected).
+
+### Known issues
+
+- Unplugging the projector while the projector view shows can leave a grey window over the laptop until the app quits. Turn the Projector switch off before unplugging.
+- The app isn't signed with an Apple Developer ID yet, so macOS asks before opening it the first time: open System Settings → Privacy & Security and click **Open Anyway**.
