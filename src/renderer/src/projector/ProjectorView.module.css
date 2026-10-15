@@ -31,6 +31,32 @@
   flex: 0 0 auto;
 }
 
+/* With a slide: previously played on the left, the slide in the top-right box (slideBox). */
+.slideRow {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2vw;
+}
+
+.slideRow .played {
+  flex: 1 1 0;
+  min-width: 0;
+  max-height: none;
+}
+
+.slideArea {
+  flex: 0 0 auto;
+  margin-left: auto;
+  background: #000;
+}
+
+.slideImage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .upcoming {
   flex: 1 1 0;
   min-height: 0;

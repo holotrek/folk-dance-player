@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react'
+import { act } from 'react'
 import { describe, expect, test } from 'vitest'
 import type { ProjectorEntry, ProjectorSnapshot } from '@shared/projector'
 import ProjectorView from '@renderer/projector/ProjectorView'
@@ -121,5 +122,63 @@ describe('projector view (spec §8.2)', () => {
     )
     expect(screen.getByText('Folk Dance Player')).toBeInTheDocument()
     expect(screen.queryByRole('region', { name: 'Now playing' })).toBeNull()
+  })
+
+  describe('with a Canva slide (spec §8.3)', () => {
+    const slide = { deckId: 1, pageId: 'P6', imageUrl: 'fdp-media://slide/1/P6?v=1', live: false }
+    const withSlide: ProjectorSnapshot = {
+      ...playing,
+      middle: { kind: 'now', entry: pravo, playId: 4, paused: false, slide }
+    }
+
+    test('the saved image sits top right, sized to the slide box, beside Previously played', () => {
+      render(<ProjectorView snapshot={withSlide} progress={null} />)
+      const image = screen.getByRole('img', { name: 'Slide for Pravo Rhodopsko Oro' })
+      expect(image).toHaveAttribute('src', slide.imageUrl)
+      // jsdom's window is 1024×768: the box is 16:9 within two-thirds of the width, the top half.
+      expect(image.parentElement).toHaveStyle({ width: '628px', height: '353px' })
+      const top = screen.getByTestId('slide-row')
+      expect(within(top).getByRole('region', { name: 'Previously played' })).toBeInTheDocument()
+      expect(within(region('Now playing')).getByText('♪ Pusteno Ludo')).toBeInTheDocument()
+    })
+
+    test('beside the slide, previously played shows titles only (the column is narrow)', () => {
+      render(<ProjectorView snapshot={withSlide} progress={null} />)
+      const played = region('Previously played')
+      expect(within(played).getByText('Misirlou')).toBeInTheDocument()
+      expect(within(played).queryByText('Romania')).toBeNull()
+      expect(within(played).queryByText('♪ Hora de la Munte')).toBeNull()
+    })
+
+    test('a live slide with no saved image keeps the area, for the live view to cover', () => {
+      render(
+        <ProjectorView
+          snapshot={{
+            ...withSlide,
+            middle: { ...withSlide.middle!, slide: { ...slide, imageUrl: null, live: true } }
+          }}
+          progress={null}
+        />
+      )
+      expect(screen.queryByRole('img')).toBeNull()
+      expect(screen.getByTestId('slide-area')).toBeInTheDocument()
+    })
+
+    test('follows the window size', () => {
+      render(<ProjectorView snapshot={withSlide} progress={null} />)
+      act(() => {
+        window.innerWidth = 1920
+        window.innerHeight = 1080
+        window.dispatchEvent(new Event('resize'))
+      })
+      expect(screen.getByTestId('slide-area')).toHaveStyle({ width: '902px', height: '508px' })
+      window.innerWidth = 1024
+      window.innerHeight = 768
+    })
+
+    test('without a slide the layout is unchanged', () => {
+      render(<ProjectorView snapshot={playing} progress={null} />)
+      expect(screen.queryByTestId('slide-area')).toBeNull()
+    })
   })
 })
