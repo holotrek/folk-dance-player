@@ -171,7 +171,8 @@ The projector uses the same parts with a different emphasis (§8.2): the dance n
 - **Library:** `danceTypeSuggestions` (string[])
 - **Playback:** `autoContinue.enabled` (default `true`), `autoContinue.seconds` (default 5), `countdown.seconds`
 - **Projector:** `projector.displayId`, `projector.enabled`
-- **Laptop mode:** `autoFullscreen.enabled`, `autoFullscreen.seconds`
+- **Laptop mode:** `autoFullscreen.enabled`, `autoFullscreen.seconds` (edited in the player bar as "Auto-show when playing", 5–3600 s)
+- **Appearance:** `appearance` (`system` (default), `light` or `dark`)
 - **Other:** `window.bounds`, `currentProgramId`
 
 Schema changes go through numbered migrations, applied at startup inside a transaction. Migration 001 has not been released, so this model is written into 001 directly. The empty development database created by Plan 1 must be deleted once.
@@ -251,7 +252,7 @@ PROGRAMS                  [+]
   └──────────────┘
 ```
 
-- **Library and playlist entries** filter the library list. Songs can be dropped onto a playlist (or Favorites) to add them.
+- **Library and playlist entries** filter the library list. Songs can be dropped onto a playlist (or Favorites) to add them. While the list shows a playlist or Favorites, a tinted note above it says so ("Showing playlist “Balkan”", "Showing Favorites") with **Show all music**, on both the Program and Music pages.
 - **The playlist list** scrolls on its own once it fills 40% of the sidebar, so a large Apple Music library's playlists never push Programs off screen.
 - **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
 - **Programs** are loaded only from the sidebar; there is no dropdown.
@@ -281,7 +282,12 @@ PROGRAMS                  [+]
 └──────────┴──────────────────────────────┴──────────────────────────────────┘
 ```
 
-- **Player bar** (above the tabs on every page; drawn above the Program page here): transport controls, the current item's label (§4 "Labels"), a seek bar, speed and volume. The auto-continue checkbox and its seconds are editable right here. There is also the **Projector** switch: it shows where the view is ("On Epson Projector"), or the notice when there's no separate display.
+- **Player bar** (above the tabs on every page; drawn above the Program page here), in two rows:
+  - **Row 1:** transport controls, the current item's label (§4 "Labels"), speed and volume; then, between thin vertical dividers, the **Projector** switch (with one line under it saying where the view is, "On Epson Projector", or the notice when there's no separate display; the full text on hover); then **Auto-show when playing [✓] after [N] s** (laptop mode's idle view, §7.3).
+  - **Row 2:** the seek bar and elapsed time; then, after a divider, **Auto-continue [✓] after [N] s**.
+  - Seconds are saved when the field is left, if they're a whole number in range; anything else goes back to the saved value.
+- **Favorites:** a star at the left of every song row (library, holding, program items) adds or removes it from Favorites; until a song is a favorite, its star shows only on hover. A program item's ⋯ menu also has Add to / Remove from favorites.
+- **Search boxes** (library, programs, dances) have an ✕ that clears them, shown once there is text.
   - **◀◀** restarts the current song. To go back to an earlier song, double-click it in previously played.
   - **▶** turns into **⏸** while a song plays.
   - When nothing is playing, the bar shows what's next ("Next up: …", "Starting in N…", or "Next: … in N…").
@@ -290,7 +296,7 @@ PROGRAMS                  [+]
 - **Previously played:** the play log for the current program, newest first. It scrolls.
 - **Program list:** only **unplayed** items, in order. Played items stay in storage (`played_at`) but are not shown here.
   - **Reordering:** drag and drop.
-  - **Adding:** drag songs in from the library, holding, playlists or previously played (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance.
+  - **Adding:** drag songs in from the library, holding, playlists or previously played (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance; when an added song has more than one dance, a "Which dance?" dialog asks, with the default preselected (closing it keeps the defaults).
   - **Each item's menu** ("⋯" or right-click) has its options.
     - **Choosing the dance:** each item shows its label (§4 "Labels"). An item whose song has several dances lists every linked dance by its label, with the current one checked, so dances with the same name are told apart by choreographer.
     - **Insert STOP before** and **Remove**.
@@ -307,7 +313,7 @@ PROGRAMS                  [+]
 - **Table:** one row per song, for browsing, sorting, searching and selecting. It is virtualized, so it stays fast with large libraries. Editing happens in the side editor, not in the table. Click selects, ⌘-click adds to the selection, Shift-click selects a range, and ⌘A (Ctrl+A on Windows) selects every song shown while the table has focus. Selected rows can be dragged onto a playlist or Favorites.
   - **Columns:** song title, artist, dance (the default dance's name), country, teacher, choreographer, dance type, difficulty, favorite, slide, duration, path and status.
   - **Song / Dance** shows the label (§4), with a "+N" badge when the song has more than one dance.
-  - **In a playlist** (shown in its own order), dropping rows onto another row moves them there, and **Remove from playlist** removes the selection. Reordering is off while a search is active, because the search hides part of the playlist.
+  - **In a playlist** (shown in its own order), a **#** column numbers the songs in the playlist's order (whatever the sort or search). Dropping rows onto another row moves them there, and onto the space below the last row moves them to the end. **Remove from playlist** removes the selection. Reordering is off while a search is active, because the search hides part of the playlist.
   - **When one song is selected,** the side editor opens beside the table. A dance shared with other songs says so ("Also used by 2 other songs"), because edits apply to all of them.
 - **Selected song:** a side editor with two sections.
   - **Song:** title and artist.
@@ -337,7 +343,7 @@ PROGRAMS                  [+]
 - Import mapping defaults
 - Dance-type suggestion list
 - Projector display choice
-- Auto-fullscreen on/off and timeout
+- Appearance: Light, Dark or System (applied at once)
 - Countdown seconds
 - Remote control: whether the remote's media keys work, and a button that asks macOS for Accessibility permission when they don't (§7.4)
 - "Reveal logs"
@@ -486,7 +492,7 @@ UP NEXT
 - **Previews and replays** show as Now Playing and are listed in previously played, like any play. The song playing now is not repeated under previously played.
 - **The Teaching marker on the next dance** lasts only while the halted program's next item is the dance after the STOP; loading another program or removing that dance clears it.
 - **Songs whose file is missing** are left out of the lists, since they will be skipped.
-- **With no program loaded and nothing playing,** the view shows only the app's name.
+- **With nothing to show** (no program loaded and nothing playing, or a loaded program with nothing left, playing or played), the view shows the logo and the app's name, never a blank screen.
 - **Previously played** shows titles only (the dance, without the song or country) when a slide is beside it, because the column is narrow. With no slide it shows the country too. Newest is at the top.
 - **A missing country** leaves the right side empty.
 
