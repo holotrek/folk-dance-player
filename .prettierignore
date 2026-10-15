@@ -4,3 +4,6 @@ node_modules
 package-lock.json
 docs
 .superpowers
+
+# Canva page fixture: its embedded data must keep Canva's exact (minified) format.
+tests/fixtures/canva-view.html
