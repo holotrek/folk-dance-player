@@ -32,6 +32,7 @@ import type {
   ProjectorStatus
 } from './projector'
 import type { SettingKey, Settings } from './settings'
+import type { CanvaDeck, CanvaPage, CaptureStatus, DanceSlide, RefreshSummary } from './canva'
 
 export interface AppInfo {
   version: string
@@ -142,6 +143,18 @@ export interface InvokeContract {
     args: [playId: number, positionMs: number, durationMs: number | null]
     result: void
   }
+  // Canva slides (spec §6.3, §8.3): decks, a dance's slide, and refreshing the saved images.
+  'canva:decks': { args: []; result: CanvaDeck[] }
+  'canva:deckPages': { args: [deckId: number]; result: CanvaPage[] }
+  'canva:addDeck': { args: [link: string]; result: CanvaDeck }
+  'canva:linkSlide': {
+    args: [danceId: number, deckId: number, position: number]
+    result: DanceSlide | null
+  }
+  'canva:linkPageLink': { args: [danceId: number, link: string]; result: DanceSlide | null }
+  'canva:clearSlide': { args: [danceId: number]; result: void }
+  'canva:refreshSlides': { args: []; result: RefreshSummary }
+  'canva:captureStatus': { args: []; result: CaptureStatus }
 }
 
 export type InvokeChannel = keyof InvokeContract
@@ -220,7 +233,15 @@ export const INVOKE_CHANNELS = [
   'projector:displays',
   'projector:setDisplay',
   'projector:getSnapshot',
-  'projector:reportProgress'
+  'projector:reportProgress',
+  'canva:decks',
+  'canva:deckPages',
+  'canva:addDeck',
+  'canva:linkSlide',
+  'canva:linkPageLink',
+  'canva:clearSlide',
+  'canva:refreshSlides',
+  'canva:captureStatus'
 ] as const satisfies readonly InvokeChannel[]
 
 // Compile error if a channel in InvokeContract is missing from INVOKE_CHANNELS.
@@ -242,6 +263,8 @@ export interface EventContract {
   // To the projector window only: what to show, and the playing song's position.
   'projector:snapshot': ProjectorSnapshot
   'projector:progress': ProjectorProgress
+  // Background slide captures started, progressed or finished.
+  'canva:captureStatus': CaptureStatus
 }
 
 export type EventChannel = keyof EventContract
@@ -253,7 +276,8 @@ export const EVENT_CHANNELS = [
   'player:state',
   'projector:status',
   'projector:snapshot',
-  'projector:progress'
+  'projector:progress',
+  'canva:captureStatus'
 ] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>

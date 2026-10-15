@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
 import type { RemoteStatus } from '@shared/program'
+import { canvaHandlers, type CanvaDeps } from './canva-handlers'
 import { projectorHandlers, type ProjectorDeps } from './projector-handlers'
 import type { ImportService } from '../import/import-service'
 import { getLibraryStats } from '../library/stats'
@@ -27,6 +28,8 @@ export interface HandlerDeps {
   remote?: { status(): RemoteStatus; requestAccess(): RemoteStatus }
   // The projector window (spec §8); reported off when absent.
   projector?: ProjectorDeps
+  // Canva decks and slide captures (spec §8.3); adding or linking fails when absent.
+  canva?: CanvaDeps
   // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void
   // Called after every change to programs or their items.
@@ -50,6 +53,7 @@ export function createHandlers(deps: HandlerDeps): InvokeHandlers {
     'library:stats': () => getLibraryStats(deps.db),
     ...libraryHandlers(deps),
     ...programHandlers(deps),
-    ...projectorHandlers(deps)
+    ...projectorHandlers(deps),
+    ...canvaHandlers(deps)
   }
 }

@@ -1,3 +1,4 @@
+import type { DanceSlide } from './canva'
 // Types for the library (Music page, sidebar) shared by main and renderer. Spec §4, §6.
 
 export type LibraryFilter =
@@ -64,6 +65,7 @@ export interface SongDance {
   songCount: number // songs this dance is linked to ("also used by N songs")
   isDefault: boolean
   label: string
+  slide: DanceSlide | null // its Canva slide (spec §8.3)
 }
 
 // "Another dance called X exists — same dance?" (spec §6.3)
