@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import { render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test } from 'vitest'
 import App from '@renderer/App'
@@ -45,6 +45,13 @@ describe('App', () => {
     await userEvent.click(screen.getByRole('tab', { name: 'Music' }))
     await userEvent.click(screen.getByRole('button', { name: 'Pause' }))
     expect(fake.callsTo('player:pause')).toHaveLength(1)
+  })
+
+  test('Settings… in the app menu opens the Settings page', async () => {
+    const fake = setup()
+    await screen.findByRole('tab', { name: 'Settings' })
+    act(() => fake.emit('app:showPage', 'settings'))
+    expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true')
   })
 
   test('the logo sits beside the page tabs', async () => {

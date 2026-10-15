@@ -265,6 +265,8 @@ export interface EventContract {
   'projector:progress': ProjectorProgress
   // Background slide captures started, progressed or finished.
   'canva:captureStatus': CaptureStatus
+  // To the control window: the app menu asks for a page (Settings…).
+  'app:showPage': 'settings'
 }
 
 export type EventChannel = keyof EventContract
@@ -277,7 +279,8 @@ export const EVENT_CHANNELS = [
   'projector:status',
   'projector:snapshot',
   'projector:progress',
-  'canva:captureStatus'
+  'canva:captureStatus',
+  'app:showPage'
 ] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>

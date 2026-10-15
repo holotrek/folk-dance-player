@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { AppShell, Group, Tabs } from '@mantine/core'
 import { useElementSize } from '@mantine/hooks'
 import { useAppearance } from './appearance'
@@ -23,6 +23,7 @@ export default function App(): React.JSX.Element {
   const [page, setPage] = useState<Page>('program')
   const header = useElementSize()
   useAppearance(window.api)
+  useEffect(() => window.api.on('app:showPage', setPage), [])
   return (
     <LibraryProvider api={window.api}>
       <ProgramProvider api={window.api}>
