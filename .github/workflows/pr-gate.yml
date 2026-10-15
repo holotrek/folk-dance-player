@@ -5,11 +5,13 @@ name: PR Gate
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled, unlabeled]
+    # ready_for_review: Prepare Release opens its pull request as a draft, and a pull request opened
+    # with a workflow's token starts no workflows; marking it ready is a person's action, which does.
+    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
   push:
     branches: [main]
-  # Prepare Release starts this on its release branch: a PR opened by a workflow doesn't start
-  # other workflows by itself, and branch protection needs these checks to merge it.
+  # A manual run, e.g. to re-check main. (Its checks don't count toward a pull request's required
+  # checks: only pull_request runs do.)
   workflow_dispatch:
 
 permissions:

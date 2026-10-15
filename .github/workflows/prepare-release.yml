@@ -1,6 +1,6 @@
 # Prepare Release (spec §13.4): run from the Actions tab on main. It bumps the version, moves the
-# CHANGELOG's Unreleased notes under it, and opens a pull request "Release vX.Y.Z". Merge it, then
-# run Create Release.
+# CHANGELOG's Unreleased notes under it, and opens a draft pull request "Release vX.Y.Z". Read the
+# notes and click "Ready for review": that starts the PR Gate. Merge it, then run Create Release.
 name: Prepare Release
 
 on:
@@ -13,7 +13,6 @@ on:
 permissions:
   contents: write
   pull-requests: write
-  actions: write
 
 jobs:
   prepare:
@@ -43,7 +42,7 @@ jobs:
           git switch -c "$branch"
           git commit -am "chore(release): v$VERSION"
           git push origin "$branch"
-          gh pr create --base main --head "$branch" --title "Release v$VERSION" \
-            --body "Bumps the version to $VERSION and dates its CHANGELOG notes. When this is merged, run **Create Release** on main."
-          # A PR opened with this workflow's token doesn't start the PR Gate; start it here.
-          gh workflow run pr-gate.yml --ref "$branch"
+          # A draft: a pull request opened with this workflow's token starts no workflows, and the
+          # PR Gate runs when a person marks it ready (ready_for_review).
+          gh pr create --draft --base main --head "$branch" --title "Release v$VERSION" \
+            --body "Bumps the version to $VERSION and dates its CHANGELOG notes. Check the version and notes, then click **Ready for review**: that starts the PR Gate. When this is merged, run **Create Release** on main."

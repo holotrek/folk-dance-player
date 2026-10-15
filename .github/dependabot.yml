@@ -1,6 +1,8 @@
 # Dependabot (spec §13.4): weekly update PRs for npm packages and the workflows' actions, only
 # for releases at least 14 days old (the project's pinning rule). Minor and patch updates of
-# development tools come together in one PR.
+# development tools come together in one PR. Major npm upgrades are deliberate work, not
+# automatic PRs (some are held back on purpose: Vite stays on 7 for electron-vite 5, and
+# @types/node follows the Node major in .nvmrc).
 version: 2
 updates:
   - package-ecosystem: npm
@@ -10,6 +12,9 @@ updates:
     cooldown:
       default-days: 14
     versioning-strategy: increase
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
       dev-tools:
         dependency-type: development
