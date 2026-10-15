@@ -13,6 +13,7 @@ import {
   Tooltip
 } from '@mantine/core'
 import type { PlayerState } from '@shared/program'
+import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 import { NextIcon, PauseIcon, PlayIcon, RestartIcon, StopIcon } from '../components/icons'
 import { formatTime } from '../format-time'
 import { useLibraryApi } from '../library/LibraryProvider'
@@ -46,18 +47,78 @@ function status(player: PlayerState): { title: string; detail: string | null } {
     : { title: 'Nothing left to play', detail: null }
 }
 
+// "[✓] Label  after [N] s": an option that waits a number of seconds (auto-continue, auto-show).
+// The seconds are saved when the field is left, if they're a whole number in range; anything
+// else goes back to the saved value.
+function DelayOption(props: {
+  label: string
+  checked: boolean
+  onToggle: (on: boolean) => void
+  seconds: number
+  min: number
+  max: number
+  onSeconds: (seconds: number) => void
+}): React.JSX.Element {
+  const [text, setText] = useState<string | number>(props.seconds)
+  useEffect(() => setText(props.seconds), [props.seconds])
+  return (
+    <Group gap={6} wrap="nowrap">
+      <Checkbox
+        label={props.label}
+        checked={props.checked}
+        onChange={(e) => props.onToggle(e.currentTarget.checked)}
+        styles={{ label: { whiteSpace: 'nowrap' } }}
+      />
+      <Text size="sm">after</Text>
+      <NumberInput
+        aria-label={`${props.label.split(' ')[0]} after (seconds)`}
+        size="xs"
+        w={64}
+        min={props.min}
+        max={props.max}
+        allowDecimal={false}
+        clampBehavior="none"
+        value={text}
+        onChange={setText}
+        onBlur={() => {
+          const n = Number(text)
+          if (text === '' || !Number.isInteger(n) || n < props.min || n > props.max)
+            return setText(props.seconds)
+          if (n !== props.seconds) props.onSeconds(n)
+        }}
+      />
+      <Text size="sm">s</Text>
+    </Group>
+  )
+}
+
+// The laptop-mode auto-show (spec §7.3): settings, read once and saved from the bar.
+function useAutoShow(api: ReturnType<typeof useLibraryApi>) {
+  const [autoShow, setAutoShow] = useState({
+    enabled: DEFAULT_SETTINGS['autoFullscreen.enabled'],
+    seconds: DEFAULT_SETTINGS['autoFullscreen.seconds']
+  })
+  const apply = (s: Settings) =>
+    setAutoShow({ enabled: s['autoFullscreen.enabled'], seconds: s['autoFullscreen.seconds'] })
+  useEffect(() => void api.invoke('settings:getAll').then(apply), [api])
+  return {
+    ...autoShow,
+    set: (key: 'autoFullscreen.enabled' | 'autoFullscreen.seconds', value: boolean | number) =>
+      void api.invoke('settings:set', key, value).then(apply)
+  }
+}
+
 // ▶ turns into ⏸ under the pointer, so the second click of a habitual double-click is ignored
 // (it would pause the song that just started).
-// Spec §6.2 player bar: transport, the current song, a seek bar, speed (with 🔒) and volume,
-// and auto-continue. Owns the <audio> element, so it's mounted once, above the tabs (App).
+// Spec §6.2 player bar. Row 1: transport, the current song, speed (with 🔒), volume, the projector
+// switch and auto-show. Row 2: the seek bar, the elapsed time and auto-continue. Owns the <audio> element, so it's mounted once, above the tabs (App).
 export default function PlayerBar(): React.JSX.Element {
   const api = useLibraryApi()
   const player = useProgram((s) => s.player)
   const audio = useAudio(api, player)
   const projector = useProjectorStatus(api)
+  const autoShow = useAutoShow(api)
   const [seeking, setSeeking] = useState<number | null>(null)
-  const [seconds, setSeconds] = useState<string | number>(player.autoContinue.seconds)
-  useEffect(() => setSeconds(player.autoContinue.seconds), [player.autoContinue.seconds])
 
   const { title, detail } = status(player)
   const playing = player.status === 'playing'
@@ -68,7 +129,7 @@ export default function PlayerBar(): React.JSX.Element {
   return (
     <Paper withBorder p="sm" className={classes.bar}>
       <audio ref={audio.ref} data-testid="player-audio" />
-      <Group gap="xs" wrap="nowrap">
+      <Group gap="xs" wrap="nowrap" data-testid="player-row-1">
         <ActionIcon
           variant="default"
           size="lg"
@@ -172,8 +233,35 @@ export default function PlayerBar(): React.JSX.Element {
             style={{ flex: 1 }}
           />
         </Group>
+        <div className={classes.projector}>
+          <Switch
+            label="Projector"
+            checked={projector.enabled}
+            onChange={(e) => void api.invoke('projector:setEnabled', e.currentTarget.checked)}
+            styles={{ label: { whiteSpace: 'nowrap' } }}
+          />
+          {projector.open && (
+            <Text
+              size="xs"
+              c="dimmed"
+              className={classes.projectorNote}
+              title={projector.notice ?? `On ${projector.display}`}
+            >
+              {projector.notice ?? `On ${projector.display}`}
+            </Text>
+          )}
+        </div>
+        <DelayOption
+          label="Auto-show when playing"
+          checked={autoShow.enabled}
+          onToggle={(on) => autoShow.set('autoFullscreen.enabled', on)}
+          seconds={autoShow.seconds}
+          min={5}
+          max={3600}
+          onSeconds={(n) => autoShow.set('autoFullscreen.seconds', n)}
+        />
       </Group>
-      <Group gap="sm" wrap="nowrap">
+      <Group gap="sm" wrap="nowrap" data-testid="player-row-2">
         <Slider
           aria-label="Position"
           min={0}
@@ -192,45 +280,15 @@ export default function PlayerBar(): React.JSX.Element {
         <Text size="sm" className={classes.time}>
           {loaded ? `${formatTime(seeking ?? audio.positionMs)} / ${formatTime(duration)}` : ''}
         </Text>
-        <Checkbox
+        <DelayOption
           label="Auto-continue"
           checked={player.autoContinue.enabled}
-          onChange={(e) =>
-            void api.invoke('player:setAutoContinue', { enabled: e.currentTarget.checked })
-          }
-        />
-        <Text size="sm">after</Text>
-        <NumberInput
-          aria-label="Auto-continue after (seconds)"
-          size="xs"
-          w={70}
+          onToggle={(enabled) => void api.invoke('player:setAutoContinue', { enabled })}
+          seconds={player.autoContinue.seconds}
           min={0}
           max={600}
-          allowDecimal={false}
-          clampBehavior="strict"
-          value={seconds}
-          onChange={setSeconds}
-          onBlur={() => {
-            const n = Number(seconds)
-            if (seconds === '' || !Number.isInteger(n))
-              return setSeconds(player.autoContinue.seconds)
-            if (n !== player.autoContinue.seconds)
-              void api.invoke('player:setAutoContinue', { seconds: n })
-          }}
+          onSeconds={(seconds) => void api.invoke('player:setAutoContinue', { seconds })}
         />
-        <Text size="sm">s</Text>
-        <Group gap={6} wrap="nowrap" ml="md">
-          <Switch
-            label="Projector"
-            checked={projector.enabled}
-            onChange={(e) => void api.invoke('projector:setEnabled', e.currentTarget.checked)}
-          />
-          {projector.open && (
-            <Text size="xs" c="dimmed" className={classes.label}>
-              {projector.notice ?? `On ${projector.display}`}
-            </Text>
-          )}
-        </Group>
       </Group>
       {player.warning && (
         <Alert

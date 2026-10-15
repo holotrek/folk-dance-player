@@ -19,3 +19,16 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* The switch, and under it where the view is (or why it isn't on a projector): one line, the rest
+   on hover. */
+.projector {
+  margin-left: var(--mantine-spacing-sm);
+}
+
+.projectorNote {
+  max-width: 160px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}

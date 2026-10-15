@@ -1,4 +1,4 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import type { PlayerState } from '@shared/program'
@@ -183,6 +183,43 @@ describe('player bar', () => {
     await userEvent.type(seconds, '8')
     await userEvent.tab()
     expect(fake.callsTo('player:setAutoContinue')).toEqual([[{ enabled: false }], [{ seconds: 8 }]])
+  })
+
+  test('auto-show (the view over the laptop while playing) and its seconds are set from the bar', async () => {
+    const fake = setup(playerState())
+    const autoShow = await screen.findByRole('checkbox', { name: 'Auto-show when playing' })
+    await waitFor(() => expect(autoShow).toBeChecked())
+    await userEvent.click(autoShow)
+    expect(fake.callsTo('settings:set')).toEqual([['autoFullscreen.enabled', false]])
+    expect(autoShow).not.toBeChecked()
+    const seconds = screen.getByRole('textbox', { name: 'Auto-show after (seconds)' })
+    expect(seconds).toHaveValue('15')
+    await userEvent.clear(seconds)
+    await userEvent.type(seconds, '30')
+    await userEvent.tab()
+    expect(fake.callsTo('settings:set').at(-1)).toEqual(['autoFullscreen.seconds', 30])
+    // Below the 5 s minimum: nothing is saved, and the field shows the saved value again.
+    await userEvent.clear(seconds)
+    await userEvent.type(seconds, '2')
+    await userEvent.tab()
+    expect(fake.callsTo('settings:set')).toHaveLength(2)
+    expect(seconds).toHaveValue('30')
+  })
+
+  test('two rows: transport, song, speed, volume and the projector; then position and auto-continue', async () => {
+    setup(playerState())
+    const top = await screen.findByTestId('player-row-1')
+    const bottom = screen.getByTestId('player-row-2')
+    for (const name of ['Play', 'Next'])
+      expect(within(top).getByRole('button', { name })).toBeInTheDocument()
+    expect(
+      within(top).getByRole('button', { name: 'Keep speed for the next song' })
+    ).toBeInTheDocument()
+    expect(within(top).getByRole('switch', { name: 'Projector' })).toBeInTheDocument()
+    expect(
+      within(top).getByRole('checkbox', { name: 'Auto-show when playing' })
+    ).toBeInTheDocument()
+    expect(within(bottom).getByRole('checkbox', { name: 'Auto-continue' })).toBeInTheDocument()
   })
 
   test('reports the playing song’s position, for the projector’s red line', async () => {

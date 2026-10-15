@@ -21,8 +21,8 @@ import RemoteSection from '../components/RemoteSection'
 import ImportMappingFields from '../import/ImportMappingFields'
 import { errorMessage } from '../ipc-error'
 
-type NumberKey = 'autoContinue.seconds' | 'countdown.seconds' | 'autoFullscreen.seconds'
-type BooleanKey = 'autoContinue.enabled' | 'autoFullscreen.enabled'
+type NumberKey = 'autoContinue.seconds' | 'countdown.seconds'
+type BooleanKey = 'autoContinue.enabled'
 
 export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.Element {
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -141,11 +141,6 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
       </Stack>
       <RemoteSection api={api} />
       <ProjectorDisplay api={api} value={settings['projector.displayId']} onSaved={reload} />
-      <Stack gap="xs">
-        <Title order={4}>Fullscreen on this screen</Title>
-        {toggle('autoFullscreen.enabled', 'Show fullscreen view when idle')}
-        {number('autoFullscreen.seconds', 'Idle time before fullscreen (seconds)', 5, 3600)}
-      </Stack>
       {info && (
         <Stack gap={4}>
           <Title order={4}>About</Title>
