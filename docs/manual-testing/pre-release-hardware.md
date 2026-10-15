@@ -18,7 +18,7 @@ list as a known issue) before the release.
 
 - [ ] Install the `.dmg` (drag the app to Applications; the first time, System Settings → Privacy & Security → **Open Anyway**).
 - [ ] A program has a few songs, with a STOP before one of them (its ⋯ menu → **Insert STOP before**), so the projector shows a Teaching row.
-- [ ] One dance is linked to a Canva slide (Music page → the dance's editor → Canva slide, with a deck's public **view** link), and a few seconds have passed so its image is saved.
+- [ ] One dance is linked to a Canva slide (Music page → the dance's editor → Canva slide, with the deck's link from Canva's **Share → Embed → Smart embed link**), and a few seconds have passed so its image is saved.
 
 ## A. No projector connected
 
