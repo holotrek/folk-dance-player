@@ -184,6 +184,7 @@ Schema changes go through numbered migrations, applied at startup inside a trans
 - **Add Music…:** a picker for files and folders. Folders are scanned recursively.
 - **Drag and drop** files or folders onto the library (Music page or Program page library list).
 - **Import from Apple Music…:** pick `Library.xml`. The screen explains how to export it from Music (File → Library → Export Library…).
+- **Sync with Apple Music** (macOS, Settings): reads the Music library directly and keeps the app current (§5.5). While it is on, Import from Apple Music… is hidden.
 
 ### 5.2 Mapping step (shown before every import)
 
@@ -226,6 +227,10 @@ The Music page has **Re-apply mapping to selected**. Its dialog shows the select
 - **New path whose `content_hash` matches a missing file:** treated as a move. The existing file row's path is updated, and its song, prefs, playlist memberships, program items and play log all carry over.
 - **Errors are per file.** An unreadable file is recorded and skipped, never aborting the batch.
 - **Summary at the end:** added, updated, relinked, already present, not found on disk (XML), unsupported format, unreadable. Each category expands to list its files.
+
+### 5.5 Sync with Apple Music
+
+Designed in its own spec, `2026-10-15-apple-music-sync-design.md`: a bundled Swift helper reads the Music library through the iTunesLibrary framework; sync runs at launch, on focus and on Sync now; removed tracks wait in a review list and are soft-deleted; Music's playlists become read-only mirrors in folders; tags follow Music unless edited in the app. It adds one rule to this section: while sync is on, Add Music… skips copies of synced songs as already present.
 
 ## 6. Control window
 
