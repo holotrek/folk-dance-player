@@ -1,0 +1,70 @@
+# Create Release (spec §13.4): run from the Actions tab on main. It refuses a version that isn't
+# higher than the last release, or that has no CHANGELOG section; then it tests, builds the
+# Universal .dmg, checks it with the end-to-end tests, tags vX.Y.Z and publishes a GitHub release
+# with the .dmg and the CHANGELOG notes. A dry run (any branch) does everything but publish, and
+# keeps the .dmg as a workflow artifact for a week.
+name: Create Release
+
+on:
+  push: # SPIKE ONLY (a push is always a dry run); removed before merging
+    branches: [ci-spike]
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run: build and check only; publish nothing'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: create-release
+  cancel-in-progress: false
+
+env:
+  # Anything but a manual run with "dry run" unchecked publishes nothing.
+  DRY_RUN: ${{ github.event_name != 'workflow_dispatch' || inputs.dry_run }}
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - name: Releases come from main
+        if: env.DRY_RUN != 'true' && github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Run Create Release on main (pick main under 'Use workflow from'). A dry run may use any branch."
+          exit 1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # the tags, to compare versions
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.1.0
+      - id: version
+        run: echo "version=$(node -p 'require("./package.json").version')" >> "$GITHUB_OUTPUT"
+      - name: The version is new and has release notes
+        # A dry run reports a failed check but goes on, to test the build.
+        continue-on-error: ${{ env.DRY_RUN == 'true' }}
+        run: node scripts/release.mts check release-notes.md
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist
+      - run: npm run test:e2e:dist
+      - name: Publish the release
+        if: env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" "dist/Folk Dance Player-$VERSION-universal.dmg" \
+            --target "$GITHUB_SHA" --title "Folk Dance Player $VERSION" --notes-file release-notes.md
+      - name: Keep the .dmg (dry run)
+        if: env.DRY_RUN == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: folk-dance-player-${{ steps.version.outputs.version }}-dmg
+          path: dist/*.dmg
+          retention-days: 7
