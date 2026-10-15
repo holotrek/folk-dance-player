@@ -520,7 +520,7 @@ Verified in the spike with a real 42-slide deck (§11):
 - **Live display** loads `…/view#<position>` in a `WebContentsView` owned by main, positioned over the slide area of the projector window. It is *not* an `<iframe>`:
   - The `/view` page sends `X-Frame-Options: deny`, so it cannot be iframed.
   - `?embed` can be iframed, but its controls never fade.
-- **Hiding Canva's controls:** after **every** slide change (new deck or same-deck page change), main sends a synthetic mouse pass (several `mouseMove` events, then `mouseLeave`) to the view. Canva then fades its controls (logo, Share, "Create with Canva", page counter, arrows) after about 10 s. Without mouse activity they never fade.
+- **Hiding Canva's controls:** after a new deck loads, main sends a synthetic mouse pass (several `mouseMove` events, then `mouseLeave`) to the view. Canva then fades its controls (logo, Share, "Create with Canva", page counter, arrows) after about 10 s; without mouse activity they never fade. Another slide of a deck whose controls have already faded is only a `#N` change in the page, and the controls stay hidden, so it gets no mouse pass (one would bring them back). A switch before the fade starts over as a new deck. The projector window ignores the mouse, so the operator's cursor never wakes the controls.
 - **Saved slide images (offline):**
   - **When captured:** on linking a slide, on "Refresh slides", and in the background at startup when online.
   - **How:** the view is loaded off-screen, nudged, allowed to fade, then captured with `webContents.capturePage()`.
@@ -530,6 +530,8 @@ Verified in the spike with a real 42-slide deck (§11):
 - **Capturing details:** at startup when online, only linked slides without a saved image are captured; "Refresh slides" re-captures all of them. Captures run one at a time in an off-screen 1920×1080 window, reused within a deck (12 s for a new deck, 1.5 s for another slide of it), and give up after 45 s.
 - **Canva's pages are untrusted.** The live view and the capture window use their own `persist:canva` session, sandboxed, muted and without a preload. They may navigate only within `https://*.canva.com` and never open windows. The app's own windows are sandboxed too, and only one copy of the app runs.
 - **A slide gone from its deck** keeps its saved image on the projector but is never loaded live (it has no position).
+- **Only Canva's deck page counts.** A load (live or capture) that ends anywhere but the deck's own view page, or with an HTTP error, has failed: a Wi-Fi login page or Canva's sign-in page for a deck no longer public is never shown or saved. Server redirects off canva.com are blocked, a deck fetch redirected elsewhere reads as "couldn't reach Canva" (not a format change), and only decks read fine in a refresh are re-captured.
+- **The live view follows the projector window:** when the window is replaced (laptop mode → projector mode, another display), the view moves to the new one; the old window's late close doesn't switch it off.
 
 ## 9. Architecture
 
