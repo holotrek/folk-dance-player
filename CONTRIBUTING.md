@@ -70,7 +70,7 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 
 ## Releasing
 
-1. Complete the manual hardware checklist in spec §10.2 (projector, Canva, offline slides, slowed audio).
+1. Complete the manual hardware checklist, [`docs/manual-testing/pre-release-hardware.md`](docs/manual-testing/pre-release-hardware.md), on the packaged app (projector, Canva, offline slides, slowed audio, sleep).
 2. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version (for the very first release, `0.1.0`). It opens a **draft** "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Check the version and notes, then click **Ready for review**: that starts the PR Gate (a pull request opened by a workflow starts none by itself). Merge it once its checks pass.
 3. **Actions → Create Release → Run workflow** on main. It refuses a version that isn't higher than the last release or has no CHANGELOG section; otherwise it tests, builds the `.dmg`, checks it with the end-to-end tests, and publishes the GitHub release `vX.Y.Z` with the `.dmg` and the notes.
 4. To try a release without publishing, tick **Dry run** (any branch): the `.dmg` is kept as a workflow artifact for a week.

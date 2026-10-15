@@ -614,12 +614,13 @@ The music never stops because of a side failure, and the projector never shows a
   - save and load a program, also after a restart
   - Settings… in the app menu opens the Settings page
   - each start backs up the library, and the log says so
-- **Manual pre-release checklist (real hardware):**
-  - projector plug and unplug mid-song
-  - mirror vs. extended mode
-  - Canva live slide and its fade
-  - offline slide images
+- **Manual pre-release checklist (real hardware):** `docs/manual-testing/pre-release-hardware.md`, a step-by-step list with checkboxes, run on the packaged app. It covers:
+  - the view over the laptop (Esc, the mouse, auto-show)
+  - extended mode with a projector, and mirror mode
+  - the Canva live slide and its fade, and offline slide images
   - how audio sounds at 0.75× and 0.5× speed
+  - sleep and wake, and keeping the Mac awake
+  - unplugging the projector
 
 ## 11. Spike findings (2026-10-13)
 
