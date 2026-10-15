@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { ProgramItem } from '@shared/program'
 import { mergeDances } from '../../../src/main/library/edit'
+import { setFavorite } from '../../../src/main/library/playlists'
 import {
   addStop,
   addTracks,
@@ -101,6 +102,14 @@ describe('program items', () => {
       isMissing: false,
       danceCount: 1
     })
+  })
+
+  test('each song item says whether its song is a favorite', () => {
+    const p = createProgram(db, 'Set')
+    addTracks(db, p, [hora.fileId, kolo.fileId])
+    setFavorite(db, [kolo.fileId], true)
+    const items = getProgram(db, p)!.items as Extract<ProgramItem, { kind: 'track' }>[]
+    expect(items.map((i) => i.isFavorite)).toEqual([false, true])
   })
 
   test('adds before an item or at the end, and inserts STOP markers', () => {

@@ -13,6 +13,7 @@ export function track(fileId: number, title: string, extra: Partial<Track> = {})
     teacher: null,
     durationMs: 180_000,
     isMissing: false,
+    isFavorite: false,
     danceCount: 1,
     ...extra
   }
