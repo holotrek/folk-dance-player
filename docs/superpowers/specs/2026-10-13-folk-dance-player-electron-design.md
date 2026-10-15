@@ -707,12 +707,10 @@ How to work on the project:
   - **Adding a dependency:** pin the exact version, at least two weeks old, and say why in the commit.
   - **Changing the database:** add a new numbered migration. A migration that has been released is never edited.
   - **Adding an IPC channel:** add it to the contract, to `INVOKE_CHANNELS`, and to the handlers.
-- **Release checklist:**
-  1. All tests and the manual hardware checklist (§10.2) pass.
-  2. Bump the version.
-  3. Move `Unreleased` into a version section in `CHANGELOG.md`.
-  4. Tag the commit.
-  5. Build the `.dmg` (`npm run dist`), check it (`npm run test:e2e:dist`) and attach it to the GitHub release.
+- **Release checklist** (the workflows do steps 2–4, §13.4):
+  1. The manual hardware checklist (§10.2) passes.
+  2. **Prepare Release** bumps the version and moves `Unreleased` into a dated version section of `CHANGELOG.md`, in a release pull request. Merge it once the PR Gate passes.
+  3. **Create Release** on main checks the version, tests, builds the installers, checks them with the end-to-end tests, and tags and publishes the GitHub release.
 
 ### 13.3 `AGENTS.md`: decision log and agent guide
 
@@ -735,3 +733,24 @@ How to work on the project:
   - double-click preview rules
   - exact, two-week-old dependency pins
 - **Kept current:** when a task makes a decision a future contributor would otherwise have to rediscover, it adds an entry in the same commit. If a decision changes the spec, the spec is updated too.
+
+### 13.4 Continuous integration and releases (GitHub Actions)
+
+The repo is public, so GitHub's standard hosted runners (Linux, Windows and macOS) cost nothing; the limits are concurrency (20 jobs, 5 of them macOS). Every action is pinned to a commit SHA (with its version in a comment), at least two weeks old like every dependency, and each workflow asks only for the permissions it needs.
+
+- **PR Gate** (`.github/workflows/pr-gate.yml`), on every pull request and every push to main:
+  - **Typecheck, test and build** (Linux): formatting, typecheck, the unit tests and the build.
+  - **End-to-end (<os>)**: the end-to-end tests on a matrix of systems, starting with `macos-latest`. Linux (under a virtual display) and Windows join by adding them to the matrix.
+  - **CHANGELOG**: a pull request that changes `src/` must change `CHANGELOG.md`, unless it's labeled `no changelog` or comes from Dependabot.
+  - Pull requests from forks run with read-only permissions and no secrets (`pull_request`, never `pull_request_target`); GitHub asks before running a first-time contributor's workflows.
+- **Prepare Release** (manual, main only; input: `major`, `minor`, `patch` or an exact version). It runs `scripts/release.mts prepare`, which bumps the version (`npm version`) and moves the Unreleased notes under a dated `## [x.y.z]` heading, leaving Unreleased empty. The current version is allowed, for the first release. Then it pushes `release/vx.y.z` and opens "Release vx.y.z". A pull request opened with the workflow's own token doesn't start other workflows, so it starts the PR Gate on the release branch itself (`workflow_dispatch`).
+- **Create Release** (manual, main only), as three jobs, so a release is all or nothing:
+  1. **Check the version** (Linux): `scripts/release.mts check` refuses a version that isn't higher than the latest `vx.y.z` tag, or that has no CHANGELOG section.
+  2. **Build (<os>)**, a matrix: the unit tests, `npm run dist` (electron-builder never publishes by itself: `--publish never`), the end-to-end tests on the packaged app, and the installer kept as an artifact. Today: `macos-latest`, the Universal `.dmg`. Windows joins as `{ os: windows-latest, installer: 'dist/*.exe' }`, with its electron-builder target and a cross-platform `dist` script (`env -u` is Unix-only).
+  3. **Publish** (Linux), once every build has passed: tags `vx.y.z` at the commit and publishes one GitHub release, "Folk Dance Player x.y.z", with every installer and the version's CHANGELOG section as its notes. It uses the workflow's own token (`contents: write`); no personal access token is needed.
+  - **A dry run** (a checkbox; any branch) does everything but publish: a failed version check is reported but doesn't stop it, and the installers are kept as workflow artifacts for a week.
+  - **Signing,** once there's a Developer ID: the certificate and Apple's notarization credentials become repo secrets for the build job (CONTRIBUTING.md has the electron-builder options).
+- **Dependabot** (`.github/dependabot.yml`): weekly update pull requests for npm packages and the workflows' actions, only for releases at least 14 days old (`cooldown`), with development tools' minor and patch updates grouped.
+- **Branch protection on main:** the PR Gate's checks (Typecheck, test and build; End-to-end (macos-latest); CHANGELOG) must pass before merging. Admins can still push in an emergency. No review approval is required, so a solo maintainer can merge.
+- **Repo setting:** "Allow GitHub Actions to create and approve pull requests" is on, for Prepare Release.
+
