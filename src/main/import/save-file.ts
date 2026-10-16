@@ -104,7 +104,7 @@ function fillEmpty(
 
 // The pairing for the song's default dance (song_prefs.default_dance_id), if it is still linked,
 // and how many songs that dance is linked to.
-function defaultPairing(
+export function defaultPairing(
   db: DatabaseSync,
   songId: number
 ): { id: number; danceId: number; songCount: number } | undefined {
