@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
 import type { RemoteStatus } from '@shared/program'
+import { appleSyncHandlers, type AppleSyncHandlerDeps } from './apple-sync-handlers'
 import { canvaHandlers, type CanvaDeps } from './canva-handlers'
 import { projectorHandlers, type ProjectorDeps } from './projector-handlers'
 import type { ImportService } from '../import/import-service'
@@ -30,6 +31,8 @@ export interface HandlerDeps {
   projector?: ProjectorDeps
   // Canva decks and slide captures (spec §8.3); adding or linking fails when absent.
   canva?: CanvaDeps
+  // Sync with Apple Music (sync spec); reported off when absent.
+  appleSync?: AppleSyncHandlerDeps
   // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void
   // Called after every change to programs or their items.
@@ -54,6 +57,7 @@ export function createHandlers(deps: HandlerDeps): InvokeHandlers {
     ...libraryHandlers(deps),
     ...programHandlers(deps),
     ...projectorHandlers(deps),
-    ...canvaHandlers(deps)
+    ...canvaHandlers(deps),
+    ...appleSyncHandlers(deps)
   }
 }

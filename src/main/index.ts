@@ -13,6 +13,7 @@ import {
   shell,
   systemPreferences
 } from 'electron'
+import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
@@ -20,6 +21,10 @@ import type { EventChannel, EventContract } from '@shared/contract'
 import { MEDIA_SCHEME, parseMediaUrl, parseSlideUrl } from '@shared/media'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
+import { AppleSync } from './apple-sync/apple-sync'
+import { runSync, statFile } from './apple-sync/engine'
+import { createFileSource, createHelperSource } from './apple-sync/library-source'
+import { disableSync, resolveAllReview, resolveReview, reviewCount } from './apple-sync/review'
 import { CanvaService } from './canva/canva-service'
 import { CaptureQueue } from './canva/capture-queue'
 import { slideImagePath } from './canva/decks'
@@ -31,7 +36,8 @@ import { openDatabase } from './db/connection'
 import { getSchemaVersion, migrate, SchemaTooNewError } from './db/migrate'
 import { MIGRATIONS } from './db/migrations'
 import { importDialogs } from './import/dialogs'
-import { ImportService } from './import/import-service'
+import { ImportBusyError, ImportService, savedMapping } from './import/import-service'
+import { findEditedApplePlaylists } from './import/save-playlists'
 import { startUtilityWorker } from './import/utility-worker'
 import { createHandlers } from './ipc/handlers'
 import { createLogger } from './log/logger'
@@ -265,11 +271,14 @@ function startApp(): void {
     db,
     settings,
     startWorker: startUtilityWorker,
+    syncEnabled: () => settings.get('appleSync.enabled'),
+    isSyncing: () => appleSync.syncing,
     onProgress: (progress) => {
       broadcast('import:progress', progress)
       if (progress.phase === 'done') {
         log.info(`Import finished: ${progress.done} of ${progress.total} files read`)
         libraryChanged()
+        appleSync.importFinished() // a sync that waited for the import runs now
       }
     }
   })
@@ -287,6 +296,58 @@ function startApp(): void {
       updateProjector()
     }
   )
+
+  // Sync with Apple Music (sync spec §3): the bundled helper, or a snapshot file in development and
+  // end-to-end tests. macOS only.
+  const appleLibraryFile = process.env['FDP_APPLE_LIBRARY']
+  const now = (): string => new Date().toISOString()
+  const appleSync: AppleSync = new AppleSync({
+    available: process.platform === 'darwin' || appleLibraryFile !== undefined,
+    source: appleLibraryFile
+      ? createFileSource(appleLibraryFile)
+      : createHelperSource(
+          app.isPackaged
+            ? join(process.resourcesPath, 'fdp-music-library')
+            : join(app.getAppPath(), 'resources', 'bin', 'fdp-music-library')
+        ),
+    settings,
+    run: async (snapshot, decisions, onProgress) => {
+      if (importer.busy) throw new ImportBusyError()
+      return runSync(
+        {
+          db,
+          mapping: savedMapping(settings),
+          readTracks: (tracks, onResult) => importer.readTracks(tracks, onResult),
+          stat: statFile,
+          exists: existsSync,
+          now,
+          onProgress
+        },
+        snapshot,
+        decisions
+      )
+    },
+    findConflicts: (snapshot) =>
+      findEditedApplePlaylists(
+        db,
+        snapshot.playlists.map((p) => p.persistentId)
+      ),
+    review: {
+      count: () => reviewCount(db),
+      resolve: (ids, action) => resolveReview(db, ids, action, now()),
+      resolveAll: (action) => resolveAllReview(db, action, now()),
+      disable: () => disableSync(db)
+    },
+    onStatus: (status) => broadcast('appleSync:state', status),
+    onNotice: (notice) => broadcast('appleSync:notice', notice),
+    onLibraryChanged: () => {
+      player.refresh() // labels, and whether the next item is removed, may have changed
+      libraryChanged()
+    },
+    onProgress: (progress) => broadcast('import:progress', progress),
+    log
+  })
+
   protocol.handle(MEDIA_SCHEME, (request) => {
     const fileId = parseMediaUrl(request.url)
     const slide = parseSlideUrl(request.url)
@@ -339,6 +400,9 @@ function startApp(): void {
   // One control window; closing it quits, so the projector is never left on its own.
   const mainWindow = createMainWindow()
   mainWindow.on('closed', () => app.quit())
+  // Sync triggers (sync spec §3.3): once the window is shown, and whenever it gains focus.
+  mainWindow.once('show', () => appleSync.started())
+  mainWindow.on('focus', () => appleSync.focused())
   app.setAboutPanelOptions({
     applicationName: 'Folk Dance Player',
     applicationVersion: app.getVersion(),
@@ -357,7 +421,15 @@ function startApp(): void {
           mainWindow.webContents.send('app:showPage', 'settings')
         },
         revealLogs: reveal(log.dir),
-        revealBackups: reveal(backupsDir)
+        revealBackups: reveal(backupsDir),
+        appleSync: appleSync.status().available,
+        // While sync is off, the menu item opens Settings, where the switch is.
+        syncAppleMusic: () => {
+          if (appleSync.status().state === 'off') {
+            mainWindow.show()
+            mainWindow.webContents.send('app:showPage', 'settings')
+          } else void appleSync.syncNow()
+        }
       })
     )
   )
@@ -466,6 +538,21 @@ function startApp(): void {
         progress: (progress) => feed.progress(progress)
       },
       canva: { service: canva, captureStatus: () => captures.current() },
+      appleSync: {
+        status: () => appleSync.status(),
+        preview: () => appleSync.preview(),
+        enable: (decisions) => appleSync.enable(decisions),
+        disable: () => appleSync.disable(),
+        syncNow: () => appleSync.syncNow(),
+        switchLibrary: () => appleSync.switchLibrary(),
+        resolve: (ids, action) => appleSync.resolve(ids, action),
+        resolveAll: (action) => appleSync.resolveAll(action),
+        // System Settings → Privacy & Security → Media & Apple Music.
+        openPrivacySettings: () =>
+          void shell.openExternal(
+            'x-apple.systempreferences:com.apple.preference.security?Privacy_Media'
+          )
+      },
       onLibraryChanged: () => {
         player.refresh() // labels or missing flags of the next item may have changed
         libraryChanged()

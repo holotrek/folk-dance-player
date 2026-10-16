@@ -2,13 +2,17 @@ import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, test, vi } from 'vitest'
 import { menuTemplate } from '../../../src/main/menu'
 
-function setup(dev = false) {
+function setup(dev = false, appleSync = false) {
   const actions = {
     showSettings: vi.fn(),
     revealLogs: vi.fn(),
-    revealBackups: vi.fn()
+    revealBackups: vi.fn(),
+    syncAppleMusic: vi.fn()
   }
-  return { actions, menu: menuTemplate({ appName: 'Folk Dance Player', dev, ...actions }) }
+  return {
+    actions,
+    menu: menuTemplate({ appName: 'Folk Dance Player', dev, appleSync, ...actions })
+  }
 }
 
 const submenu = (menu: MenuItemConstructorOptions[], label: string) =>
@@ -54,5 +58,14 @@ describe('the app menu', () => {
     expect(roles(true)).toContain('toggleDevTools')
     expect(roles(false)).not.toContain('toggleDevTools')
     expect(roles(false)).toContain('togglefullscreen')
+  })
+
+  test('File → Sync with Apple Music (⌘⇧S) appears only where sync is available', () => {
+    const { menu, actions } = setup(false, true)
+    const sync = item(submenu(menu, 'File'), 'Sync with Apple Music')
+    expect(sync.accelerator).toBe('CmdOrCtrl+Shift+S')
+    click(sync)
+    expect(actions.syncAppleMusic).toHaveBeenCalled()
+    expect(setup(false, false).menu.find((m) => m.label === 'File')).toBeUndefined()
   })
 })

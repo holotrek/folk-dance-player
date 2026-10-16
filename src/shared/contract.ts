@@ -33,6 +33,15 @@ import type {
 } from './projector'
 import type { SettingKey, Settings } from './settings'
 import type { CanvaDeck, CanvaPage, CaptureStatus, DanceSlide, RefreshSummary } from './canva'
+import type {
+  AppleSyncNotice,
+  AppleSyncStatus,
+  MirrorDecision,
+  PlaylistFolder,
+  ReviewAction,
+  SyncPreview,
+  SyncSummary
+} from './apple-sync'
 
 export interface AppInfo {
   version: string
@@ -87,6 +96,8 @@ export interface InvokeContract {
   'playlists:add': { args: [playlistId: number, fileIds: number[]]; result: void }
   'playlists:remove': { args: [playlistId: number, itemIds: number[]]; result: void }
   'playlists:reorder': { args: [playlistId: number, itemIds: number[]]; result: void }
+  // Music's playlist folders (sync spec §6.2).
+  'playlists:folders': { args: []; result: PlaylistFolder[] }
   // Holding places songs before `beforeFileId` (a held song) or at the end; held songs move.
   'library:setHolding': {
     args: [fileIds: number[], held: boolean, beforeFileId?: number | null]
@@ -155,6 +166,19 @@ export interface InvokeContract {
   'canva:clearSlide': { args: [danceId: number]; result: void }
   'canva:refreshSlides': { args: []; result: RefreshSummary }
   'canva:captureStatus': { args: []; result: CaptureStatus }
+  // Sync with Apple Music (sync spec §3.3, §6).
+  'appleSync:status': { args: []; result: AppleSyncStatus }
+  'appleSync:preview': { args: []; result: SyncPreview }
+  'appleSync:enable': {
+    args: [decisions: Record<string, MirrorDecision>]
+    result: SyncSummary | null
+  }
+  'appleSync:disable': { args: []; result: void }
+  'appleSync:syncNow': { args: []; result: void }
+  'appleSync:switchLibrary': { args: []; result: void }
+  'appleSync:resolve': { args: [fileIds: number[], action: ReviewAction]; result: void }
+  'appleSync:resolveAll': { args: [action: ReviewAction]; result: void }
+  'appleSync:openPrivacySettings': { args: []; result: void }
 }
 
 export type InvokeChannel = keyof InvokeContract
@@ -197,6 +221,7 @@ export const INVOKE_CHANNELS = [
   'playlists:add',
   'playlists:remove',
   'playlists:reorder',
+  'playlists:folders',
   'library:setHolding',
   'programs:list',
   'programs:get',
@@ -241,7 +266,16 @@ export const INVOKE_CHANNELS = [
   'canva:linkPageLink',
   'canva:clearSlide',
   'canva:refreshSlides',
-  'canva:captureStatus'
+  'canva:captureStatus',
+  'appleSync:status',
+  'appleSync:preview',
+  'appleSync:enable',
+  'appleSync:disable',
+  'appleSync:syncNow',
+  'appleSync:switchLibrary',
+  'appleSync:resolve',
+  'appleSync:resolveAll',
+  'appleSync:openPrivacySettings'
 ] as const satisfies readonly InvokeChannel[]
 
 // Compile error if a channel in InvokeContract is missing from INVOKE_CHANNELS.
@@ -267,6 +301,10 @@ export interface EventContract {
   'canva:captureStatus': CaptureStatus
   // To the control window: the app menu asks for a page (Settings…).
   'app:showPage': 'settings'
+  // To the control window: sync's state changed (and with it the review count or last result).
+  'appleSync:state': AppleSyncStatus
+  // To the control window: a toast or notice, once per occurrence (sync spec §6.5).
+  'appleSync:notice': AppleSyncNotice
 }
 
 export type EventChannel = keyof EventContract
@@ -280,7 +318,9 @@ export const EVENT_CHANNELS = [
   'projector:snapshot',
   'projector:progress',
   'canva:captureStatus',
-  'app:showPage'
+  'app:showPage',
+  'appleSync:state',
+  'appleSync:notice'
 ] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>

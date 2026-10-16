@@ -1,7 +1,7 @@
 import type { MenuItemConstructorOptions } from 'electron'
 
 // The macOS menu bar (spec §10.1: Help → Reveal logs). Settings… opens the Settings page; the
-// Edit menu gives text fields copy, paste and undo; Window gives Minimize (⌘M) and Zoom. There is
+// File menu has Sync with Apple Music (⌘⇧S) where sync is available; the Edit menu gives text fields copy, paste and undo; Window gives Minimize (⌘M) and Zoom. There is
 // deliberately no Close Window (⌘W): closing the control window quits the app, mid-dance. The
 // developer tools are offered only in development.
 export function menuTemplate(o: {
@@ -10,6 +10,8 @@ export function menuTemplate(o: {
   showSettings: () => void
   revealLogs: () => void
   revealBackups: () => void
+  appleSync: boolean // Sync with Apple Music is available (macOS)
+  syncAppleMusic: () => void
 }): MenuItemConstructorOptions[] {
   return [
     {
@@ -28,6 +30,21 @@ export function menuTemplate(o: {
         { role: 'quit' }
       ]
     },
+    // File → Sync with Apple Music (sync spec §3.3), where sync is available (macOS).
+    ...(o.appleSync
+      ? ([
+          {
+            label: 'File',
+            submenu: [
+              {
+                label: 'Sync with Apple Music',
+                accelerator: 'CmdOrCtrl+Shift+S',
+                click: o.syncAppleMusic
+              }
+            ]
+          }
+        ] as MenuItemConstructorOptions[])
+      : []),
     { role: 'editMenu' },
     {
       label: 'View',
