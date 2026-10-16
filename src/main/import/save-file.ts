@@ -4,7 +4,13 @@ import type { DatabaseSync } from 'node:sqlite'
 import { mapTags, type ImportMapping, type MappedTags } from './mapping'
 import type { FileFacts } from './read-file'
 
-export type SaveOutcome = 'added' | 'updated' | 'relinked' | 'unchanged'
+export type SaveOutcome =
+  | 'added'
+  | 'updated'
+  | 'relinked'
+  | 'unchanged'
+  | 'restored' // a removed song added again (sync spec §7.3)
+  | 'appleSynced' // already in the library through Apple Music sync (§5.7)
 
 export interface SaveContext {
   source: 'files' | 'apple_xml'
@@ -195,18 +201,59 @@ export function insertFile(
   return fileId
 }
 
+// Sync spec §5.7: while sync is on, Music owns a synced song's file and tags, so Add Music… leaves
+// it alone. §7.3: a removed song added again comes back as a local song with all its data.
+function findSynced(db: DatabaseSync, facts: FileFacts): FileRow | undefined {
+  return db
+    .prepare(
+      "SELECT * FROM files WHERE content_hash = ? AND apple_sync = 'synced' ORDER BY id LIMIT 1"
+    )
+    .get(facts.contentHash) as FileRow | undefined
+}
+
+function findRemoved(db: DatabaseSync, facts: FileFacts): FileRow | undefined {
+  return db
+    .prepare(
+      'SELECT * FROM files WHERE content_hash = ? AND removed_at IS NOT NULL ORDER BY id LIMIT 1'
+    )
+    .get(facts.contentHash) as FileRow | undefined
+}
+
+const restore = (db: DatabaseSync, fileId: number): void =>
+  void db.prepare('UPDATE files SET removed_at = NULL, apple_sync = NULL WHERE id = ?').run(fileId)
+
 export function saveImportedFile(
   db: DatabaseSync,
   facts: FileFacts,
   ctx: SaveContext
 ): { outcome: SaveOutcome; fileId: number } {
   const mapped = mapTags(facts.tags, facts.path, ctx.mapping)
+  const fromFiles = ctx.source === 'files'
 
   const existing = findExisting(db, facts, ctx)
   if (existing) {
+    if (fromFiles && existing.apple_sync === 'synced') {
+      return { outcome: 'appleSynced', fileId: existing.id }
+    }
     const fileChanged = updateFile(db, existing, facts, ctx)
     const songChanged = fillEmptyFields(db, existing.id, mapped)
+    if (existing.removed_at !== null) {
+      restore(db, existing.id)
+      return { outcome: 'restored', fileId: existing.id }
+    }
     return { outcome: fileChanged || songChanged ? 'updated' : 'unchanged', fileId: existing.id }
+  }
+
+  if (fromFiles) {
+    const synced = findSynced(db, facts)
+    if (synced) return { outcome: 'appleSynced', fileId: synced.id }
+    const removed = findRemoved(db, facts)
+    if (removed) {
+      updateFile(db, removed, facts, ctx)
+      fillEmptyFields(db, removed.id, mapped)
+      restore(db, removed.id)
+      return { outcome: 'restored', fileId: removed.id }
+    }
   }
 
   const moved = findMoved(db, facts)

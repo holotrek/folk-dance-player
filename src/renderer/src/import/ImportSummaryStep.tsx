@@ -8,7 +8,9 @@ const CATEGORIES: { key: FileCategory; label: string }[] = [
   { key: 'added', label: 'Added' },
   { key: 'updated', label: 'Updated' },
   { key: 'relinked', label: 'Found after moving' },
+  { key: 'restored', label: 'Restored' },
   { key: 'alreadyPresent', label: 'Already in your library' },
+  { key: 'appleSynced', label: 'Already in library (Apple Music)' },
   { key: 'notFound', label: 'Not found on disk' },
   { key: 'unsupported', label: 'Unsupported format' },
   { key: 'unreadable', label: "Couldn't be read" }

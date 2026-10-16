@@ -31,8 +31,8 @@ export function savedMapping(settings: SettingsStore): ImportMapping {
 }
 
 export class ImportBusyError extends Error {
-  constructor() {
-    super('An import is already running.')
+  constructor(message = 'An import is already running.') {
+    super(message)
     this.name = 'ImportBusyError'
   }
 }
@@ -42,14 +42,23 @@ export interface ImportServiceDeps {
   settings: SettingsStore
   startWorker: StartWorker
   onProgress: (progress: ImportProgress) => void
+  // Sync with Apple Music (sync spec §5.7): Library.xml imports wait until it is off, and nothing
+  // is imported while a sync runs.
+  syncEnabled?: () => boolean
+  isSyncing?: () => boolean
   now?: () => string
 }
 
-const SUMMARY_KEY: Record<SaveOutcome, 'added' | 'updated' | 'relinked' | 'alreadyPresent'> = {
+const SUMMARY_KEY: Record<
+  SaveOutcome,
+  'added' | 'updated' | 'relinked' | 'alreadyPresent' | 'restored' | 'appleSynced'
+> = {
   added: 'added',
   updated: 'updated',
   relinked: 'relinked',
-  unchanged: 'alreadyPresent'
+  unchanged: 'alreadyPresent',
+  restored: 'restored',
+  appleSynced: 'appleSynced'
 }
 
 const FAILURE_KEY = {
@@ -100,6 +109,12 @@ export class ImportService {
 
   async run(request: ImportRequest): Promise<ImportSummary> {
     if (this.current) throw new ImportBusyError()
+    if (this.deps.isSyncing?.()) {
+      throw new ImportBusyError('A sync with Apple Music is running. Try again in a moment.')
+    }
+    if (request.kind === 'apple' && this.deps.syncEnabled?.()) {
+      throw new Error('Turn off Sync with Apple Music to import a Library.xml.')
+    }
     const { db, settings, onProgress } = this.deps
     const mapping = savedMapping(settings)
     const source = request.kind === 'apple' ? 'apple_xml' : 'files'

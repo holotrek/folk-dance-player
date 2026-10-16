@@ -39,6 +39,8 @@ export interface ImportSummary {
   updated: ImportSummaryItem[]
   relinked: ImportSummaryItem[]
   alreadyPresent: ImportSummaryItem[]
+  restored: ImportSummaryItem[] // removed songs whose file was added again (sync spec §7.3)
+  appleSynced: ImportSummaryItem[] // already in the library through Apple Music sync (§5.7)
   notFound: ImportSummaryItem[]
   unsupported: ImportSummaryItem[]
   unreadable: ImportSummaryItem[]
@@ -78,6 +80,8 @@ export function emptySummary(): ImportSummary {
     updated: [],
     relinked: [],
     alreadyPresent: [],
+    restored: [],
+    appleSynced: [],
     notFound: [],
     unsupported: [],
     unreadable: [],

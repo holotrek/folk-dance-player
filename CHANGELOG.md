@@ -12,6 +12,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - **Edit details** in a song's menu ("⋯" or right-click) in the program, Holding and the library list opens the song in the Music page's editor, selected and scrolled into view. Library and Holding rows now have that menu, with Add to / Remove from favorites too.
 - After you link a Canva slide, the dance editor shows **Generating preview…** with a moving bar until the slide's image is saved. Offline, it says the preview will be made when you're back online, and it is made then; if Canva can't be reached, it says so.
+- Adding a song you removed from the library brings it back with its dances, notes and history.
 - Songs removed from the library stay in past programs and Previously played, greyed and labeled "removed", and a program skips them.
 
 ### Fixed
