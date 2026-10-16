@@ -41,6 +41,9 @@ export default function MusicPage(): React.JSX.Element {
   const [confirmRemoveAll, setConfirmRemoveAll] = useState(false)
   const sync = useAppleSync(api)
   const syncOn = sync !== null && sync.state !== 'off'
+  // Keep all / Remove all act on the review list's songs as shown (a search narrows them), so the
+  // confirmation's count is what happens.
+  const shownFileIds = (): number[] => store.getState().rows.map((r) => r.fileId)
   const playlists = useLibrary((s) => s.playlists)
   // A mirror of a Music playlist is read-only (sync spec §6.3).
   const inMirror =
@@ -123,7 +126,7 @@ export default function MusicPage(): React.JSX.Element {
           </Button>
           <Button
             variant="default"
-            onClick={() => act(() => api.invoke('appleSync:resolveAll', 'keep'))}
+            onClick={() => act(() => api.invoke('appleSync:resolve', shownFileIds(), 'keep'))}
           >
             Keep all
           </Button>
@@ -216,7 +219,7 @@ export default function MusicPage(): React.JSX.Element {
         message="They leave the library. Their dances, notes and history are kept, and come back if the same file is added again."
         confirmLabel={`Remove ${rows.length} ${rows.length === 1 ? 'song' : 'songs'}`}
         danger
-        onConfirm={() => void act(() => api.invoke('appleSync:resolveAll', 'remove'))}
+        onConfirm={() => void act(() => api.invoke('appleSync:resolve', shownFileIds(), 'remove'))}
         onClose={() => setConfirmRemoveAll(false)}
       />
     </div>

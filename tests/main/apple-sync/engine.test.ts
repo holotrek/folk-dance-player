@@ -199,6 +199,19 @@ describe('runSync', () => {
     ).toEqual({ m: 1, s: 'synced' })
   })
 
+  // Final review: gone means "no longer in the snapshot" (sync spec §5.5), not "no longer synced".
+  test('a track still in Music but no longer syncable (now cloud-only) is not sent to review', async () => {
+    await sync(library())
+    const summary = await sync(
+      library([
+        snapTrack(1, kolo, { title: 'Kolo', genre: 'Serbia' }),
+        snapTrack(2, hora, { title: 'Hora', locationType: 'remote', location: null })
+      ])
+    )
+    expect(summary.gone).toEqual([])
+    expect(reviewCount(db)).toBe(0)
+  })
+
   test('a new track whose file is missing is counted, not added', async () => {
     const summary = await sync(library([snapTrack(1, join(dir.path, 'nowhere.mp3'))]))
     expect(summary.missing).toHaveLength(1)

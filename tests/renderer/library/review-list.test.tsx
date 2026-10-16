@@ -42,7 +42,8 @@ const gone = [row(1, 'Kolo', false), row(2, 'Hora', true)]
 function setup(reviewCount = 2) {
   const fake = createFakeApi({
     'appleSync:status': status(reviewCount),
-    'library:list': (query: LibraryQuery) => (query.filter.kind === 'review' ? gone : []),
+    'library:list': (query: LibraryQuery) =>
+      query.filter.kind === 'review' ? gone.filter((r) => r.title.includes(query.search)) : [],
     'library:stats': { fileCount: 2 },
     'library:song': null,
     'appleSync:resolve': undefined,
@@ -97,11 +98,24 @@ describe('Removed from Apple Music', () => {
   test('Keep all acts at once; Remove all asks first', async () => {
     const { fake, user } = setup()
     await user.click(await screen.findByText('Removed from Apple Music (2)'))
-    await user.click(await screen.findByRole('button', { name: 'Keep all' }))
-    expect(fake.callsTo('appleSync:resolveAll')).toEqual([['keep']])
+    await screen.findByText('Kolo')
+    await user.click(screen.getByRole('button', { name: 'Keep all' }))
+    expect(fake.callsTo('appleSync:resolve')).toEqual([[[101, 102], 'keep']])
     await user.click(screen.getByRole('button', { name: 'Remove all' }))
     await user.click(await screen.findByRole('button', { name: 'Remove 2 songs' }))
-    expect(fake.callsTo('appleSync:resolveAll').at(-1)).toEqual(['remove'])
+    expect(fake.callsTo('appleSync:resolve').at(-1)).toEqual([[101, 102], 'remove'])
+  })
+
+  // Final review: with a search typed, "all" means the songs shown, as the dialog says.
+  test('with a search, Remove all removes only the songs shown', async () => {
+    const { fake, user } = setup()
+    await user.click(await screen.findByText('Removed from Apple Music (2)'))
+    await user.type(screen.getByRole('searchbox', { name: 'Search music' }), 'Kolo')
+    await waitFor(() => expect(screen.queryByText('Hora')).not.toBeInTheDocument())
+    await user.click(screen.getByRole('button', { name: 'Remove all' }))
+    await user.click(await screen.findByRole('button', { name: 'Remove 1 song' }))
+    expect(fake.callsTo('appleSync:resolve').at(-1)).toEqual([[101], 'remove'])
+    expect(fake.callsTo('appleSync:resolveAll')).toEqual([])
   })
 
   test('Import from Apple Music… is hidden while sync is on', async () => {

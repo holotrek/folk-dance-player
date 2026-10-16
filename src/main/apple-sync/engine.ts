@@ -117,7 +117,10 @@ export async function runSync(
     report(track.path)
   })
 
-  summary.gone = inTransaction(db, () => markGone(db, livePids, deps.exists))
+  // Gone means no longer in the snapshot (§5.5): a track Music still has but that is skipped now
+  // (cloud-only, converted to an unsupported format) keeps its song out of the review list.
+  const inSnapshot = new Set(snapshot.tracks.map((t) => t.persistentId))
+  summary.gone = inTransaction(db, () => markGone(db, inSnapshot, deps.exists))
   summary.playlists = inTransaction(db, () =>
     syncPlaylists(db, snapshot, syncedFileIds(db), decisions, deps.now())
   )
