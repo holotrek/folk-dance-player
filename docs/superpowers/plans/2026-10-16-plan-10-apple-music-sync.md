@@ -6790,3 +6790,39 @@ git commit -m "docs: Sync with Apple Music in the specs, decisions and hardware 
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 ```
+
+---
+
+## Changes after execution
+
+**Executed natively in one session, rebased onto `main` after Plan 9 merged (b309a67).**
+
+**Departures from the tasks (rulings made while executing):**
+- **Test placement:** several tasks' tests went into new files rather than the existing ones named in the plan:
+  - `tests/main/library/removed-songs.test.ts` and `tests/renderer/program/removed-songs.test.tsx`
+  - `tests/main/import/sync-rules.test.ts` and `tests/renderer/import-summary.test.tsx`
+  - `tests/main/ipc/apple-sync-handlers.test.ts`
+  - `tests/renderer/library/review-list.test.tsx` and `tests/renderer/library/mirrors.test.tsx`
+  - `readTracks` is tested in `tests/main/apple-sync/engine.test.ts`.
+- **End-to-end test:** it is in its own `e2e/apple-sync.spec.ts`, because `app.spec.ts`'s `beforeEach` imports music first.
+- **Sync switch:** Mantine puts a switch's description inside its label, so tests find the switch by the start of its name (`/^Sync with Apple Music/`).
+- **"Copies of local songs" test:** it expects `relinked`, because its first path isn't on disk.
+
+**Final review (a fresh reviewer): no Critical findings, 2 Important, 10 Minor.** Both Important findings were fixed:
+- **Gone means "not in the snapshot".** A track Music still has but now skips (cloud-only, ALAC) doesn't send its song to review. Hardware check 22 covers the unplugged-drive case.
+- **Keep all / Remove all act on the songs shown,** so a typed search narrows them, and the confirmation's count is what happens.
+
+**The user went through the minors one by one, and fixed nine:**
+1. Turning sync on waits for an off still in progress ("Waiting for the last sync to finish…").
+2. No sync starts after sync is off.
+3. The first sync waits for a running import and keeps the choices ("Waiting for the import to finish…").
+4. A different library is found by `preview()` and asked about before the mapping step. `enable(decisions, switchLibrary)` adopts it.
+5. A sync that changes only missing states refreshes the lists quietly (`SyncSummary.missingChanged`).
+6. Rows matched before reading are claimed, so another track's audio match can't take them.
+7. The dance picker and playlist numbers count only songs that are in the library.
+8. Add Music… finding a review-list song counts as Keep. `importFinished()` re-sends the status, so the review count updates.
+9. A shrink pause: a sync that would send more than half of synced songs, and at least 20, to review pauses. It offers **Sync anyway**, and resumes by itself when Music recovers.
+
+**Deferred:** Minor 10, the 30 s timeout of launch and focus syncs if macOS asks for access again after an update. It waits for hardware check 21.
+
+**Results:** 806 unit tests and 8 end-to-end tests pass.
