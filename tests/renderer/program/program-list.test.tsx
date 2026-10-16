@@ -49,6 +49,7 @@ function setup(
     programs?: ProgramDetail
     programsGet?: () => ProgramDetail
     addTracks?: () => number[]
+    onShowMusic?: () => void
   } = {}
 ) {
   const loaded = options.loaded ?? true
@@ -81,7 +82,8 @@ function setup(
     ) : (
       <ProgramList />
     ),
-    fake.api
+    fake.api,
+    options.onShowMusic
   )
   return fake
 }
@@ -206,6 +208,22 @@ describe('program list', () => {
       within(await menu('STOP / TEACHING')).getByRole('menuitem', { name: 'Remove' })
     )
     expect(fake.callsTo('programs:removeItems')).toEqual([[5, [2]]])
+  })
+
+  test('an item’s menu opens its song on the Music page (Edit details); a STOP has none', async () => {
+    const showMusic = vi.fn()
+    const fake = setup({ onShowMusic: showMusic })
+    const menu = (name: string) => screen.findByRole('menu', { name: `Options for ${name}` })
+    await screen.findByText('Kolo')
+    await userEvent.pointer({ keys: '[MouseRight]', target: rowFor('Hora') })
+    await userEvent.click(
+      within(await menu('Hora')).getByRole('menuitem', { name: 'Edit details' })
+    )
+    expect(showMusic).toHaveBeenCalledTimes(1)
+    // Hora isn't in the library list shown, so the list goes back to All Music to show it.
+    await waitFor(() =>
+      expect(fake.callsTo('library:list').at(-1)?.[0]).toMatchObject({ filter: { kind: 'all' } })
+    )
   })
 
   test('an item’s menu adds its song to favorites, or removes it', async () => {

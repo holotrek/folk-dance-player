@@ -1,6 +1,6 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { act, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import type { CanvaDeck, DanceSlide } from '@shared/canva'
 import DanceSlideField from '@renderer/library/DanceSlideField'
 import { createFakeApi } from '../fake-api'
@@ -65,13 +65,16 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
-  test('adds a deck by pasting its view link, then picks from it', async () => {
+  test("adds a deck by pasting its smart embed link (Canva's Share → Embed), then picks from it", async () => {
     const fake = setup(null, { 'canva:decks': [] })
     const dialog = await open()
     const link = await dialog.findByLabelText('Deck link')
-    await userEvent.type(link, 'https://www.canva.com/design/DAX/TOK/view')
+    expect(dialog.getByText('In Canva: Share → Embed → Smart embed link')).toBeInTheDocument()
+    await userEvent.type(link, 'https://www.canva.com/design/DAX/TOK/view?embed')
     await userEvent.click(dialog.getByRole('button', { name: 'Add deck' }))
-    expect(fake.callsTo('canva:addDeck')).toEqual([['https://www.canva.com/design/DAX/TOK/view']])
+    expect(fake.callsTo('canva:addDeck')).toEqual([
+      ['https://www.canva.com/design/DAX/TOK/view?embed']
+    ])
     expect(await dialog.findByDisplayValue('Workshop')).toBeInTheDocument()
   })
 
@@ -118,5 +121,24 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
     })
     expect(screen.getByText(/no longer in the deck/)).toBeInTheDocument()
     expect(screen.getByText(/Couldn't save the slide image: Timed out/)).toBeInTheDocument()
+  })
+
+  test('while its image is being saved: "Generating preview…" with a moving bar', () => {
+    setup({ ...linked, imageUrl: null })
+    expect(screen.getByText('Generating preview…')).toBeInTheDocument()
+    expect(screen.getByRole('progressbar', { name: 'Generating preview' })).toBeInTheDocument()
+  })
+
+  test('offline, it says the preview waits for the connection; back online, the bar shows', () => {
+    const onLine = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false)
+    setup({ ...linked, imageUrl: null })
+    expect(
+      screen.getByText("The slide preview will be generated when you're back online.")
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('progressbar')).toBeNull()
+    onLine.mockReturnValue(true)
+    act(() => void window.dispatchEvent(new Event('online')))
+    expect(screen.getByRole('progressbar', { name: 'Generating preview' })).toBeInTheDocument()
+    onLine.mockRestore()
   })
 })

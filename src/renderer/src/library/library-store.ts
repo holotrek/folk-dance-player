@@ -12,6 +12,7 @@ export interface LibraryState {
   playlists: PlaylistSummary[]
   selected: number[] // song ids, in the order they were selected
   anchor: number | null // last clicked song, for shift-click ranges
+  scrollTo: number | null // a song the table should scroll into view (then calls `scrolled`)
   refresh(): Promise<void>
   setFilter(filter: LibraryFilter): Promise<void>
   setSearch(search: string): Promise<void>
@@ -20,6 +21,10 @@ export interface LibraryState {
   clearSelection(): void
   selectAll(): void
   selectedRows(): LibraryRow[]
+  // "Edit details": selects the song alone and scrolls to it, showing All Music without the search
+  // when they hide it.
+  reveal(songId: number): Promise<void>
+  scrolled(): void
   // Refetches whenever main reports a library change; returns the unsubscribe function.
   watch(): () => void
 }
@@ -41,6 +46,7 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
     playlists: [],
     selected: [],
     anchor: null,
+    scrollTo: null,
 
     async refresh() {
       const request = ++latest
@@ -108,6 +114,17 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
       const chosen = new Set(selected)
       return rows.filter((r) => chosen.has(r.songId))
     },
+
+    async reveal(songId) {
+      if (!get().rows.some((r) => r.songId === songId)) {
+        const sort = get().sort.column === 'position' ? TITLE_SORT : get().sort
+        set({ filter: { kind: 'all' }, search: '', sort })
+        await get().refresh()
+      }
+      set({ selected: [songId], anchor: songId, scrollTo: songId })
+    },
+
+    scrolled: () => set({ scrollTo: null }),
 
     watch: () => api.on('library:changed', () => void get().refresh())
   }))

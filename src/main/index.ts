@@ -24,6 +24,7 @@ import { CanvaService } from './canva/canva-service'
 import { CaptureQueue } from './canva/capture-queue'
 import { slideImagePath } from './canva/decks'
 import { canvaFetcher, createCanvaPage, createLiveView } from './canva/electron-canva'
+import { ConnectionWatcher } from './canva/connection-watcher'
 import { createSlideCapturer } from './canva/slide-capturer'
 import { backupDatabase } from './db/backup'
 import { openDatabase } from './db/connection'
@@ -322,6 +323,7 @@ function startApp(): void {
     db,
     fetcher: canvaFetcher,
     queue: captures,
+    online: () => net.isOnline(),
     onChange: libraryChanged
   })
 
@@ -482,9 +484,17 @@ function startApp(): void {
 
   controller.start()
   activity.start()
-  // Re-read the decks and capture linked slides that have no image yet (spec §8.3).
+  // Re-read the decks and capture linked slides that have no image yet (spec §8.3), now and
+  // whenever the connection comes back.
   void canva.startup(net.isOnline())
+  const connection = new ConnectionWatcher({
+    isOnline: () => net.isOnline(),
+    onReconnect: () => void canva.catchUp(),
+    whileOnline: () => void canva.retryIfWaiting()
+  })
+  connection.start()
   app.on('will-quit', () => {
+    connection.stop()
     activity.stop()
     globalShortcut.unregisterAll()
     db.close()

@@ -8,27 +8,38 @@ import {
   captureTargets,
   deckByDesign,
   listDecks,
+  recordCaptureError,
   saveDeck,
   setDanceSlide,
   setDanceSlideByPage,
   type CaptureTarget
 } from './decks'
 
+const UNREACHED =
+  "Couldn't reach Canva to save the slide image. It's tried again when you're back online, or with Refresh slides."
+
 // What the control window asks of Canva (spec §6.3, §8.3): add decks, link slides, refresh.
-// Linking a slide captures its image; a refresh re-reads every deck and re-captures linked slides.
+// Linking a slide captures its image (offline, once the connection is back: `catchUp`); a refresh
+// re-reads every deck and re-captures linked slides.
 export class CanvaService {
+  private waiting = false // a capture was skipped offline and waits for `catchUp`
+
   constructor(
     private readonly deps: {
       db: DatabaseSync
       fetcher: Fetcher
       queue: { enqueue(targets: CaptureTarget[]): void }
+      online(): boolean
       onChange(): void // decks or a dance's slide changed
     }
   ) {}
 
   async addDeck(input: string): Promise<number> {
     const link = normalizeDeckUrl(input)
-    if (!link) throw new CanvaError("Paste the deck's public view link (it ends in /view).")
+    if (!link)
+      throw new CanvaError(
+        "Paste the deck's smart embed link (in Canva: Share → Embed → Smart embed link)."
+      )
     const id = saveDeck(this.deps.db, link, await fetchDeck(this.deps.fetcher, link.viewUrl))
     this.deps.onChange()
     return id
@@ -70,15 +81,33 @@ export class CanvaService {
 
   // At startup, when online: re-read the decks and capture linked slides that have no image yet.
   async startup(online: boolean): Promise<void> {
-    if (!online) return
+    if (online) await this.catchUp()
+  }
+
+  // Online again (or at startup): re-read the decks and capture linked slides with no image yet,
+  // such as those linked while offline.
+  async catchUp(): Promise<void> {
+    this.waiting = false
     this.captureFrom((await this.refreshAll()).read, 'missing')
+  }
+
+  // On every online check: catch up if a capture was skipped offline, even when the drop was too
+  // short for the connection watcher to see.
+  async retryIfWaiting(): Promise<void> {
+    if (this.waiting) await this.catchUp()
   }
 
   // Only decks read fine this time are captured: one that wasn't may show a Wi-Fi login page or
   // Canva's sign-in page, which must never replace a good saved image.
   private captureFrom(read: Set<number>, which: 'all' | 'missing'): void {
-    const targets = captureTargets(this.deps.db, which).filter((t) => read.has(t.deckId))
+    const all = captureTargets(this.deps.db, which)
+    const targets = all.filter((t) => read.has(t.deckId))
     if (targets.length) this.deps.queue.enqueue(targets)
+    // A slide with no image yet, in a deck that couldn't be read, says why instead of waiting: the
+    // dance editor would otherwise show "Generating preview…" forever.
+    const unreached = which === 'missing' ? all.filter((t) => !read.has(t.deckId)) : []
+    for (const t of unreached) recordCaptureError(this.deps.db, t.deckId, t.pageId, UNREACHED)
+    if (unreached.length) this.deps.onChange()
   }
 
   private async refreshAll(): Promise<{ summary: RefreshSummary; read: Set<number> }> {
@@ -107,7 +136,12 @@ export class CanvaService {
     }
   }
 
+  // Offline, a capture could only fail: the slide waits for `catchUp`.
   private captureLinked(deckId: number, pageId: string): void {
+    if (!this.deps.online()) {
+      this.waiting = true
+      return
+    }
     const target = captureTargets(this.deps.db, 'all').find(
       (t) => t.deckId === deckId && t.pageId === pageId
     )

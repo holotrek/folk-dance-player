@@ -129,4 +129,36 @@ describe('library store', () => {
         .map((r) => r.songId)
     ).toEqual([1, 3])
   })
+
+  test('reveal selects a listed song alone and asks the table to scroll to it', async () => {
+    setup()
+    await store.getState().setFilter({ kind: 'favorites' })
+    store.getState().select(1, 'single')
+    await store.getState().reveal(3)
+    expect(store.getState()).toMatchObject({
+      filter: { kind: 'favorites' },
+      selected: [3],
+      anchor: 3,
+      scrollTo: 3
+    })
+    store.getState().scrolled()
+    expect(store.getState().scrollTo).toBeNull()
+  })
+
+  test('reveal shows All Music, without the search, when the song is hidden by them', async () => {
+    let rows = [row(1)]
+    const fake = createFakeApi({
+      'library:list': () => rows,
+      'playlists:list': []
+    })
+    store = createLibraryStore(fake.api)
+    await store.getState().setFilter({ kind: 'playlist', playlistId: 7 })
+    await store.getState().setSearch('ho')
+    rows = [row(1), row(2), row(3)]
+    await store.getState().reveal(3)
+    expect(fake.callsTo('library:list').at(-1)).toEqual([
+      { search: '', filter: { kind: 'all' }, sort: { column: 'title', direction: 'asc' } }
+    ])
+    expect(store.getState()).toMatchObject({ search: '', selected: [3], scrollTo: 3 })
+  })
 })

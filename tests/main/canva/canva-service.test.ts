@@ -28,6 +28,7 @@ function setup(pages = fixture) {
     db,
     fetcher,
     queue: { enqueue: (t) => void queued.push(t) },
+    online: () => online,
     onChange: () => void changes++
   })
   return {
@@ -48,7 +49,7 @@ describe('Canva service', () => {
       { id, viewUrl: VIEW, title: "Dance n' Jam Tunes", pageCount: 4 }
     ])
     expect(changes()).toBe(1)
-    await expect(service.addDeck('https://example.com/x')).rejects.toThrow('public view link')
+    await expect(service.addDeck('https://example.com/x')).rejects.toThrow('smart embed link')
   })
 
   test('linking a slide by number captures its image', async () => {
@@ -90,6 +91,40 @@ describe('Canva service', () => {
     expect(await service.refreshSlides()).toMatchObject({ unreachable: 1 })
     await service.startup(true)
     expect(queued.flat()).toEqual([])
+  })
+
+  test("offline, a newly linked slide isn't captured; back online, it is", async () => {
+    const { db, service, queued, setOnline } = setup()
+    const deckId = await service.addDeck(VIEW)
+    setOnline(false)
+    service.linkSlide(addDance(db, { name: 'A' }), deckId, 1)
+    expect(queued).toEqual([]) // no failed capture to report
+    setOnline(true)
+    await service.catchUp()
+    expect(queued[0].map((t) => t.position)).toEqual([1])
+  })
+
+  test("a slide skipped offline is captured on the next online check, even if the drop wasn't seen", async () => {
+    const { db, service, queued, setOnline } = setup()
+    const deckId = await service.addDeck(VIEW)
+    setOnline(false)
+    service.linkSlide(addDance(db, { name: 'A' }), deckId, 1)
+    setOnline(true)
+    await service.retryIfWaiting()
+    expect(queued.map((batch) => batch.map((t) => t.position))).toEqual([[1]])
+    await service.retryIfWaiting() // nothing waits any more
+    expect(queued).toHaveLength(1)
+  })
+
+  test('Canva unreachable when catching up: a slide with no image shows why, rather than waiting', async () => {
+    const { db, service, queued, setOnline } = setup()
+    const deckId = await service.addDeck(VIEW)
+    setOnline(false)
+    const dance = addDance(db, { name: 'A' })
+    service.linkSlide(dance, deckId, 1)
+    await service.catchUp() // the deck can't be read
+    expect(queued).toEqual([])
+    expect(getDanceSlide(db, dance)?.captureError).toMatch(/Couldn't reach Canva/)
   })
 
   test('at startup: nothing offline; online, decks are re-read and only missing images captured', async () => {

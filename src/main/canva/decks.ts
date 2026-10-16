@@ -69,7 +69,7 @@ export const deckByDesign = (db: DatabaseSync, designId: string): CanvaDeck | nu
 export function saveDeck(db: DatabaseSync, link: DeckLink, parsed: ParsedDeck): number {
   if (parsed.pages.length === 0) {
     throw new CanvaError(
-      "Couldn't read the slides of this deck. Is it shared as a public view link?"
+      "Couldn't read the slides of this deck. Is its smart embed link turned on (Share → Embed)?"
     )
   }
   db.prepare(
@@ -151,7 +151,7 @@ export function setDanceSlideByPage(
 ): void {
   inTransaction(db, () => {
     const deck = deckByDesign(db, designId)
-    if (!deck) throw new CanvaError('Add this deck first, with its public view link.')
+    if (!deck) throw new CanvaError('Add this deck first, with its smart embed link.')
     const index = deckPages(db, deck.id).findIndex((p) => p.id === pageId)
     if (index < 0) throw new CanvaError("That slide isn't in the deck. Try Refresh slides.")
     storeSlide(db, danceId, deck.id, pageId, index + 1)

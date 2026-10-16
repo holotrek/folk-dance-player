@@ -1,7 +1,7 @@
 import type { ProjectorController } from './projector-controller'
 
 const POLL_MS = 250
-const GRACE_MS = 1000 // laptop mode ignores input this soon after opening
+const GRACE_MS = 1000 // laptop mode ignores the mouse this soon after opening
 
 export interface ActivityDeps {
   cursor(): { x: number; y: number } // the mouse position on screen
@@ -14,7 +14,8 @@ export interface ActivityDeps {
 
 // Spec §7.3 and §8.1 laptop mode. The mouse is polled (it moves over the projector window too,
 // which takes no input), and the control window passes on its key presses.
-// - Mouse movement or Esc closes laptop mode, after a 1 s grace.
+// - Esc closes laptop mode at once. Mouse movement closes it too, after a 1 s grace: the click
+//   that turned it on, or a nudge as it opened, mustn't close it straight away.
 // - With projector mode off and music playing, no input for `autoFullscreen.seconds` shows the
 //   view over the laptop.
 export class ActivityWatcher {
@@ -39,7 +40,7 @@ export class ActivityWatcher {
   // A key pressed in the control window.
   keyInput(key: string): void {
     this.last = Date.now()
-    if (key === 'Escape') this.closeLaptop()
+    if (key === 'Escape') this.closeLaptop(false)
   }
 
   private tick(): void {
@@ -53,7 +54,7 @@ export class ActivityWatcher {
     if (cursor.x !== this.cursor.x || cursor.y !== this.cursor.y) {
       this.cursor = cursor
       this.last = now
-      return this.closeLaptop()
+      return this.closeLaptop(true)
     }
 
     const { enabled, seconds } = this.deps.autoFullscreen()
@@ -70,10 +71,10 @@ export class ActivityWatcher {
     }
   }
 
-  private closeLaptop(): void {
+  private closeLaptop(byMouse: boolean): void {
     const status = this.deps.projector.status()
     if (!status.open || status.mode !== 'laptop') return
-    if (this.openedAt !== null && Date.now() - this.openedAt < GRACE_MS) return
+    if (byMouse && this.openedAt !== null && Date.now() - this.openedAt < GRACE_MS) return
     this.deps.projector.dismiss()
     this.openedAt = null
   }

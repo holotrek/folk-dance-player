@@ -6,7 +6,18 @@ import {
 } from '../../../src/main/projector/live-slide'
 
 const deckA = { deckId: 1, viewUrl: 'https://www.canva.com/design/A/x/view' }
-const slide = (pageId: string, position: number, deck = deckA) => ({ ...deck, pageId, position })
+const image = (pageId: string) => `fdp-media://slide/1/${pageId}`
+const slide = (
+  pageId: string,
+  position: number,
+  deck = deckA,
+  imageUrl: string | null = image(pageId)
+) => ({
+  ...deck,
+  pageId,
+  position,
+  imageUrl
+})
 
 function setup(online = true) {
   const log: string[] = []
@@ -21,7 +32,9 @@ function setup(online = true) {
         })
       },
       nudge: () => log.push('nudge'),
-      setVisible: (v) => log.push(v ? 'show' : 'hide'),
+      cover: (url) => log.push(`cover ${url ?? 'black'}`),
+      reveal: () => log.push('reveal'),
+      hide: () => log.push('hide'),
       setBounds: (r) => log.push(`bounds ${r.width}x${r.height}`),
       destroy: () => log.push('destroy')
     }
@@ -35,41 +48,48 @@ function setup(online = true) {
     size: () => ({ width: 1920, height: 1080 }),
     onChange
   })
-  return { live, log, onChange, views, load: (ok = true) => finishLoad(ok) }
+  return {
+    live,
+    log,
+    onChange,
+    views,
+    load: (ok = true) => finishLoad(ok),
+    setOnline: (o: boolean) => void (online = o)
+  }
 }
 
 describe('the live Canva view over the saved slide image', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
-  test('loads hidden, nudges the mouse, and shows once the controls have faded', async () => {
+  test('loads under a cover of the saved image, nudges the mouse, and is revealed once the controls have faded', async () => {
     const { live, log, onChange, load } = setup()
     live.show(slide('P6', 6))
-    expect(log).toEqual(['bounds 902x508', 'hide', `load ${deckA.viewUrl}#6`])
+    expect(log).toEqual(['bounds 902x508', `cover ${image('P6')}`, `load ${deckA.viewUrl}#6`])
     load()
     await vi.advanceTimersByTimeAsync(0)
     expect(log.at(-1)).toBe('nudge')
     await vi.advanceTimersByTimeAsync(10_999)
     expect(live.isLive(slide('P6', 6))).toBe(false)
     await vi.advanceTimersByTimeAsync(1)
-    expect(log.at(-1)).toBe('show')
+    expect(log.at(-1)).toBe('reveal')
     expect(live.isLive(slide('P6', 6))).toBe(true)
     expect(onChange).toHaveBeenCalledTimes(1)
   })
 
-  test('another slide of the same deck changes in place, hidden briefly', async () => {
+  test('another slide of the same deck changes in place, covered briefly', async () => {
     const { live, log, views, load } = setup()
     live.show(slide('P6', 6))
     load()
     await vi.advanceTimersByTimeAsync(11_000)
     log.length = 0
     live.show(slide('P7', 7))
-    expect(log).toEqual(['hide', `load ${deckA.viewUrl}#7`])
+    expect(log).toEqual([`cover ${image('P7')}`, `load ${deckA.viewUrl}#7`])
     load()
     await vi.advanceTimersByTimeAsync(1_499)
     expect(live.isLive(slide('P7', 7))).toBe(false)
     await vi.advanceTimersByTimeAsync(1)
-    expect(log).toEqual(['hide', `load ${deckA.viewUrl}#7`, 'show'])
+    expect(log).toEqual([`cover ${image('P7')}`, `load ${deckA.viewUrl}#7`, 'reveal'])
     expect(views).toHaveLength(1)
   })
 
@@ -82,9 +102,9 @@ describe('the live Canva view over the saved slide image', () => {
     live.show(slide('P7', 7))
     load()
     await vi.advanceTimersByTimeAsync(1_500)
-    expect(log).toEqual(['hide', `load ${deckA.viewUrl}#7`, 'nudge'])
+    expect(log).toEqual([`cover ${image('P7')}`, `load ${deckA.viewUrl}#7`, 'nudge'])
     await vi.advanceTimersByTimeAsync(9_500)
-    expect(log.at(-1)).toBe('show')
+    expect(log.at(-1)).toBe('reveal')
   })
 
   test('the same slide again changes nothing', async () => {
@@ -110,7 +130,7 @@ describe('the live Canva view over the saved slide image', () => {
     await vi.advanceTimersByTimeAsync(10_000)
     expect(live.isLive(slide('Q1', 1, deckB))).toBe(false)
     await vi.advanceTimersByTimeAsync(1_000)
-    expect(log).toEqual(['hide', `load ${deckB.viewUrl}#1`, 'nudge', 'show'])
+    expect(log).toEqual([`cover ${image('Q1')}`, `load ${deckB.viewUrl}#1`, 'nudge', 'reveal'])
   })
 
   test('switching away before the fade never shows the old slide', async () => {
@@ -120,7 +140,7 @@ describe('the live Canva view over the saved slide image', () => {
     await vi.advanceTimersByTimeAsync(5_000)
     live.show(null)
     await vi.advanceTimersByTimeAsync(20_000)
-    expect(log).not.toContain('show')
+    expect(log).not.toContain('reveal')
     expect(onChange).not.toHaveBeenCalled()
   })
 
@@ -142,8 +162,46 @@ describe('the live Canva view over the saved slide image', () => {
     failing.live.show(slide('P6', 6))
     failing.load(false)
     await vi.advanceTimersByTimeAsync(20_000)
-    expect(failing.log).not.toContain('show')
+    expect(failing.log).not.toContain('reveal')
     expect(failing.live.isLive(slide('P6', 6))).toBe(false)
+  })
+
+  test('a slide with no saved image yet is covered in black; its image covers it once saved', async () => {
+    const { live, log, load } = setup()
+    live.show(slide('P6', 6, deckA, null))
+    expect(log).toContain('cover black')
+    log.length = 0
+    live.show(slide('P6', 6)) // the capture finished while the page loads
+    expect(log).toEqual([`cover ${image('P6')}`])
+    load()
+    await vi.advanceTimersByTimeAsync(11_000)
+    expect(log).toEqual([`cover ${image('P6')}`, 'nudge', 'reveal'])
+    log.length = 0
+    live.show(slide('P6', 6, deckA, `${image('P6')}?v=2`)) // re-captured while live: nothing to do
+    expect(log).toEqual([])
+  })
+
+  test('a slide shown while offline loads once back online, even when only its image changed', async () => {
+    const { live, log, load, setOnline } = setup(false)
+    live.show(slide('P6', 6, deckA, null))
+    expect(log).toEqual([])
+    setOnline(true)
+    live.show(slide('P6', 6)) // the catch-up saved its image: same slide, new image
+    expect(log).toContain(`load ${deckA.viewUrl}#6`)
+    load()
+    await vi.advanceTimersByTimeAsync(11_000)
+    expect(live.isLive(slide('P6', 6))).toBe(true)
+  })
+
+  test('a failed load isn’t retried every time the projector updates', async () => {
+    const { live, log, load } = setup()
+    live.show(slide('P6', 6))
+    load(false)
+    await vi.advanceTimersByTimeAsync(0)
+    log.length = 0
+    live.show(slide('P6', 6))
+    live.show(slide('P6', 6))
+    expect(log).toEqual([])
   })
 
   test('closing destroys the view; the next slide starts a new one', async () => {

@@ -30,22 +30,29 @@ const nextLabel = (player: PlayerState): string | null =>
       ? 'STOP / TEACHING'
       : player.nextUp.label
 
+// The title's parts: only `name` shortens (…) when space runs out, so "Next:" and "in 3…" stay.
+interface Title {
+  before?: string
+  name: string
+  after?: string
+}
+
 // The line under the transport: what's playing, the countdown, or what's next (spec §6.2, §7.2).
-function status(player: PlayerState): { title: string; detail: string | null } {
+function status(player: PlayerState): { title: Title; detail: string | null } {
   const next = nextLabel(player)
   if (player.current) {
-    return { title: player.current.track.label, detail: player.current.track.country }
+    return { title: { name: player.current.track.label }, detail: player.current.track.country }
   }
   if (player.countdown) {
     const n = player.countdown.secondsLeft
     return player.countdown.reason === 'start'
-      ? { title: `Starting in ${n}…`, detail: next }
-      : { title: `Next: ${next ?? ''} in ${n}…`, detail: null }
+      ? { title: { name: `Starting in ${n}…` }, detail: next }
+      : { title: { before: 'Next: ', name: next ?? '', after: ` in ${n}…` }, detail: null }
   }
-  if (player.programId === null) return { title: 'No program loaded', detail: null }
+  if (player.programId === null) return { title: { name: 'No program loaded' }, detail: null }
   return next
-    ? { title: `Next up: ${next}`, detail: null }
-    : { title: 'Nothing left to play', detail: null }
+    ? { title: { before: 'Next up: ', name: next }, detail: null }
+    : { title: { name: 'Nothing left to play' }, detail: null }
 }
 
 // "[✓] Label  after [N] s": an option that waits a number of seconds (auto-continue, auto-show).
@@ -178,8 +185,12 @@ export default function PlayerBar(): React.JSX.Element {
         </ActionIcon>
         <div className={classes.now} aria-live="polite">
           <Group gap={6} wrap="nowrap">
-            <Text fw={600} className={classes.label} data-testid="player-title">
-              {title}
+            <Text fw={600} className={classes.title} data-testid="player-title">
+              {title.before && <span className={classes.fixed}>{title.before}</span>}
+              <span className={classes.label} data-testid="player-title-name">
+                {title.name}
+              </span>
+              {title.after && <span className={classes.fixed}>{title.after}</span>}
             </Text>
             {player.current && player.current.source !== 'program' && (
               <Badge size="xs" variant="light">

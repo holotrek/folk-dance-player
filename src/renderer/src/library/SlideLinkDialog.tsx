@@ -121,8 +121,8 @@ export default function SlideLinkDialog(props: {
               <Group align="flex-end" wrap="nowrap">
                 <TextInput
                   label="Deck link"
-                  description="In Canva: Share → Public view link"
-                  placeholder="https://www.canva.com/design/…/view"
+                  description="In Canva: Share → Embed → Smart embed link"
+                  placeholder="https://www.canva.com/design/…/view?embed"
                   style={{ flex: 1 }}
                   value={deckLink}
                   onChange={(e) => setDeckLink(e.currentTarget.value)}

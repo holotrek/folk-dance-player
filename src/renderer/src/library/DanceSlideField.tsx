@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Button, Group, Image, Stack, Text } from '@mantine/core'
+import { Button, Group, Image, Progress, Stack, Text } from '@mantine/core'
 import type { DanceSlide } from '@shared/canva'
 import { errorMessage } from '../ipc-error'
+import { useOnline } from '../use-online'
 import { useLibraryApi } from './LibraryProvider'
 import SlideLinkDialog from './SlideLinkDialog'
 
@@ -17,6 +18,7 @@ export default function DanceSlideField(props: {
   slide: DanceSlide | null
 }): React.JSX.Element {
   const api = useLibraryApi()
+  const online = useOnline()
   const [linking, setLinking] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const { slide } = props
@@ -71,11 +73,22 @@ export default function DanceSlideField(props: {
             </Text>
           ) : (
             !slide.imageUrl &&
-            slide.status === 'ok' && (
+            slide.status === 'ok' &&
+            (online ? (
+              // Saving the image takes a few seconds, with no progress to report.
+              <Stack gap={4} w={240}>
+                <Text size="sm" c="dimmed">
+                  Generating preview…
+                </Text>
+                <Progress.Root size="sm">
+                  <Progress.Section value={100} animated striped aria-label="Generating preview" />
+                </Progress.Root>
+              </Stack>
+            ) : (
               <Text size="sm" c="dimmed">
-                The slide image is saved in the background.
+                The slide preview will be generated when you're back online.
               </Text>
-            )
+            ))
           )}
         </>
       )}

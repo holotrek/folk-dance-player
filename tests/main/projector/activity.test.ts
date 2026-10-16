@@ -108,6 +108,19 @@ describe('laptop-mode auto-fullscreen (spec §7.3)', () => {
     expect(calls).toEqual(['show', 'dismiss', 'show', 'dismiss'])
   })
 
+  test('Esc closes laptop mode at once: the grace after opening is for the mouse only', () => {
+    status = {
+      enabled: true,
+      open: true,
+      mode: 'laptop',
+      display: 'Built-in',
+      notice: 'No separate display'
+    }
+    vi.advanceTimersByTime(300) // opened from the toggle a moment ago
+    watcher.keyInput('Escape')
+    expect(calls).toEqual(['dismiss'])
+  })
+
   test('laptop mode from the toggle (one display) closes the same way; projector mode never does', () => {
     status = {
       enabled: true,

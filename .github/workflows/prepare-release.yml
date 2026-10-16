@@ -1,8 +1,9 @@
 # Prepare Release (spec §13.4): run from the Actions tab on main. It bumps the version, moves the
 # CHANGELOG's Unreleased notes under it, and opens a draft pull request "Release vX.Y.Z" whose
-# description carries the pre-release hardware checklist (docs/manual-testing). Tick it while
-# testing, read the notes, and click "Ready for review": that starts the PR Gate. Merge it, then
-# run Create Release.
+# description carries the pre-release hardware checklist (docs/manual-testing). Click "Approve
+# workflows to run" (GitHub holds the PR Gate of a pull request opened by a workflow), tick the
+# checklist while testing, read the notes, click "Ready for review" and merge. Then run Create
+# Release.
 name: Prepare Release
 
 on:
@@ -44,16 +45,17 @@ jobs:
           git switch -c "$branch"
           git commit -am "chore(release): v$VERSION"
           git push origin "$branch"
-          # A draft: a pull request opened with this workflow's token starts no workflows, and the
-          # PR Gate runs when a person marks it ready (ready_for_review).
+          # A draft, so it can't be merged before the hardware check. GitHub holds the PR Gate of a
+          # pull request opened with this workflow's token until someone approves it.
           # The description carries the hardware checklist (without its title), so its boxes can be
           # ticked: GitHub makes checkboxes clickable in pull requests, not in files.
           {
             echo "Bumps the version to $VERSION and dates its CHANGELOG notes."
             echo
-            echo "1. Install this version's \`.dmg\` (a **Create Release** dry run on this branch builds one) and tick the checklist below as you go."
-            echo "2. Check the version and notes, then click **Ready for review**: that starts the PR Gate."
-            echo "3. When this is merged, run **Create Release** on main."
+            echo "1. Click **Approve workflows to run** (below): that starts the PR Gate."
+            echo "2. Install this version's \`.dmg\` (a **Create Release** dry run on this branch builds one) and tick the checklist below as you go."
+            echo "3. Check the version and notes, click **Ready for review**, and merge once the checks pass."
+            echo "4. Then run **Create Release** on main."
             echo
             echo "## Pre-release hardware check"
             tail -n +2 docs/manual-testing/pre-release-hardware.md

@@ -1,10 +1,14 @@
 import { slideBox, type Rect } from '@shared/projector'
 
-// The Canva page shown over the projector's slide area: a WebContentsView in Electron.
+// The Canva page shown over the projector's slide area: a WebContentsView in Electron, with a
+// cover over it. A hidden page is throttled by Chromium: Canva never fades its controls and the
+// page keeps its last picture, so the page stays visible under the cover while it gets ready.
 export interface LiveView {
   load(url: string): Promise<void> // resolves once the page has loaded
   nudge(): void // a synthetic mouse pass, so Canva starts fading its controls
-  setVisible(visible: boolean): void
+  cover(imageUrl: string | null): void // the saved image (or black) over the page
+  reveal(): void // the cover goes: the live page shows
+  hide(): void // neither shows
   setBounds(bounds: Rect): void
   destroy(): void
 }
@@ -14,6 +18,7 @@ export interface LiveTarget {
   viewUrl: string
   pageId: string
   position: number
+  imageUrl: string | null // the saved image, which covers the page until it is ready
 }
 
 // Canva fades its controls about 10 s after the last mouse activity; a slide change within a
@@ -22,8 +27,9 @@ const FADE_MS = 11_000
 const HASH_FADE_MS = 1_500
 
 // Spec §8.3, "saved image, then live": the projector page shows the saved image at once, and the
-// live view stays hidden until its controls have faded, then covers the image exactly. Offline, or
-// when the page fails to load, it never shows. `onChange` fires when the view appears or goes.
+// live view stays covered by the same image until its controls have faded, then is revealed over
+// the image exactly. Offline, or when the page fails to load, it never shows. `onChange` fires when
+// the live view appears or goes.
 export class LiveSlide {
   private view: LiveView | null = null
   // The deck the view has loaded with its controls faded. Until the fade, a switch starts over:
@@ -31,6 +37,8 @@ export class LiveSlide {
   private deckUrl: string | null = null
   private target: LiveTarget | null = null
   private live = false
+  private loading = false // a load (and its wait for the fade) is under way for `target`
+  private failed = false // `target`'s page failed to load: it isn't retried until another slide
   private generation = 0
   private timer: ReturnType<typeof setTimeout> | null = null
 
@@ -44,12 +52,19 @@ export class LiveSlide {
   ) {}
 
   show(target: LiveTarget | null): void {
-    if (target && this.target && same(target, this.target)) return
+    // The same slide again, already loading, live or failed. (One first shown offline starts over.)
+    const settled = this.loading || this.live || this.failed
+    if (target && this.target && same(target, this.target) && settled) {
+      // The image was saved (or saved again) while the page loads: it becomes the cover.
+      if (!this.live && target.imageUrl !== this.target.imageUrl) this.view?.cover(target.imageUrl)
+      this.target = target
+      return
+    }
     const wasLive = this.live
     this.cancel()
     this.target = target
     if (!target || !this.deps.online()) {
-      this.view?.setVisible(false)
+      this.view?.hide()
       if (wasLive) this.deps.onChange()
       return
     }
@@ -59,10 +74,11 @@ export class LiveSlide {
       this.resize()
     }
     const view = this.view
-    view.setVisible(false)
+    view.cover(target.imageUrl)
     if (wasLive) this.deps.onChange()
     if (!sameDeck) this.deckUrl = null
     const generation = this.generation
+    this.loading = true
     view.load(`${target.viewUrl}#${target.position}`).then(
       () => {
         if (generation !== this.generation) return
@@ -71,15 +87,19 @@ export class LiveSlide {
           () => {
             this.timer = null
             this.deckUrl = target.viewUrl
+            this.loading = false
             this.live = true
-            view.setVisible(true)
+            view.reveal()
             this.deps.onChange()
           },
           sameDeck ? HASH_FADE_MS : FADE_MS
         )
       },
       () => {
-        if (generation === this.generation) this.deckUrl = null // try a full load next time
+        if (generation !== this.generation) return
+        this.loading = false
+        this.failed = true
+        this.deckUrl = null // try a full load next time
       }
     )
   }
@@ -108,6 +128,8 @@ export class LiveSlide {
     if (this.timer) clearTimeout(this.timer)
     this.timer = null
     this.live = false
+    this.loading = false
+    this.failed = false
   }
 }
 

@@ -17,16 +17,19 @@ import {
 import { useLibraryApi, useLibraryStore } from '../library/LibraryProvider'
 import { moveBefore } from '../library/reorder'
 import { formatTime } from '../format-time'
+import { useEditSong } from '../navigation'
+import { openRowMenu } from '../library/SongMenu'
 import { useProgram, useProgramStore } from './ProgramProvider'
 import classes from './ProgramList.module.css'
 
-// One program item's options: its dance (when the song has several), favorite, a STOP before it,
-// remove.
+// One program item's options: Edit details, its dance (when the song has several), favorite, a STOP
+// before it, remove.
 function ItemMenu(props: {
   item: ProgramItem
   onError: (message: string) => void
 }): React.JSX.Element {
   const api = useLibraryApi()
+  const editSong = useEditSong()
   const program = useProgram((s) => s.program)
   const [dances, setDances] = useState<SongDance[]>([])
   const { item } = props
@@ -55,6 +58,9 @@ function ItemMenu(props: {
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown>
+        {item.kind === 'track' && (
+          <Menu.Item onClick={() => editSong(item.songId)}>Edit details</Menu.Item>
+        )}
         {dances.length > 1 && item.kind === 'track' && (
           <>
             <Menu.Label>Dance</Menu.Label>
@@ -228,10 +234,7 @@ export default function ProgramList(): React.JSX.Element {
               e.stopPropagation()
               drop(e, item.id)
             }}
-            onContextMenu={(e) => {
-              e.preventDefault()
-              ;(e.currentTarget.querySelector('[data-options]') as HTMLElement | null)?.click()
-            }}
+            onContextMenu={openRowMenu}
           >
             {item.kind === 'stop' ? (
               <span className={`${classes.label} ${classes.stopLabel}`}>

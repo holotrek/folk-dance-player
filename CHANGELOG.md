@@ -8,6 +8,18 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Edit details** in a song's menu ("⋯" or right-click) in the program, Holding and the library list opens the song in the Music page's editor, selected and scrolled into view. Library and Holding rows now have that menu, with Add to / Remove from favorites too.
+- After you link a Canva slide, the dance editor shows **Generating preview…** with a moving bar until the slide's image is saved. Offline, it says the preview will be made when you're back online, and it is made then; if Canva can't be reached, it says so.
+
+### Fixed
+
+- Esc closes the projector view over the laptop the first time it's pressed, even right after turning the view on.
+- Canva's buttons no longer show over the live slide on the projector, and changing to another slide of the same deck no longer flashes the previous slide.
+- A long dance name no longer hides the countdown in the player bar: the name is shortened instead ("Next: A long dance na… in 3…").
+- Adding a Canva deck now says where to find its link in Canva: **Share → Embed → Smart embed link**.
+
 ## [0.1.0] - 2026-10-15
 
 ### Added

@@ -155,7 +155,7 @@ The projector uses the same parts with a different emphasis (§8.2): the dance n
 
 **Canva**
 
-- **Decks are added once,** by their public view link (`canva_decks`, §8.3).
+- **Decks are added once,** by their smart embed link (`canva_decks`, §8.3).
 - **A dance's slide** is stored as a **page ID**, which is stable when slides are inserted or moved. The last known position is kept as a fallback.
 
 **Playlists, programs and history**
@@ -303,6 +303,7 @@ PROGRAMS                  [+]
   - **Reordering:** drag and drop.
   - **Adding:** drag songs in from the library, holding, playlists or previously played (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance; when an added song has more than one dance, a "Which dance?" dialog asks, with the default preselected (closing it keeps the defaults).
   - **Each item's menu** ("⋯" or right-click) has its options.
+    - **Edit details** (song items) opens the song in the Music page's editor (below).
     - **Choosing the dance:** each item shows its label (§4 "Labels"). An item whose song has several dances lists every linked dance by its label, with the current one checked, so dances with the same name are told apart by choreographer.
     - **Insert STOP before** and **Remove**.
   - **STOP markers:** inserted with the **+ STOP** button (at the end) or an item's menu (before it).
@@ -311,6 +312,7 @@ PROGRAMS                  [+]
   - **The program's name** is shown above the list, with a ✎ button to rename it.
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
 - **Holding panel:** files with `in_holding`, above the library list, in the order they were placed (`holding_position`). Drag and drop works as in the program: the whole panel takes drops; dropped on a held song, songs go before it, and anywhere else at the end; held songs dragged within the panel move. ✕ releases one, and held songs can be dragged into the program.
+- **Song menus:** every song row in the library list (on both pages) and in Holding has a "⋯" menu, shown on hover (and on the selected library row), or by right-clicking the row: **Edit details** and **Add to / Remove from favorites**. **Edit details** (also in a program item's menu) switches to the Music page with that song selected alone, scrolled into view, and its editor open. If the current filter or search hides the song, the list goes back to All Music without the search.
 - **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection, and the search carries over between the Program and Music pages.
 
 ### 6.3 Music page
@@ -326,10 +328,10 @@ PROGRAMS                  [+]
     - **Per dance:** name, country, choreographer, dance type, difficulty and notes; the pairing's teacher; the Canva slide.
     - **Actions:** set as default; link an existing dance (search by name, choreographer or teacher); create a new dance; unlink.
 - **Linking a Canva slide:**
-  1. Choose a deck from a dropdown that lists decks by title (for example "Dance n' Jam Tunes"), or "+ Add a deck…" to paste a deck's view link once.
+  1. Choose a deck from a dropdown that lists decks by title (for example "Dance n' Jam Tunes"), or "+ Add a deck…" to paste a deck's link once (in Canva: Share → Embed → Smart embed link).
   2. Enter a slide number. The app immediately converts it to the slide's page ID and shows a preview with the slide's title, if it has one, to confirm.
   3. Optionally, paste a page link copied from Canva's share menu instead.
-  - **The slide field** shows the saved image, "Deck · slide N: Title", Change… and Remove. It warns when the slide is no longer in its deck (link it again) or when its image couldn't be saved. The library table has no slide column in v1.
+  - **The slide field** shows the saved image, "Deck · slide N: Title", Change… and Remove. It warns when the slide is no longer in its deck (link it again) or when its image couldn't be saved. While the image is being saved it shows "Generating preview…" with a moving bar; offline, "The slide preview will be generated when you're back online." instead. The library table has no slide column in v1.
 - **Same-name suggestions:** when a dance shares its name with another dance that at least one song uses, the editor asks "Another dance called Lesnoto exists — same dance?". Dances no song uses (left over after unlinking) are never suggested.
   - **Same dance:** links this song to that dance and removes the automatic duplicate, if nothing else uses it.
   - **Different dance:** dismisses the suggestion for that pair, permanently (`distinct_dances`).
@@ -511,7 +513,7 @@ UP NEXT
 
 Verified in the spike with a real 42-slide deck (§11):
 
-- **Decks are added once.** The user pastes a deck's public view link. Any Canva share link is normalized to the plain `https://www.canva.com/design/<designId>/<token>/view` form: a `?embed` suffix and any fragment are removed.
+- **Decks are added once.** The user pastes the deck's link from Canva's **Share → Embed → Smart embed link** (`…/view?embed`); the field's hint says so. Any Canva share link is normalized to the plain `https://www.canva.com/design/<designId>/<token>/view` form: a `?embed` suffix and any fragment are removed.
 - **Reading a deck:** the app fetches that public view page, with no Canva login, and reads:
   - **The presentation title** from the page's `<title>` / `og:title`, for example "Dance n' Jam Tunes". This is how decks are listed in dropdowns.
   - **The ordered list of slides** from the design data embedded in the page. Each slide has a stable page ID (for example `PBrWDbC9tVSzgzvW`) and, if the slide is named in Canva, a title (for example "Ali Paşa").
@@ -534,11 +536,11 @@ Verified in the spike with a real 42-slide deck (§11):
   - `?embed` can be iframed, but its controls never fade.
 - **Hiding Canva's controls:** after a new deck loads, main sends a synthetic mouse pass (several `mouseMove` events, then `mouseLeave`) to the view. Canva then fades its controls (logo, Share, "Create with Canva", page counter, arrows) after about 10 s; without mouse activity they never fade. Another slide of a deck whose controls have already faded is only a `#N` change in the page, and the controls stay hidden, so it gets no mouse pass (one would bring them back). A switch before the fade starts over as a new deck. The projector window ignores the mouse, so the operator's cursor never wakes the controls.
 - **Saved slide images (offline):**
-  - **When captured:** on linking a slide, on "Refresh slides", and in the background at startup when online.
+  - **When captured:** on linking a slide (when online), on "Refresh slides", and in the background at startup and whenever the connection comes back (main checks `net.isOnline()` every 15 s, and a capture skipped offline is retried on the next check that finds the app online): linked slides without a saved image. If such a slide's deck can't be read then, it records why ("Couldn't reach Canva…"), so the dance editor shows that instead of "Generating preview…".
   - **How:** the view is loaded off-screen, nudged, allowed to fade, then captured with `webContents.capturePage()`.
   - **Storage:** saved under the app data folder, keyed by deck and page ID in `slide_cache`, so a moved slide keeps its image.
   - **On failure:** the previous image is kept and `last_error` is recorded, shown as ⚠ on the dance.
-- **What is shown: the saved image first, then live.** The projector shows the saved image at once. The live view loads hidden and is shown only once Canva's controls have faded: 11 s after a new deck loads (after the mouse pass), 1.5 s after another slide of the loaded deck. Switching away before then never shows it. Offline, or when the page fails to load, the saved image stays. With no saved image the slide area stays black until the live view appears. The projector never shows "Loading…" or Canva's controls.
+- **What is shown: the saved image first, then live.** The projector shows the saved image at once. The live view loads under a **cover** showing the same saved image (a second view, on top of it; it appears only once its page has loaded that image, and until then the projector page's own copy shows through), and the cover is removed only once Canva's controls have faded: 11 s after a new deck loads (after the mouse pass), 1.5 s after another slide of the loaded deck. The Canva page is never simply hidden while it gets ready: Chromium throttles a hidden page, so Canva never fades its controls and the page keeps showing its previous slide until it is shown (both seen on real hardware, and reproduced in a spike). Switching away before then never shows it. Offline, or when the page fails to load, the saved image stays. With no saved image the slide area stays black until the live view appears. The projector never shows "Loading…" or Canva's controls.
 - **Capturing details:** at startup when online, only linked slides without a saved image are captured; "Refresh slides" re-captures all of them. Captures run one at a time in an off-screen 1920×1080 window, reused within a deck (12 s for a new deck, 1.5 s for another slide of it), and give up after 45 s.
 - **Canva's pages are untrusted.** The live view and the capture window use their own `persist:canva` session, sandboxed, muted and without a preload. They may navigate only within `https://*.canva.com` and never open windows. The app's own windows are sandboxed too, and only one copy of the app runs.
 - **A slide gone from its deck** keeps its saved image on the projector but is never loaded live (it has no position).
@@ -715,7 +717,7 @@ How to work on the project:
   - **Adding an IPC channel:** add it to the contract, to `INVOKE_CHANNELS`, and to the handlers.
 - **Release checklist** (the workflows do steps 2–4, §13.4):
   1. **Prepare Release** bumps the version and moves `Unreleased` into a dated version section of `CHANGELOG.md`, in a draft release pull request whose description carries the manual hardware checklist (§10.2).
-  2. While the pull request is a draft, the maintainer runs the checklist on that version's `.dmg` and ticks it in the description, then marks it ready and merges it once the PR Gate passes.
+  2. The maintainer approves the pull request's PR Gate run (**Approve workflows to run**). While the pull request is a draft, they run the checklist on that version's `.dmg` and tick it in the description, then mark it ready and merge it once the PR Gate passes.
   3. **Create Release** on main checks the version, tests, builds the installers, checks them with the end-to-end tests, and tags and publishes the GitHub release.
 
 ### 13.3 `AGENTS.md`: decision log and agent guide
@@ -749,7 +751,7 @@ The repo is public, so GitHub's standard hosted runners (Linux, Windows and macO
   - **End-to-end (<os>)**: the end-to-end tests on a matrix of systems, starting with `macos-latest`. Linux (under a virtual display) and Windows join by adding them to the matrix.
   - **CHANGELOG**: a pull request that changes `src/` must change `CHANGELOG.md`, unless it's labeled `no changelog` or comes from Dependabot. It compares the PR's merge commit with today's main, so it sees exactly the PR's changes.
   - Pull requests from forks run with read-only permissions and no secrets (`pull_request`, never `pull_request_target`); GitHub asks before running a first-time contributor's workflows.
-- **Prepare Release** (manual, main only; input, with no default: `major`, `minor`, `patch` or an exact version; the first release is `0.1.0`). It runs `scripts/release.mts prepare`, which bumps the version (`npm version`) and moves the Unreleased notes under a dated `## [x.y.z]` heading, leaving Unreleased empty. The current version is allowed, for the first release. Then it pushes `release/vx.y.z` and opens "Release vx.y.z" **as a draft**. A pull request opened with the workflow's own token starts no workflows, and checks from a separately started (dispatched) run don't count toward a pull request's required checks. Its description is the hardware checklist (`docs/manual-testing/pre-release-hardware.md`, without its title), so the boxes can be ticked there. So the maintainer runs the checklist, reads the version and notes and clicks **Ready for review**: that is a person's action, which starts the PR Gate (`ready_for_review`).
+- **Prepare Release** (manual, main only; input, with no default: `major`, `minor`, `patch` or an exact version; the first release is `0.1.0`). It runs `scripts/release.mts prepare`, which bumps the version (`npm version`) and moves the Unreleased notes under a dated `## [x.y.z]` heading, leaving Unreleased empty. The current version is allowed, for the first release. Then it pushes `release/vx.y.z` and opens "Release vx.y.z" **as a draft**, so it can't be merged before the hardware check. Its description starts with the steps, then the hardware checklist (`docs/manual-testing/pre-release-hardware.md`, without its title), so the boxes can be ticked there. GitHub holds the PR Gate of a pull request opened with a workflow's own token until someone with write access clicks **Approve workflows to run** (since mid-2026; before, it started no run at all, and checks from a separately started, dispatched run don't count toward a pull request's required checks). So the maintainer approves the run, runs the checklist, reads the version and notes, clicks **Ready for review** and merges. The PR Gate doesn't listen for `ready_for_review`: marking a draft ready changes no code, and on the 0.1.0 release PR that second run was cancelled by the first's concurrency group, leaving the PR blocked until it was re-run.
 - **Create Release** (manual, main only), as three jobs, so a release is all or nothing:
   1. **Check the version** (Linux): `scripts/release.mts check` refuses a version that isn't higher than the latest `vx.y.z` tag, or that has no CHANGELOG section.
   2. **Build (<os>)**, a matrix: the unit tests, `npm run dist` (electron-builder never publishes by itself: `--publish never`), the end-to-end tests on the packaged app, and the installer kept as an artifact. Today: `macos-latest`, the Universal `.dmg`. Windows joins as `{ os: windows-latest, installer: 'dist/*.exe' }`, with its electron-builder target and a cross-platform `dist` script (`env -u` is Unix-only).

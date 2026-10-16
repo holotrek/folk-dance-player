@@ -18,12 +18,12 @@ list as a known issue) before the release.
 
 - [ ] Install the `.dmg` (drag the app to Applications; the first time, System Settings → Privacy & Security → **Open Anyway**).
 - [ ] A program has a few songs, with a STOP before one of them (its ⋯ menu → **Insert STOP before**), so the projector shows a Teaching row.
-- [ ] One dance is linked to a Canva slide (Music page → the dance's editor → Canva slide, with the deck's link from Canva's **Share → Embed → Smart embed link**), and a few seconds have passed so its image is saved.
+- [ ] One dance is linked to a Canva slide (Music page → the dance's editor → Canva slide, with the deck's link from Canva's **Share → Embed → Smart embed link**). The editor shows **Generating preview…** with a moving bar until the slide's image appears.
 
 ## A. No projector connected
 
 - [ ] 1. Turn on the **Projector** switch in the player bar: the view covers the laptop and shows its notice.
-- [ ] 2. **Esc** closes it. Turned on again, moving the mouse after a second closes it too.
+- [ ] 2. **Esc** closes it at once, even pressed right after turning it on. Turned on again, moving the mouse after a second closes it too.
 - [ ] 3. Turn on **Auto-show when playing** with a short delay (e.g. 5 s), play a song and don't touch anything: the view appears by itself.
 
 ## B. Projector connected, extended mode

@@ -70,9 +70,9 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 
 ## Releasing
 
-1. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version (for the very first release, `0.1.0`). It opens a **draft** "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Its description carries the hardware checklist from [`docs/manual-testing/pre-release-hardware.md`](docs/manual-testing/pre-release-hardware.md).
+1. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version (for the very first release, `0.1.0`). It opens a **draft** "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Its description carries the hardware checklist from [`docs/manual-testing/pre-release-hardware.md`](docs/manual-testing/pre-release-hardware.md). On the pull request, click **Approve workflows to run**: GitHub holds the PR Gate of a pull request opened by a workflow until someone approves it.
 2. While it's a draft, build the `.dmg` with a **Create Release** dry run on the release branch (or `npm run dist`), install it, and tick the checklist in the description as you go. If something fails, close the pull request and delete its `release/vX.Y.Z` branch (Prepare Release can't push over it), fix the problem on main, and start again from step 1.
-3. Check the version and notes, then click **Ready for review**: that starts the PR Gate (a pull request opened by a workflow starts none by itself). Merge it once its checks pass.
+3. Check the version and notes, then click **Ready for review** (it starts nothing) and merge once the PR Gate's checks pass.
 4. **Actions → Create Release → Run workflow** on main. It refuses a version that isn't higher than the last release or has no CHANGELOG section; otherwise it tests, builds the `.dmg`, checks it with the end-to-end tests, and publishes the GitHub release `vX.Y.Z` with the `.dmg` and the notes.
 5. To try a release without publishing, tick **Dry run** (any branch): the `.dmg` is kept as a workflow artifact for a week.
 
