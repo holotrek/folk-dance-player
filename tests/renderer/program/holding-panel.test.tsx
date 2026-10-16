@@ -1,6 +1,6 @@
-import { act, fireEvent, screen, waitFor } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import type { LibraryQuery, LibraryRow } from '@shared/library'
 import { FILES_MIME } from '@renderer/library/drag'
 import HoldingPanel from '@renderer/program/HoldingPanel'
@@ -16,7 +16,7 @@ const files = (ids: number[]) => ({
 })
 const rowFor = (text: string) => screen.getByText(text).closest('[role=listitem]') as HTMLElement
 
-function setup() {
+function setup(onShowMusic?: () => void) {
   let rows: LibraryRow[] = [held, kolo]
   const fake = createFakeApi({
     'player:getState': playerState(),
@@ -25,7 +25,7 @@ function setup() {
     'library:setFavorite': undefined,
     'player:preview': undefined
   })
-  renderWithLibrary(<HoldingPanel />, fake.api)
+  renderWithLibrary(<HoldingPanel />, fake.api, onShowMusic)
   return { fake, setRows: (r: LibraryRow[]) => (rows = r) }
 }
 
@@ -98,5 +98,22 @@ describe('holding panel', () => {
     const { fake } = setup()
     await userEvent.dblClick(await screen.findByText('Hora'))
     expect(fake.callsTo('player:preview')).toEqual([[101]])
+  })
+
+  test('a held song’s menu (⋯ or right-click): Edit details, and favorites', async () => {
+    const showMusic = vi.fn()
+    const { fake } = setup(showMusic)
+    await screen.findByText('Hora')
+    await userEvent.pointer({ keys: '[MouseRight]', target: rowFor('Hora') })
+    const menu = await screen.findByRole('menu', { name: 'Options for Hora' })
+    await userEvent.click(within(menu).getByRole('menuitem', { name: 'Edit details' }))
+    expect(showMusic).toHaveBeenCalledTimes(1)
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Kolo' }))
+    await userEvent.click(
+      within(await screen.findByRole('menu', { name: 'Options for Kolo' })).getByRole('menuitem', {
+        name: 'Add to favorites'
+      })
+    )
+    expect(fake.callsTo('library:setFavorite')).toEqual([[[102], true]])
   })
 })

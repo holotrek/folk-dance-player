@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Badge, Group, Text, UnstyledButton } from '@mantine/core'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
@@ -7,6 +7,7 @@ import FavoriteToggle from './FavoriteToggle'
 import { carriesFiles, getDraggedFiles, setDraggedFiles } from './drag'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
+import SongMenu, { openRowMenu } from './SongMenu'
 import classes from './LibraryTable.module.css'
 
 interface Column {
@@ -65,6 +66,21 @@ const NUMBER_COLUMN: Column = {
   )
 }
 
+// Last in every row: its "⋯" menu (Edit details, favorites), shown on hover.
+const MENU_COLUMN: Column = {
+  sort: null,
+  label: '',
+  render: (r) => (
+    <SongMenu
+      songId={r.songId}
+      fileId={r.fileId}
+      label={r.label}
+      isFavorite={r.isFavorite}
+      className={classes.options}
+    />
+  )
+}
+
 // The Program page's library list (spec §6.2): the song and its dance, country and teacher.
 const COMPACT = new Set(['', 'Song / Dance', 'Country', 'Teacher', 'Time'])
 const COMPACT_COLUMNS = ALL_COLUMNS.filter((c) => COMPACT.has(c.label))
@@ -86,11 +102,13 @@ export default function LibraryTable({
   const search = useLibrary((s) => s.search)
   const setSort = useLibrary((s) => s.setSort)
   const select = useLibrary((s) => s.select)
+  const scrollTo = useLibrary((s) => s.scrollTo)
   const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
   const inPlaylist = filter.kind === 'playlist'
   const COLUMNS = [
     ...(inPlaylist ? [NUMBER_COLUMN] : []),
-    ...(compact ? COMPACT_COLUMNS : ALL_COLUMNS)
+    ...(compact ? COMPACT_COLUMNS : ALL_COLUMNS),
+    MENU_COLUMN
   ]
   const scroll = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
@@ -100,6 +118,15 @@ export default function LibraryTable({
     overscan: 12,
     initialRect: { width: 1000, height: 600 }
   })
+
+  // "Edit details" asked for a song: bring its row into view once it is listed.
+  useEffect(() => {
+    if (scrollTo === null) return
+    const index = rows.findIndex((r) => r.songId === scrollTo)
+    if (index < 0) return
+    virtualizer.scrollToIndex(index, { align: 'center' })
+    store.getState().scrolled()
+  }, [scrollTo, rows, virtualizer, store])
 
   const chosen = new Set(selected)
   // A search hides some of the playlist, so a move can't be placed within the whole order.
@@ -176,6 +203,7 @@ export default function LibraryTable({
                 }`}
                 style={{ transform: `translateY(${v.start}px)` }}
                 onDoubleClick={() => void api.invoke('player:preview', r.fileId)}
+                onContextMenu={openRowMenu}
                 onClick={(e) =>
                   select(
                     r.songId,

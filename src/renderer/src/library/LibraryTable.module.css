@@ -10,7 +10,7 @@
 
 .row {
   display: grid;
-  grid-template-columns: 28px minmax(220px, 3fr) repeat(4, minmax(90px, 1fr)) 80px 56px;
+  grid-template-columns: 28px minmax(220px, 3fr) repeat(4, minmax(90px, 1fr)) 80px 56px 28px;
   align-items: center;
   column-gap: var(--mantine-spacing-xs);
   padding: 0 var(--mantine-spacing-xs);
@@ -77,16 +77,28 @@
 
 .compact .header,
 .compact .item {
-  grid-template-columns: 28px minmax(160px, 3fr) minmax(70px, 1fr) minmax(70px, 1fr) 48px;
+  grid-template-columns: 28px minmax(160px, 3fr) minmax(70px, 1fr) minmax(70px, 1fr) 48px 28px;
 }
 
 /* In a playlist, a narrow number column comes first. */
 .numbered .header,
 .numbered .item {
-  grid-template-columns: 32px 28px minmax(220px, 3fr) repeat(4, minmax(90px, 1fr)) 80px 56px;
+  grid-template-columns: 32px 28px minmax(220px, 3fr) repeat(4, minmax(90px, 1fr)) 80px 56px 28px;
 }
 
 .numbered.compact .header,
 .numbered.compact .item {
-  grid-template-columns: 32px 28px minmax(160px, 3fr) minmax(70px, 1fr) minmax(70px, 1fr) 48px;
+  grid-template-columns: 32px 28px minmax(160px, 3fr) minmax(70px, 1fr) minmax(70px, 1fr) 48px 28px;
+}
+
+/* A row's "⋯" menu: shown on hover, on the selected row, and while open. */
+.options {
+  opacity: 0;
+}
+
+.item:hover .options,
+.item[aria-selected='true'] .options,
+.options[aria-expanded='true'],
+.options:focus-visible {
+  opacity: 1;
 }

@@ -4,6 +4,7 @@ import type { LibraryRow } from '@shared/library'
 import FavoriteToggle from '../library/FavoriteToggle'
 import { carriesFiles, getDraggedFiles, setDraggedFiles } from '../library/drag'
 import { useLibraryApi } from '../library/LibraryProvider'
+import SongMenu, { openRowMenu } from '../library/SongMenu'
 import classes from './ProgramList.module.css'
 
 const HOLDING = {
@@ -15,7 +16,8 @@ const HOLDING = {
 // Spec §6.2 holding panel: songs set aside for this session, in the order they were placed.
 // Drag and drop works as in the program: songs dropped on a held song go before it, anywhere else
 // in the panel at the end, and held songs dragged within the panel move. Drag them into the
-// program; double-click to preview; the star to favorite; ✕ to release.
+// program; double-click to preview; the star to favorite; ✕ to release; ⋯ or right-click for Edit
+// details.
 export default function HoldingPanel(): React.JSX.Element {
   const api = useLibraryApi()
   const [rows, setRows] = useState<LibraryRow[]>([])
@@ -79,6 +81,7 @@ export default function HoldingPanel(): React.JSX.Element {
               drop(e, r.fileId)
             }}
             onDoubleClick={() => void api.invoke('player:preview', r.fileId)}
+            onContextMenu={openRowMenu}
           >
             <FavoriteToggle fileId={r.fileId} label={r.label} isFavorite={r.isFavorite} />
             <span className={classes.label}>{r.label}</span>
@@ -96,6 +99,13 @@ export default function HoldingPanel(): React.JSX.Element {
             >
               ✕
             </ActionIcon>
+            <SongMenu
+              songId={r.songId}
+              fileId={r.fileId}
+              label={r.label}
+              isFavorite={r.isFavorite}
+              className={classes.options}
+            />
           </div>
         ))}
       </div>

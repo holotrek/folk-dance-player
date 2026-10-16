@@ -57,6 +57,16 @@ test('drag songs into a program, then reorder them', async () => {
   await expect(programItems()).toHaveText([/Kolo/, /Hora/])
 })
 
+test('Edit details on a program item opens its song in the Music page editor', async () => {
+  const { page } = running
+  await drag(running.page, libraryRow('Kolo'), page.getByRole('region', { name: 'Program' }))
+  await programItems().filter({ hasText: 'Kolo' }).click({ button: 'right' })
+  await page.getByRole('menuitem', { name: 'Edit details' }).click()
+  await expect(page.getByRole('tab', { name: 'Music' })).toHaveAttribute('aria-selected', 'true')
+  await expect(libraryRow('Kolo')).toHaveAttribute('aria-selected', 'true')
+  await expect(page.getByRole('complementary', { name: 'Song editor' })).toBeVisible()
+})
+
 test('play, and the projector’s snapshot follows', async () => {
   const { page, invoke } = running
   await drag(running.page, libraryRow('Tfilati'), page.getByRole('region', { name: 'Program' }))

@@ -298,6 +298,7 @@ PROGRAMS                  [+]
   - **Reordering:** drag and drop.
   - **Adding:** drag songs in from the library, holding, playlists or previously played (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance; when an added song has more than one dance, a "Which dance?" dialog asks, with the default preselected (closing it keeps the defaults).
   - **Each item's menu** ("⋯" or right-click) has its options.
+    - **Edit details** (song items) opens the song in the Music page's editor (below).
     - **Choosing the dance:** each item shows its label (§4 "Labels"). An item whose song has several dances lists every linked dance by its label, with the current one checked, so dances with the same name are told apart by choreographer.
     - **Insert STOP before** and **Remove**.
   - **STOP markers:** inserted with the **+ STOP** button (at the end) or an item's menu (before it).
@@ -306,6 +307,7 @@ PROGRAMS                  [+]
   - **The program's name** is shown above the list, with a ✎ button to rename it.
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
 - **Holding panel:** files with `in_holding`, above the library list, in the order they were placed (`holding_position`). Drag and drop works as in the program: the whole panel takes drops; dropped on a held song, songs go before it, and anywhere else at the end; held songs dragged within the panel move. ✕ releases one, and held songs can be dragged into the program.
+- **Song menus:** every song row in the library list (on both pages) and in Holding has a "⋯" menu, shown on hover (and on the selected library row), or by right-clicking the row: **Edit details** and **Add to / Remove from favorites**. **Edit details** (also in a program item's menu) switches to the Music page with that song selected alone, scrolled into view, and its editor open. If the current filter or search hides the song, the list goes back to All Music without the search.
 - **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection, and the search carries over between the Program and Music pages.
 
 ### 6.3 Music page
