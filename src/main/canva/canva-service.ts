@@ -28,7 +28,10 @@ export class CanvaService {
 
   async addDeck(input: string): Promise<number> {
     const link = normalizeDeckUrl(input)
-    if (!link) throw new CanvaError("Paste the deck's public view link (it ends in /view).")
+    if (!link)
+      throw new CanvaError(
+        "Paste the deck's smart embed link (in Canva: Share → Embed → Smart embed link)."
+      )
     const id = saveDeck(this.deps.db, link, await fetchDeck(this.deps.fetcher, link.viewUrl))
     this.deps.onChange()
     return id

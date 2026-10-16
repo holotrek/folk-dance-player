@@ -155,7 +155,7 @@ The projector uses the same parts with a different emphasis (§8.2): the dance n
 
 **Canva**
 
-- **Decks are added once,** by their public view link (`canva_decks`, §8.3).
+- **Decks are added once,** by their smart embed link (`canva_decks`, §8.3).
 - **A dance's slide** is stored as a **page ID**, which is stable when slides are inserted or moved. The last known position is kept as a fallback.
 
 **Playlists, programs and history**
@@ -321,7 +321,7 @@ PROGRAMS                  [+]
     - **Per dance:** name, country, choreographer, dance type, difficulty and notes; the pairing's teacher; the Canva slide.
     - **Actions:** set as default; link an existing dance (search by name, choreographer or teacher); create a new dance; unlink.
 - **Linking a Canva slide:**
-  1. Choose a deck from a dropdown that lists decks by title (for example "Dance n' Jam Tunes"), or "+ Add a deck…" to paste a deck's view link once.
+  1. Choose a deck from a dropdown that lists decks by title (for example "Dance n' Jam Tunes"), or "+ Add a deck…" to paste a deck's link once (in Canva: Share → Embed → Smart embed link).
   2. Enter a slide number. The app immediately converts it to the slide's page ID and shows a preview with the slide's title, if it has one, to confirm.
   3. Optionally, paste a page link copied from Canva's share menu instead.
   - **The slide field** shows the saved image, "Deck · slide N: Title", Change… and Remove. It warns when the slide is no longer in its deck (link it again) or when its image couldn't be saved. The library table has no slide column in v1.
@@ -506,7 +506,7 @@ UP NEXT
 
 Verified in the spike with a real 42-slide deck (§11):
 
-- **Decks are added once.** The user pastes a deck's public view link. Any Canva share link is normalized to the plain `https://www.canva.com/design/<designId>/<token>/view` form: a `?embed` suffix and any fragment are removed.
+- **Decks are added once.** The user pastes the deck's link from Canva's **Share → Embed → Smart embed link** (`…/view?embed`); the field's hint says so. Any Canva share link is normalized to the plain `https://www.canva.com/design/<designId>/<token>/view` form: a `?embed` suffix and any fragment are removed.
 - **Reading a deck:** the app fetches that public view page, with no Canva login, and reads:
   - **The presentation title** from the page's `<title>` / `og:title`, for example "Dance n' Jam Tunes". This is how decks are listed in dropdowns.
   - **The ordered list of slides** from the design data embedded in the page. Each slide has a stable page ID (for example `PBrWDbC9tVSzgzvW`) and, if the slide is named in Canva, a title (for example "Ali Paşa").

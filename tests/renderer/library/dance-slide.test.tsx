@@ -65,13 +65,16 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
-  test('adds a deck by pasting its view link, then picks from it', async () => {
+  test("adds a deck by pasting its smart embed link (Canva's Share → Embed), then picks from it", async () => {
     const fake = setup(null, { 'canva:decks': [] })
     const dialog = await open()
     const link = await dialog.findByLabelText('Deck link')
-    await userEvent.type(link, 'https://www.canva.com/design/DAX/TOK/view')
+    expect(dialog.getByText('In Canva: Share → Embed → Smart embed link')).toBeInTheDocument()
+    await userEvent.type(link, 'https://www.canva.com/design/DAX/TOK/view?embed')
     await userEvent.click(dialog.getByRole('button', { name: 'Add deck' }))
-    expect(fake.callsTo('canva:addDeck')).toEqual([['https://www.canva.com/design/DAX/TOK/view']])
+    expect(fake.callsTo('canva:addDeck')).toEqual([
+      ['https://www.canva.com/design/DAX/TOK/view?embed']
+    ])
     expect(await dialog.findByDisplayValue('Workshop')).toBeInTheDocument()
   })
 

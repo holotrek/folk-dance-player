@@ -48,7 +48,7 @@ describe('Canva service', () => {
       { id, viewUrl: VIEW, title: "Dance n' Jam Tunes", pageCount: 4 }
     ])
     expect(changes()).toBe(1)
-    await expect(service.addDeck('https://example.com/x')).rejects.toThrow('public view link')
+    await expect(service.addDeck('https://example.com/x')).rejects.toThrow('smart embed link')
   })
 
   test('linking a slide by number captures its image', async () => {
