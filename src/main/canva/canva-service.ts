@@ -15,13 +15,15 @@ import {
 } from './decks'
 
 // What the control window asks of Canva (spec §6.3, §8.3): add decks, link slides, refresh.
-// Linking a slide captures its image; a refresh re-reads every deck and re-captures linked slides.
+// Linking a slide captures its image (offline, once the connection is back: `catchUp`); a refresh
+// re-reads every deck and re-captures linked slides.
 export class CanvaService {
   constructor(
     private readonly deps: {
       db: DatabaseSync
       fetcher: Fetcher
       queue: { enqueue(targets: CaptureTarget[]): void }
+      online(): boolean
       onChange(): void // decks or a dance's slide changed
     }
   ) {}
@@ -73,7 +75,12 @@ export class CanvaService {
 
   // At startup, when online: re-read the decks and capture linked slides that have no image yet.
   async startup(online: boolean): Promise<void> {
-    if (!online) return
+    if (online) await this.catchUp()
+  }
+
+  // Online again (or at startup): re-read the decks and capture linked slides with no image yet,
+  // such as those linked while offline.
+  async catchUp(): Promise<void> {
     this.captureFrom((await this.refreshAll()).read, 'missing')
   }
 
@@ -110,7 +117,9 @@ export class CanvaService {
     }
   }
 
+  // Offline, a capture could only fail: the slide waits for `catchUp`.
   private captureLinked(deckId: number, pageId: string): void {
+    if (!this.deps.online()) return
     const target = captureTargets(this.deps.db, 'all').find(
       (t) => t.deckId === deckId && t.pageId === pageId
     )

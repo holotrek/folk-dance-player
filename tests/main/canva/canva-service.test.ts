@@ -28,6 +28,7 @@ function setup(pages = fixture) {
     db,
     fetcher,
     queue: { enqueue: (t) => void queued.push(t) },
+    online: () => online,
     onChange: () => void changes++
   })
   return {
@@ -90,6 +91,17 @@ describe('Canva service', () => {
     expect(await service.refreshSlides()).toMatchObject({ unreachable: 1 })
     await service.startup(true)
     expect(queued.flat()).toEqual([])
+  })
+
+  test("offline, a newly linked slide isn't captured; back online, it is", async () => {
+    const { db, service, queued, setOnline } = setup()
+    const deckId = await service.addDeck(VIEW)
+    setOnline(false)
+    service.linkSlide(addDance(db, { name: 'A' }), deckId, 1)
+    expect(queued).toEqual([]) // no failed capture to report
+    setOnline(true)
+    await service.catchUp()
+    expect(queued[0].map((t) => t.position)).toEqual([1])
   })
 
   test('at startup: nothing offline; online, decks are re-read and only missing images captured', async () => {

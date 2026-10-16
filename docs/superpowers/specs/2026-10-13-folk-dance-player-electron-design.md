@@ -324,7 +324,7 @@ PROGRAMS                  [+]
   1. Choose a deck from a dropdown that lists decks by title (for example "Dance n' Jam Tunes"), or "+ Add a deck…" to paste a deck's link once (in Canva: Share → Embed → Smart embed link).
   2. Enter a slide number. The app immediately converts it to the slide's page ID and shows a preview with the slide's title, if it has one, to confirm.
   3. Optionally, paste a page link copied from Canva's share menu instead.
-  - **The slide field** shows the saved image, "Deck · slide N: Title", Change… and Remove. It warns when the slide is no longer in its deck (link it again) or when its image couldn't be saved. The library table has no slide column in v1.
+  - **The slide field** shows the saved image, "Deck · slide N: Title", Change… and Remove. It warns when the slide is no longer in its deck (link it again) or when its image couldn't be saved. While the image is being saved it shows "Generating preview…" with a moving bar; offline, "The slide preview will be generated when you're back online." instead. The library table has no slide column in v1.
 - **Same-name suggestions:** when a dance shares its name with another dance that at least one song uses, the editor asks "Another dance called Lesnoto exists — same dance?". Dances no song uses (left over after unlinking) are never suggested.
   - **Same dance:** links this song to that dance and removes the automatic duplicate, if nothing else uses it.
   - **Different dance:** dismisses the suggestion for that pair, permanently (`distinct_dances`).
@@ -529,7 +529,7 @@ Verified in the spike with a real 42-slide deck (§11):
   - `?embed` can be iframed, but its controls never fade.
 - **Hiding Canva's controls:** after a new deck loads, main sends a synthetic mouse pass (several `mouseMove` events, then `mouseLeave`) to the view. Canva then fades its controls (logo, Share, "Create with Canva", page counter, arrows) after about 10 s; without mouse activity they never fade. Another slide of a deck whose controls have already faded is only a `#N` change in the page, and the controls stay hidden, so it gets no mouse pass (one would bring them back). A switch before the fade starts over as a new deck. The projector window ignores the mouse, so the operator's cursor never wakes the controls.
 - **Saved slide images (offline):**
-  - **When captured:** on linking a slide, on "Refresh slides", and in the background at startup when online.
+  - **When captured:** on linking a slide (when online), on "Refresh slides", and in the background at startup and whenever the connection comes back (main checks `net.isOnline()` every 15 s): linked slides without a saved image.
   - **How:** the view is loaded off-screen, nudged, allowed to fade, then captured with `webContents.capturePage()`.
   - **Storage:** saved under the app data folder, keyed by deck and page ID in `slide_cache`, so a moved slide keeps its image.
   - **On failure:** the previous image is kept and `last_error` is recorded, shown as ⚠ on the dance.

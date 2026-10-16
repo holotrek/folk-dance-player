@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- After you link a Canva slide, the dance editor shows **Generating preview…** with a moving bar until the slide's image is saved. Offline, it says the preview will be made when you're back online, and it is.
+
 ### Fixed
 
 - Esc closes the projector view over the laptop the first time it's pressed, even right after turning the view on.

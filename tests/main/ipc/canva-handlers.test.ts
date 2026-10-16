@@ -24,6 +24,7 @@ function setup(withCanva = true) {
     db,
     fetcher: async () => ({ status: 200, text: async () => fixture, headers: { get: () => null } }),
     queue: { enqueue: (t) => void queued.push(t) },
+    online: () => true,
     onChange: () => void libraryChanges++
   })
   const deps: HandlerDeps = {
