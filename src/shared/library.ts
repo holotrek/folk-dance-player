@@ -123,6 +123,8 @@ export interface PlaylistSummary {
   name: string
   source: 'local' | 'apple_xml'
   itemCount: number
+  mirror: boolean // a read-only mirror of a Music playlist (sync spec §6.3)
+  folderId: number | null // its Music folder
 }
 
 // Autocomplete lists (spec §4): teachers and choreographers share one list.

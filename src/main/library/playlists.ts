@@ -1,4 +1,5 @@
 import type { DatabaseSync } from 'node:sqlite'
+import type { PlaylistFolder } from '@shared/apple-sync'
 import type { PlaylistSummary } from '@shared/library'
 import { inTransaction } from '../db/transaction'
 import { LibraryEditError } from './edit'
@@ -16,15 +17,35 @@ const touch = (db: DatabaseSync, playlistId: number): void => {
   db.prepare(`UPDATE playlists SET modified_at = ${NOW} WHERE id = ?`).run(playlistId)
 }
 
+// Main rejects writes to a mirror of a Music playlist (sync spec §6.3), so the rule doesn't depend
+// on the UI.
+function requireEditable(db: DatabaseSync, playlistId: number): void {
+  const row = db.prepare('SELECT apple_sync FROM playlists WHERE id = ?').get(playlistId) as
+    { apple_sync: number } | undefined
+  if (row?.apple_sync === 1) throw new LibraryEditError('Edit this playlist in Music.')
+}
+
+// Mirrors first, in name order (their folders come from listPlaylistFolders), then local playlists.
 export function listPlaylists(db: DatabaseSync): PlaylistSummary[] {
-  return db
+  const rows = db
     .prepare(
-      `SELECT p.id, p.name, p.source,
+      `SELECT p.id, p.name, p.source, p.apple_sync AS mirror, p.folder_id AS folderId,
          (SELECT COUNT(*) FROM playlist_items i JOIN files f ON f.id = i.file_id
           WHERE i.playlist_id = p.id AND f.removed_at IS NULL) AS itemCount
-       FROM playlists p ORDER BY p.name COLLATE NOCASE, p.id`
+       FROM playlists p ORDER BY p.apple_sync DESC, p.name COLLATE NOCASE, p.id`
     )
-    .all() as unknown as PlaylistSummary[]
+    .all() as unknown as (Omit<PlaylistSummary, 'mirror'> & { mirror: number })[]
+  return rows.map((r) => ({ ...r, mirror: r.mirror === 1 }))
+}
+
+// Music's playlist folders (sync spec §6.2), in Music's order.
+export function listPlaylistFolders(db: DatabaseSync): PlaylistFolder[] {
+  return db
+    .prepare(
+      `SELECT id, name, parent_id AS parentId, apple_persistent_id AS persistentId
+       FROM playlist_folders ORDER BY position, id`
+    )
+    .all() as unknown as PlaylistFolder[]
 }
 
 export function createPlaylist(db: DatabaseSync, playlistName: string): number {
@@ -35,6 +56,7 @@ export function createPlaylist(db: DatabaseSync, playlistName: string): number {
 }
 
 export function renamePlaylist(db: DatabaseSync, playlistId: number, playlistName: string): void {
+  requireEditable(db, playlistId)
   db.prepare(`UPDATE playlists SET name = ?, modified_at = ${NOW} WHERE id = ?`).run(
     name(playlistName),
     playlistId
@@ -42,6 +64,7 @@ export function renamePlaylist(db: DatabaseSync, playlistId: number, playlistNam
 }
 
 export function deletePlaylist(db: DatabaseSync, playlistId: number): void {
+  requireEditable(db, playlistId)
   db.prepare('DELETE FROM playlists WHERE id = ?').run(playlistId)
 }
 
@@ -61,6 +84,7 @@ export function duplicatePlaylist(db: DatabaseSync, playlistId: number): number 
 
 // Appends songs to the end of a playlist; songs already in it are skipped.
 export function addToPlaylist(db: DatabaseSync, playlistId: number, fileIds: number[]): void {
+  requireEditable(db, playlistId)
   inTransaction(db, () => {
     const present = new Set(
       db
@@ -88,6 +112,7 @@ export function addToPlaylist(db: DatabaseSync, playlistId: number, fileIds: num
 }
 
 export function removeFromPlaylist(db: DatabaseSync, playlistId: number, itemIds: number[]): void {
+  requireEditable(db, playlistId)
   inTransaction(db, () => {
     const remove = db.prepare('DELETE FROM playlist_items WHERE playlist_id = ? AND id = ?')
     for (const id of itemIds) remove.run(playlistId, id)
@@ -97,6 +122,7 @@ export function removeFromPlaylist(db: DatabaseSync, playlistId: number, itemIds
 
 // `itemIds` is the playlist's complete new order.
 export function reorderPlaylist(db: DatabaseSync, playlistId: number, itemIds: number[]): void {
+  requireEditable(db, playlistId)
   inTransaction(db, () => {
     const current = db
       .prepare('SELECT id FROM playlist_items WHERE playlist_id = ?')

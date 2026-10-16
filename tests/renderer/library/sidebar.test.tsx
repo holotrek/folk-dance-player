@@ -8,8 +8,8 @@ import { createFakeApi } from '../fake-api'
 import { renderWithLibrary } from './render-library'
 
 const playlists: PlaylistSummary[] = [
-  { id: 1, name: 'Balkan', source: 'apple_xml', itemCount: 12 },
-  { id: 2, name: 'Couple dances', source: 'local', itemCount: 3 }
+  { id: 1, name: 'Balkan', source: 'apple_xml', itemCount: 12, mirror: false, folderId: null },
+  { id: 2, name: 'Couple dances', source: 'local', itemCount: 3, mirror: false, folderId: null }
 ]
 
 function setup(extra = {}) {
