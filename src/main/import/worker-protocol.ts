@@ -1,11 +1,23 @@
 import type { AppleSelection, ApplePreview } from '@shared/import'
 import type { ApplePlaylist } from './apple-library'
+import type { RawTags } from './mapping'
 import type { ReadResult } from './read-file'
 
 // Messages between ImportService (main process) and the import worker (utility process).
 
+// A file Sync with Apple Music needs read (new, moved or changed), with Music's tags (sync spec §5.3).
+export interface KnownTrack {
+  key: number // the caller's reference, echoed as the result's apple.trackId
+  path: string
+  persistentId: string
+  tags: RawTags
+  durationMs: number | null
+  kind: string | null
+}
+
 export type WorkerJob =
   | { kind: 'preview-apple'; xmlPath: string }
+  | { kind: 'read-known'; tracks: KnownTrack[] }
   | { kind: 'import-paths'; paths: string[] }
   | { kind: 'import-apple'; xmlPath: string; selection: AppleSelection }
 

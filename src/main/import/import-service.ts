@@ -12,7 +12,23 @@ import type { ImportMapping } from './mapping'
 import { saveImportedFile, type SaveOutcome } from './save-file'
 import { findEditedApplePlaylists, saveApplePlaylists } from './save-playlists'
 import type { ApplePlaylist } from './apple-library'
-import type { StartWorker, WorkerHandle, WorkerJob, WorkerMessage } from './worker-protocol'
+import type { ReadResult } from './read-file'
+import type {
+  KnownTrack,
+  StartWorker,
+  WorkerHandle,
+  WorkerJob,
+  WorkerMessage
+} from './worker-protocol'
+
+// The mapping saved in Settings (main spec §5.2): imports and every sync use it.
+export function savedMapping(settings: SettingsStore): ImportMapping {
+  return {
+    artistTagTarget: settings.get('import.artistTagTarget'),
+    albumArtistTagTarget: settings.get('import.albumArtistTagTarget'),
+    genreIsCountry: settings.get('import.genreIsCountry')
+  }
+}
 
 export class ImportBusyError extends Error {
   constructor() {
@@ -59,6 +75,23 @@ export class ImportService {
     return findEditedApplePlaylists(this.deps.db, persistentIds)
   }
 
+  get busy(): boolean {
+    return this.current !== null
+  }
+
+  // Reads files for Sync with Apple Music (sync spec §5.3) on the import worker, one job at a time
+  // with imports (ImportBusyError while one runs). Each result is passed on as it arrives, so the
+  // caller saves files one by one.
+  async readTracks(
+    tracks: KnownTrack[],
+    onResult: (key: number, result: ReadResult) => void
+  ): Promise<void> {
+    if (tracks.length === 0) return
+    await this.runWorker({ kind: 'read-known', tracks }, (message) => {
+      if (message.type === 'file' && message.apple) onResult(message.apple.trackId, message.result)
+    })
+  }
+
   cancel(): void {
     if (!this.current) return
     this.cancelRequested = true
@@ -68,11 +101,7 @@ export class ImportService {
   async run(request: ImportRequest): Promise<ImportSummary> {
     if (this.current) throw new ImportBusyError()
     const { db, settings, onProgress } = this.deps
-    const mapping: ImportMapping = {
-      artistTagTarget: settings.get('import.artistTagTarget'),
-      albumArtistTagTarget: settings.get('import.albumArtistTagTarget'),
-      genreIsCountry: settings.get('import.genreIsCountry')
-    }
+    const mapping = savedMapping(settings)
     const source = request.kind === 'apple' ? 'apple_xml' : 'files'
     const summary = emptySummary()
     const fileIdByTrackId = new Map<number, number>()
