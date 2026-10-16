@@ -2,7 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { ApplePlaylistConflict, ImportSummary, PlaylistDecision } from '@shared/import'
 import type { ApplePlaylist } from './apple-library'
 
-interface PlaylistRow {
+export interface PlaylistRow {
   id: number
   name: string
   imported_at: string | null
@@ -14,7 +14,7 @@ type PlaylistResult = ImportSummary['playlists']
 const APPLE_SUFFIX = ' (Apple Music)'
 
 // Any local edit bumps playlists.modified_at; an import sets imported_at = modified_at.
-const isEdited = (row: PlaylistRow): boolean =>
+export const isEdited = (row: PlaylistRow): boolean =>
   row.imported_at === null || row.modified_at > row.imported_at
 
 function findByPersistentId(db: DatabaseSync, persistentId: string): PlaylistRow | undefined {
