@@ -489,7 +489,8 @@ function startApp(): void {
   void canva.startup(net.isOnline())
   const connection = new ConnectionWatcher({
     isOnline: () => net.isOnline(),
-    onReconnect: () => void canva.catchUp()
+    onReconnect: () => void canva.catchUp(),
+    whileOnline: () => void canva.retryIfWaiting()
   })
   connection.start()
   app.on('will-quit', () => {

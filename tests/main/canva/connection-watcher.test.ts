@@ -37,3 +37,20 @@ test('online from the start is not a reconnection', () => {
   expect(reconnected).not.toHaveBeenCalled()
   watcher.stop()
 })
+
+test('while online, also calls `whileOnline` on every check (for anything that missed the drop)', () => {
+  let online = true
+  const checks = vi.fn()
+  const watcher = new ConnectionWatcher({
+    isOnline: () => online,
+    onReconnect: () => undefined,
+    whileOnline: checks
+  })
+  watcher.start()
+  vi.advanceTimersByTime(45_000)
+  expect(checks).toHaveBeenCalledTimes(3)
+  online = false
+  vi.advanceTimersByTime(30_000)
+  expect(checks).toHaveBeenCalledTimes(3)
+  watcher.stop()
+})
