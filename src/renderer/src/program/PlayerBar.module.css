@@ -15,6 +15,17 @@
   text-overflow: ellipsis;
 }
 
+/* The title: a name that shortens, between words that don't ("Next: " … " in 3…"). */
+.title {
+  display: flex;
+  min-width: 0;
+}
+
+.fixed {
+  flex: none;
+  white-space: pre;
+}
+
 .time {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;

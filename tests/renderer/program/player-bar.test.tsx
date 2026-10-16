@@ -152,6 +152,19 @@ describe('player bar', () => {
     expect(title()).toHaveTextContent('Next: Hora in 2…')
   })
 
+  test('a long dance name shortens on its own, so the countdown stays readable', async () => {
+    setup(
+      playerState({
+        status: 'countdown',
+        countdown: { secondsLeft: 2, reason: 'continue' },
+        nextUp: item(1, hora)
+      })
+    )
+    await waitFor(() => expect(title()).toHaveTextContent('Next: Hora in 2…'))
+    // Only the name is in the part that ellipsizes; "Next:" and "in 2…" stay whole.
+    expect(screen.getByTestId('player-title-name')).toHaveTextContent(/^Hora$/)
+  })
+
   test('marks a preview, and keeps the speed and pitch on the audio element', async () => {
     const fake = setup(playing(hora, { speed: 0.75 }))
     await waitFor(() => expect(audio().playbackRate).toBe(0.75))
