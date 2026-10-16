@@ -41,6 +41,10 @@ export default function MusicPage(): React.JSX.Element {
   const [confirmRemoveAll, setConfirmRemoveAll] = useState(false)
   const sync = useAppleSync(api)
   const syncOn = sync !== null && sync.state !== 'off'
+  const playlists = useLibrary((s) => s.playlists)
+  // A mirror of a Music playlist is read-only (sync spec §6.3).
+  const inMirror =
+    filter.kind === 'playlist' && playlists.some((p) => p.id === filter.playlistId && p.mirror)
 
   const refresh = useCallback(() => {
     api.invoke('library:stats').then((s) => setFileCount(s.fileCount))
@@ -160,7 +164,7 @@ export default function MusicPage(): React.JSX.Element {
             >
               Re-apply mapping…
             </Button>
-            {filter.kind === 'playlist' && (
+            {filter.kind === 'playlist' && !inMirror && (
               <Button
                 variant="default"
                 onClick={() =>

@@ -76,3 +76,12 @@ export const StarIcon = ({
       <path d={STAR} />
     </svg>
   )
+
+// The mark on a mirror of an Apple Music playlist (sync spec §6.2).
+export const MusicNoteIcon = (p: IconProps): React.JSX.Element => (
+  <Icon {...p}>
+    <path d="M9 18V6.5l10-2.5v11.5" fill="none" stroke="currentColor" strokeWidth="2" />
+    <circle cx="6.5" cy="18" r="2.5" />
+    <circle cx="16.5" cy="15.5" r="2.5" />
+  </Icon>
+)

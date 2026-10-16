@@ -1,15 +1,20 @@
 import { useRef, useState } from 'react'
 import { ActionIcon, Group, Menu, Text } from '@mantine/core'
+import { notifications } from '@mantine/notifications'
 import type { PlaylistSummary } from '@shared/library'
 import { useLibrary, useLibraryApi } from '../../library/LibraryProvider'
 import ConfirmDialog from '../ConfirmDialog'
+import { MusicNoteIcon } from '../icons'
 import NamePrompt from '../NamePrompt'
 import classes from '../Sidebar.module.css'
 import DropTarget from './DropTarget'
 import FilterEntry, { sameFilter } from './FilterEntry'
+import { buildTree, FolderEntry, useOpenFolders } from './PlaylistTree'
 import SectionHeading from './SectionHeading'
 
-// A playlist in the sidebar: a drop target, with an options menu ("⋯", or right-click).
+// A playlist in the sidebar: a drop target, with an options menu ("⋯", or right-click). A mirror of
+// a Music playlist is read-only (sync spec §6.3): it is marked, takes no drops, and its menu only
+// duplicates it.
 function PlaylistEntry(props: {
   playlist: PlaylistSummary
   onRename: () => void
@@ -26,12 +31,27 @@ function PlaylistEntry(props: {
         options.current?.click()
       }}
     >
-      <DropTarget onFiles={(ids) => void api.invoke('playlists:add', p.id, ids)}>
+      <DropTarget
+        onFiles={(ids) =>
+          p.mirror
+            ? notifications.show({ message: 'Edit this playlist in Music.', color: 'yellow' })
+            : void api.invoke('playlists:add', p.id, ids)
+        }
+      >
         <FilterEntry
           label={p.name}
           filter={{ kind: 'playlist', playlistId: p.id }}
           extra={
-            p.source === 'apple_xml' ? (
+            p.mirror ? (
+              <Text
+                span
+                c="dimmed"
+                aria-label="Apple Music playlist"
+                title="Synced from Apple Music"
+              >
+                <MusicNoteIcon size={12} />
+              </Text>
+            ) : p.source === 'apple_xml' ? (
               <Text
                 span
                 size="xs"
@@ -56,13 +76,21 @@ function PlaylistEntry(props: {
           </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
-          <Menu.Item onClick={props.onRename}>Rename…</Menu.Item>
-          <Menu.Item onClick={() => void api.invoke('playlists:duplicate', p.id)}>
-            Duplicate
-          </Menu.Item>
-          <Menu.Item color="red" onClick={props.onDelete}>
-            Delete…
-          </Menu.Item>
+          {p.mirror ? (
+            <Menu.Item onClick={() => void api.invoke('playlists:duplicate', p.id)}>
+              Duplicate as my playlist
+            </Menu.Item>
+          ) : (
+            <>
+              <Menu.Item onClick={props.onRename}>Rename…</Menu.Item>
+              <Menu.Item onClick={() => void api.invoke('playlists:duplicate', p.id)}>
+                Duplicate
+              </Menu.Item>
+              <Menu.Item color="red" onClick={props.onDelete}>
+                Delete…
+              </Menu.Item>
+            </>
+          )}
         </Menu.Dropdown>
       </Menu>
     </div>
@@ -75,10 +103,22 @@ export default function PlaylistsSection(): React.JSX.Element {
   const filter = useLibrary((s) => s.filter)
   const setFilter = useLibrary((s) => s.setFilter)
   const playlists = useLibrary((s) => s.playlists)
+  const folders = useLibrary((s) => s.folders)
+  const [open, toggle] = useOpenFolders(api)
   const [prompt, setPrompt] = useState<
     { mode: 'create' } | { mode: 'rename'; playlist: PlaylistSummary } | null
   >(null)
   const [deleting, setDeleting] = useState<PlaylistSummary | null>(null)
+  // Music's folders first (sync spec §6.2), then the playlists outside any folder.
+  const tree = buildTree(folders, playlists)
+  const entry = (p: PlaylistSummary): React.ReactNode => (
+    <PlaylistEntry
+      key={p.id}
+      playlist={p}
+      onRename={() => setPrompt({ mode: 'rename', playlist: p })}
+      onDelete={() => setDeleting(p)}
+    />
+  )
 
   return (
     <>
@@ -99,14 +139,16 @@ export default function PlaylistsSection(): React.JSX.Element {
             No playlists yet
           </Text>
         )}
-        {playlists.map((p) => (
-          <PlaylistEntry
-            key={p.id}
-            playlist={p}
-            onRename={() => setPrompt({ mode: 'rename', playlist: p })}
-            onDelete={() => setDeleting(p)}
+        {tree.folders.map((node) => (
+          <FolderEntry
+            key={node.folder.id}
+            node={node}
+            open={open}
+            onToggle={toggle}
+            renderPlaylist={entry}
           />
         ))}
+        {tree.playlists.map(entry)}
       </div>
       <NamePrompt
         opened={prompt !== null}
