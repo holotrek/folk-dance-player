@@ -20,5 +20,15 @@ mac:
   # notarize.
   identity: '-'
   hardenedRuntime: false
+  # The Music library helper (Apple Music sync spec §3.1). It is already Universal, so the Universal
+  # merge must take it from the x64 copy as is (x64ArchFiles), or @electron/universal stops on a
+  # Mach-O file that is the same in both builds.
+  extraResources:
+    - from: resources/bin/fdp-music-library
+      to: fdp-music-library
+  x64ArchFiles: Contents/Resources/fdp-music-library
+  # Without this key macOS refuses Music access without asking (sync spec §9).
+  extendInfo:
+    NSAppleMusicUsageDescription: Folk Dance Player reads your Music library to keep its songs and playlists in step with Apple Music.
 dmg:
   title: Folk Dance Player

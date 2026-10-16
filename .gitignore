@@ -1,6 +1,8 @@
 node_modules/
 dist/
 out/
+# Built by npm run build:helper
+resources/bin/
 .DS_Store
 *.log
 

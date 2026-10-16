@@ -55,6 +55,8 @@ jobs:
           cache: npm
       - run: npm install --global npm@12.1.0
       - run: npm ci
+      # The Swift helper must build on macOS (sync spec §8); the release's npm run dist builds it too.
+      - run: npm run build:helper
       - run: npm run test:e2e
       - name: Keep Playwright's report of a failure
         if: failure()

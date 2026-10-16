@@ -51,3 +51,17 @@ describe('project documents', () => {
     expect(read('CONTRIBUTING.md')).toMatch(/^# Contributing/m)
   })
 })
+
+describe('the Music library helper (Apple Music sync spec §3.1)', () => {
+  const read = (file: string): string => readFileSync(resolve(__dirname, '..', file), 'utf8')
+
+  test('is bundled, and the app explains Music access', () => {
+    const builder = read('electron-builder.yml')
+    expect(builder).toMatch(/from: resources\/bin\/fdp-music-library/)
+    expect(builder).toMatch(/NSAppleMusicUsageDescription:/)
+    expect(builder).toMatch(/x64ArchFiles: Contents\/Resources\/fdp-music-library/)
+    expect(pkg.scripts['build:helper']).toBe('sh scripts/build-helper.sh')
+    expect(pkg.scripts.dist).toContain('npm run build:helper')
+    expect(read('.gitignore')).toMatch(/^resources\/bin\/$/m)
+  })
+})
