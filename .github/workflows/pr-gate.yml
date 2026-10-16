@@ -5,9 +5,10 @@ name: PR Gate
 
 on:
   pull_request:
-    # ready_for_review: Prepare Release opens its pull request as a draft, and a pull request opened
-    # with a workflow's token starts no workflows; marking it ready is a person's action, which does.
-    types: [opened, synchronize, reopened, ready_for_review, labeled, unlabeled]
+    # Not ready_for_review: marking a draft ready changes no code, and the second run it started on
+    # the release PR was cancelled by the first's group, leaving the PR blocked. A pull request opened
+    # by a workflow (Prepare Release) gets its run once someone clicks "Approve workflows to run".
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   push:
     branches: [main]
   # A manual run, e.g. to re-check main. (Its checks don't count toward a pull request's required
