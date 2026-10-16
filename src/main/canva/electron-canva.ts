@@ -74,7 +74,20 @@ export function createCanvaPage(): CanvaPage {
   }
 }
 
-// The live Canva page over the projector's slide area (spec §8.3).
+// The cover: the saved slide image, fitted like the projector page's own (spec §8.3).
+const coverPage = (imageUrl: string | null): string =>
+  'data:text/html,' +
+  encodeURIComponent(
+    '<!doctype html><body style="margin:0;background:#000">' +
+      (imageUrl
+        ? `<img src="${imageUrl}" alt="" style="display:block;width:100vw;height:100vh;object-fit:contain">`
+        : '') +
+      '</body>'
+  )
+
+// The live Canva page over the projector's slide area (spec §8.3). While it loads and its controls
+// fade, it stays visible under a cover showing the saved image: hidden, Chromium throttles the page,
+// so Canva never fades its controls and the page keeps its previous slide until it is shown.
 export function createLiveView(window: BrowserWindow): LiveView {
   const view = new WebContentsView({ webPreferences: CANVA_PREFERENCES })
   const contents = view.webContents
@@ -82,18 +95,44 @@ export function createLiveView(window: BrowserWindow): LiveView {
   view.setBackgroundColor('#000000')
   view.setVisible(false)
   guardCanva(contents)
+  // In the app's own session, which serves the saved images (fdp-media://slide/…).
+  const cover = new WebContentsView({ webPreferences: { sandbox: true } })
+  cover.setBackgroundColor('#000000')
+  cover.setVisible(false)
+  cover.webContents.on('will-navigate', (event) => event.preventDefault())
+  cover.webContents.setWindowOpenHandler(() => ({ action: 'deny' }))
   window.contentView.addChildView(view)
+  window.contentView.addChildView(cover) // above the Canva page
   let bounds: Rect = { x: 0, y: 0, width: 0, height: 0 }
+  let shownImage: string | null | undefined
   return {
     load: (url) => load(contents, url),
     nudge: () => nudge(contents, bounds.width, bounds.height),
-    setVisible: (visible) => view.setVisible(visible),
+    cover: (imageUrl) => {
+      if (imageUrl !== shownImage) void cover.webContents.loadURL(coverPage(imageUrl))
+      shownImage = imageUrl
+      cover.setVisible(true)
+      view.setVisible(true)
+    },
+    reveal: () => {
+      view.setVisible(true)
+      cover.setVisible(false)
+    },
+    hide: () => {
+      cover.setVisible(false)
+      view.setVisible(false)
+    },
     setBounds: (b) => {
       bounds = b
       view.setBounds(b)
+      cover.setBounds(b)
     },
     destroy: () => {
-      if (!window.isDestroyed()) window.contentView.removeChildView(view)
+      if (!window.isDestroyed()) {
+        window.contentView.removeChildView(cover)
+        window.contentView.removeChildView(view)
+      }
+      if (!cover.webContents.isDestroyed()) cover.webContents.close()
       if (!contents.isDestroyed()) contents.close()
     }
   }

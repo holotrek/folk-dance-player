@@ -36,7 +36,8 @@ export function createProjectorFeed(deps: {
               deckId: slide.deckId,
               viewUrl: slide.viewUrl,
               pageId: slide.pageId,
-              position: slide.position!
+              position: slide.position!,
+              imageUrl: slide.imageUrl
             }
           : null
       deps.live.show(live)

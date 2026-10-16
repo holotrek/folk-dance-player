@@ -11,6 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Fixed
 
 - Esc closes the projector view over the laptop the first time it's pressed, even right after turning the view on.
+- Canva's buttons no longer show over the live slide on the projector, and changing to another slide of the same deck no longer flashes the previous slide.
 
 ## [0.1.0] - 2026-10-15
 

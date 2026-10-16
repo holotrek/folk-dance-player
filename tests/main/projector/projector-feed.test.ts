@@ -99,7 +99,13 @@ describe('projector feed', () => {
       imageUrl: expect.stringMatching(/^fdp-media:\/\/slide\/\d+\/P2\?v=/),
       live: false
     })
-    expect(shown.at(-1)).toEqual({ deckId, pageId: 'P2', viewUrl, position: 2 })
+    expect(shown.at(-1)).toEqual({
+      deckId,
+      pageId: 'P2',
+      viewUrl,
+      position: 2,
+      imageUrl: feed.snapshot().middle?.slide?.imageUrl // the live view's cover
+    })
     liveNow = true
     expect(feed.snapshot().middle?.slide?.live).toBe(true)
     player.play()
