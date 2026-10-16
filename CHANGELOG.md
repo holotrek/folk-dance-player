@@ -11,6 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - **Sync with Apple Music** (Settings → Apple Music, on a Mac): reads your Music library directly, with no Library.xml export, and keeps songs and playlists in step when the app starts, when you switch back to it, and with Sync now (File → Sync with Apple Music, ⌘⇧S). Tags follow Music unless you edited the field here, and a message says what each sync changed.
+- Songs deleted from Music wait in **Removed from Apple Music** (in the sidebar) until you keep or remove them; sync never deletes a song by itself.
 - **Edit details** in a song's menu ("⋯" or right-click) in the program, Holding and the library list opens the song in the Music page's editor, selected and scrolled into view. Library and Holding rows now have that menu, with Add to / Remove from favorites too.
 - After you link a Canva slide, the dance editor shows **Generating preview…** with a moving bar until the slide's image is saved. Offline, it says the preview will be made when you're back online, and it is made then; if Canva can't be reached, it says so.
 - Adding a song you removed from the library brings it back with its dances, notes and history.

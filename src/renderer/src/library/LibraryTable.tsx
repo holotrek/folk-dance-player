@@ -66,6 +66,17 @@ const NUMBER_COLUMN: Column = {
   )
 }
 
+// In the review list: whether the song's file is still on disk (sync spec §6.2).
+const FILE_COLUMN: Column = {
+  sort: null,
+  label: 'File',
+  render: (r) => (
+    <Text span size="xs" c="dimmed">
+      {r.isMissing ? 'File gone' : 'File still on disk'}
+    </Text>
+  )
+}
+
 // Last in every row: its "⋯" menu (Edit details, favorites), shown on hover.
 const MENU_COLUMN: Column = {
   sort: null,
@@ -108,6 +119,7 @@ export default function LibraryTable({
   const COLUMNS = [
     ...(inPlaylist ? [NUMBER_COLUMN] : []),
     ...(compact ? COMPACT_COLUMNS : ALL_COLUMNS),
+    ...(filter.kind === 'review' ? [FILE_COLUMN] : []),
     MENU_COLUMN
   ]
   const scroll = useRef<HTMLDivElement>(null)
