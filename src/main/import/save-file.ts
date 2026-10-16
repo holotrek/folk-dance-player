@@ -12,7 +12,7 @@ export interface SaveContext {
   mapping: ImportMapping
 }
 
-interface FileRow {
+export interface FileRow {
   id: number
   path: string
   file_size: number
@@ -25,6 +25,8 @@ interface FileRow {
   tag_genre: string | null
   apple_persistent_id: string | null
   is_missing: number
+  apple_sync: 'synced' | 'gone' | null
+  removed_at: string | null
 }
 
 // The file columns an import writes, keyed by column name.
@@ -144,7 +146,7 @@ function fillEmptyFields(db: DatabaseSync, fileId: number, mapped: MappedTags): 
 
 // A new file gets its song, an automatic dance with the song's title, the pairing between them,
 // and that dance as the song's default (spec §4). Never linked to an existing dance by name.
-function insertFile(
+export function insertFile(
   db: DatabaseSync,
   facts: FileFacts,
   ctx: SaveContext,
