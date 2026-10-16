@@ -1,4 +1,5 @@
 import { MantineProvider } from '@mantine/core'
+import { Notifications } from '@mantine/notifications'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test } from 'vitest'
@@ -22,6 +23,7 @@ function setup() {
   ;(window as { api?: unknown }).api = fake.api
   render(
     <MantineProvider theme={testTheme}>
+      <Notifications />
       <App />
     </MantineProvider>
   )

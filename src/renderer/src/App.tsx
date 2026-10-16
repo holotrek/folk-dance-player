@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { AppShell, Group, Tabs } from '@mantine/core'
 import { useElementSize } from '@mantine/hooks'
+import AppleSyncNotices from './apple-sync/AppleSyncNotices'
 import { useAppearance } from './appearance'
 import Logo from './components/Logo'
 import Sidebar from './components/Sidebar'
@@ -30,6 +31,7 @@ export default function App(): React.JSX.Element {
     <LibraryProvider api={window.api}>
       <ProgramProvider api={window.api}>
         <EditSongProvider onShowMusic={showMusic}>
+          <AppleSyncNotices api={window.api} />
           <AppShell
             header={{ height: Math.ceil(header.height) || HEADER_FALLBACK }}
             navbar={{ width: 220, breakpoint: 0, collapsed: { desktop: page === 'settings' } }}

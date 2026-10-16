@@ -1,4 +1,5 @@
 import type { EventChannel, EventContract, InvokeChannel, RendererApi } from '@shared/contract'
+import { APPLE_SYNC_OFF } from '@shared/apple-sync'
 import { CAPTURES_IDLE } from '@shared/canva'
 import { IDLE_PLAYER_STATE, NO_REMOTE } from '@shared/program'
 import { PROJECTOR_OFF } from '@shared/projector'
@@ -53,6 +54,9 @@ export function createFakeApi(
         // No Canva decks, and no slide images being saved.
         if (channel === 'canva:decks') return []
         if (channel === 'canva:captureStatus') return CAPTURES_IDLE
+        // Sync with Apple Music is unavailable unless a test says otherwise.
+        if (channel === 'appleSync:status') return APPLE_SYNC_OFF
+        if (channel === 'playlists:folders') return []
         if (channel === 'settings:getAll') return fake.settings
         if (channel === 'settings:set') {
           const [key, value] = args as [keyof Settings, unknown]
