@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Esc closes the projector view over the laptop the first time it's pressed, even right after turning the view on.
+
 ## [0.1.0] - 2026-10-15
 
 ### Added
