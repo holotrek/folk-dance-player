@@ -167,7 +167,9 @@ export function searchDances(db: DatabaseSync, text: string, limit = 50): DanceS
   const rows = db
     .prepare(
       `SELECT d.id AS danceId, d.name, d.choreographer, d.country,
-         (SELECT COUNT(*) FROM dance_songs c WHERE c.dance_id = d.id) AS songCount
+         (SELECT COUNT(*) FROM dance_songs c JOIN songs cs ON cs.id = c.song_id
+            JOIN files cf ON cf.id = cs.file_id
+          WHERE c.dance_id = d.id AND cf.removed_at IS NULL) AS songCount
        FROM dances d ORDER BY d.name COLLATE NOCASE, d.id`
     )
     .all() as unknown as DanceSearchResult[]

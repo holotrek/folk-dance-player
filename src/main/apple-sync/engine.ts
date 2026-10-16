@@ -65,7 +65,8 @@ export async function runSync(
   summary.skipped = skipped
   summary.unsupported = unsupported
   const livePids = new Set(eligible.map((t) => t.persistentId))
-  const ctx = { mapping: deps.mapping, livePids }
+  const claimed = new Set<number>()
+  const ctx = { mapping: deps.mapping, livePids, claimed }
   const total = eligible.length
   let done = 0
   let missingChanged = false
@@ -102,6 +103,7 @@ export async function runSync(
       }
     }
     rowFor.set(key, row?.id ?? null)
+    if (row) claimed.add(row.id)
     toRead.push(known(key, track))
   }
   report(null)

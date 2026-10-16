@@ -1,7 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import type { LibraryFilter } from '@shared/library'
-import { getSongDetail } from '../../../src/main/library/edit'
+import { getSongDetail, searchDances } from '../../../src/main/library/edit'
 import { listLibrary } from '../../../src/main/library/list'
 import {
   addToPlaylist,
@@ -16,7 +16,7 @@ import { addTracks, createProgram, getProgram } from '../../../src/main/programs
 import { PlayerSession } from '../../../src/main/session/player-session'
 import { createSessionPorts } from '../../../src/main/session/session-ports'
 import { SettingsStore } from '../../../src/main/settings/settings-store'
-import { addLibrarySong, removeSong } from '../helpers/library-fixtures'
+import { addLibrarySong, link, removeSong } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 
 // A removed song (files.removed_at, sync spec §6.4) is hidden wherever songs are listed, shown in
@@ -63,6 +63,35 @@ describe('removed songs', () => {
     expect(getSongDetail(db, mine.songId)?.suggestions).toHaveLength(1)
     removeSong(db, other.fileId)
     expect(getSongDetail(db, mine.songId)?.suggestions).toEqual([])
+  })
+
+  // Final review, Minor 7.
+  test('the dance picker still offers their dances, counting only songs in the library', () => {
+    const mine = addLibrarySong(db, { title: 'Lesnoto A', dance: { name: 'Lesnoto' } })
+    const other = addLibrarySong(db, { title: 'Lesnoto B' })
+    link(db, mine.danceId!, other.songId)
+    removeSong(db, other.fileId)
+    expect(searchDances(db, 'lesnoto')).toMatchObject([{ name: 'Lesnoto', songCount: 1 }])
+  })
+
+  test('playlist numbers skip removed songs', () => {
+    const songs = ['A', 'B', 'C'].map((title) => addLibrarySong(db, { title }))
+    const playlist = createPlaylist(db, 'Mine')
+    addToPlaylist(
+      db,
+      playlist,
+      songs.map((s) => s.fileId)
+    )
+    removeSong(db, songs[1].fileId)
+    const rows = listLibrary(db, {
+      search: '',
+      filter: { kind: 'playlist', playlistId: playlist },
+      sort: { column: 'position', direction: 'asc' }
+    })
+    expect(rows.map((r) => [r.title, r.playlistNumber])).toEqual([
+      ['A', 1],
+      ['C', 2]
+    ])
   })
 
   test('stay in a program, flagged removed', () => {

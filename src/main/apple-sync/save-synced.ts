@@ -57,13 +57,14 @@ function findByFingerprint(
   db: DatabaseSync,
   hash: string,
   pid: string,
-  live: ReadonlySet<string>
+  live: ReadonlySet<string>,
+  claimed?: ReadonlySet<number>
 ): FileRow | undefined {
   const rows = (
     db
       .prepare('SELECT * FROM files WHERE content_hash = ? ORDER BY id')
       .all(hash) as unknown as FileRow[]
-  ).filter((r) => !ownedByLiveTrack(r, pid, live))
+  ).filter((r) => !ownedByLiveTrack(r, pid, live) && !claimed?.has(r.id))
   return (
     rows.find((r) => r.apple_sync !== null && r.removed_at === null) ??
     rows.find((r) => r.removed_at !== null) ??
@@ -81,6 +82,9 @@ export interface SyncTrackInput {
 export interface SyncSaveContext {
   mapping: ImportMapping
   livePids: ReadonlySet<string>
+  // Rows matched (by path or persistent ID) to other tracks of this sync before reading: never
+  // adopted by another track's audio match.
+  claimed?: ReadonlySet<number>
 }
 
 // Saves one track (the caller runs it in a transaction). Every match keeps the song and all its
@@ -95,7 +99,9 @@ export function saveSyncedTrack(
     (input.rowId !== null
       ? (db.prepare('SELECT * FROM files WHERE id = ?').get(input.rowId) as FileRow | undefined)
       : undefined) ??
-    (facts ? findByFingerprint(db, facts.contentHash, track.persistentId, ctx.livePids) : undefined)
+    (facts
+      ? findByFingerprint(db, facts.contentHash, track.persistentId, ctx.livePids, ctx.claimed)
+      : undefined)
 
   if (!row) {
     if (!facts) throw new Error(`A new track must be read first: ${track.path}`)

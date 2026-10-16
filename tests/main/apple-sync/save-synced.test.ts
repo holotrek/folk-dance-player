@@ -188,6 +188,23 @@ describe('saveSyncedTrack (sync spec §5.3)', () => {
     expect(file(fileId)).toMatchObject({ pid: pid(2), sync: 'synced' })
   })
 
+  // Final review, Minor 6: a row another track claimed before reading isn't adopted by audio.
+  test('a song claimed by another track in this sync is not adopted by fingerprint', () => {
+    const a = local('Kolo', '/m/Kolo.mp3', 'h1')
+    const result = saveSyncedTrack(
+      db,
+      {
+        track: track(2, '/m/copy.mp3'),
+        facts: facts('/m/copy.mp3', 'h1'),
+        rowId: null,
+        missing: false
+      },
+      { mapping, livePids: new Set([pid(1), pid(2)]), claimed: new Set([a.fileId]) }
+    )
+    expect(result.outcome).toBe('added')
+    expect(result.fileId).not.toBe(a.fileId)
+  })
+
   test('two Music tracks with identical audio are two songs', () => {
     const one = save({ track: track(1, '/m/a.mp3'), facts: facts('/m/a.mp3', 'h1') }, [1, 2])
     const two = save({ track: track(2, '/m/b.mp3'), facts: facts('/m/b.mp3', 'h1') }, [1, 2])

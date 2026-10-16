@@ -222,6 +222,12 @@ function findRemoved(db: DatabaseSync, facts: FileFacts): FileRow | undefined {
 const restore = (db: DatabaseSync, fileId: number): void =>
   void db.prepare('UPDATE files SET removed_at = NULL, apple_sync = NULL WHERE id = ?').run(fileId)
 
+// Adding a song that waits in "Removed from Apple Music" counts as Keep: an ordinary local song.
+const keepIfInReview = (db: DatabaseSync, row: FileRow): void => {
+  if (row.apple_sync === 'gone' && row.removed_at === null)
+    db.prepare('UPDATE files SET apple_sync = NULL WHERE id = ?').run(row.id)
+}
+
 export function saveImportedFile(
   db: DatabaseSync,
   facts: FileFacts,
@@ -237,6 +243,7 @@ export function saveImportedFile(
     }
     const fileChanged = updateFile(db, existing, facts, ctx)
     const songChanged = fillEmptyFields(db, existing.id, mapped)
+    keepIfInReview(db, existing)
     if (existing.removed_at !== null) {
       restore(db, existing.id)
       return { outcome: 'restored', fileId: existing.id }
@@ -260,6 +267,7 @@ export function saveImportedFile(
   if (moved) {
     updateFile(db, moved, facts, ctx)
     fillEmptyFields(db, moved.id, mapped)
+    keepIfInReview(db, moved)
     return { outcome: 'relinked', fileId: moved.id }
   }
 

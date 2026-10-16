@@ -81,6 +81,28 @@ describe('removed songs (sync spec §7.3)', () => {
   })
 })
 
+// Final review, Minor 8: adding a song that waits in "Removed from Apple Music" counts as Keep.
+describe('a song in the review list added again', () => {
+  const gone = (fileId: number) =>
+    db.prepare("UPDATE files SET apple_sync = 'gone' WHERE id = ?").run(fileId)
+  const sync = (fileId: number) =>
+    (db.prepare('SELECT apple_sync AS s FROM files WHERE id = ?').get(fileId) as { s: unknown }).s
+
+  test('the same file makes it an ordinary local song', () => {
+    const first = saveImportedFile(db, facts('/m/Kolo.mp3', 'h1'), ctx)
+    gone(first.fileId)
+    saveImportedFile(db, facts('/m/Kolo.mp3', 'h1'), ctx)
+    expect(sync(first.fileId)).toBeNull()
+  })
+
+  test('a copy, when its old file is gone, makes it an ordinary local song too', () => {
+    const first = saveImportedFile(db, facts('/m/Kolo.mp3', 'h1'), ctx)
+    gone(first.fileId)
+    expect(saveImportedFile(db, facts('/Downloads/Kolo.mp3', 'h1'), ctx).outcome).toBe('relinked')
+    expect(sync(first.fileId)).toBeNull()
+  })
+})
+
 describe('ImportService while syncing', () => {
   const service = (deps: { syncEnabled?: () => boolean; isSyncing?: () => boolean }) =>
     new ImportService({

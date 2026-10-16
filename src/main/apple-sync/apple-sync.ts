@@ -126,6 +126,8 @@ export class AppleSync {
 
   importFinished(): void {
     for (const resume of this.importWaiters.splice(0)) resume()
+    // An import can take songs out of the review list (adding one counts as Keep).
+    if (this.deps.available) this.emit()
     if (!this.waitingForImport || !this.enabled) return
     this.waitingForImport = false
     void this.request()

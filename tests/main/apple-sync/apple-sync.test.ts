@@ -376,6 +376,15 @@ describe('after the final review', () => {
     expect(sync.status().state).toBe('idle')
   })
 
+  // Minor 8: an import can take songs out of the review list, so the count is sent again.
+  test('a finished import re-sends the status (the review count may have changed)', () => {
+    enabled()
+    const sync = make()
+    review = 3
+    sync.importFinished()
+    expect(statuses.at(-1)?.reviewCount).toBe(3)
+  })
+
   // Minor 5.
   test('a sync that only changed missing files refreshes the lists, quietly', async () => {
     enabled()

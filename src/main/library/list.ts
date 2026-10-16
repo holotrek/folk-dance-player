@@ -92,8 +92,9 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
          ${playlist ? 'pi.id' : 'NULL'} AS playlistItemId,
          ${
            playlist
-             ? `(SELECT COUNT(*) FROM playlist_items x
-                 WHERE x.playlist_id = pi.playlist_id AND x.position <= pi.position)`
+             ? `(SELECT COUNT(*) FROM playlist_items x JOIN files xf ON xf.id = x.file_id
+                 WHERE x.playlist_id = pi.playlist_id AND x.position <= pi.position
+                   AND xf.removed_at IS NULL)`
              : 'NULL'
          } AS playlistNumber
        FROM songs s
