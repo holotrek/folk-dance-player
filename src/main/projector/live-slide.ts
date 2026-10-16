@@ -37,6 +37,8 @@ export class LiveSlide {
   private deckUrl: string | null = null
   private target: LiveTarget | null = null
   private live = false
+  private loading = false // a load (and its wait for the fade) is under way for `target`
+  private failed = false // `target`'s page failed to load: it isn't retried until another slide
   private generation = 0
   private timer: ReturnType<typeof setTimeout> | null = null
 
@@ -50,7 +52,9 @@ export class LiveSlide {
   ) {}
 
   show(target: LiveTarget | null): void {
-    if (target && this.target && same(target, this.target)) {
+    // The same slide again, already loading, live or failed. (One first shown offline starts over.)
+    const settled = this.loading || this.live || this.failed
+    if (target && this.target && same(target, this.target) && settled) {
       // The image was saved (or saved again) while the page loads: it becomes the cover.
       if (!this.live && target.imageUrl !== this.target.imageUrl) this.view?.cover(target.imageUrl)
       this.target = target
@@ -74,6 +78,7 @@ export class LiveSlide {
     if (wasLive) this.deps.onChange()
     if (!sameDeck) this.deckUrl = null
     const generation = this.generation
+    this.loading = true
     view.load(`${target.viewUrl}#${target.position}`).then(
       () => {
         if (generation !== this.generation) return
@@ -82,6 +87,7 @@ export class LiveSlide {
           () => {
             this.timer = null
             this.deckUrl = target.viewUrl
+            this.loading = false
             this.live = true
             view.reveal()
             this.deps.onChange()
@@ -90,7 +96,10 @@ export class LiveSlide {
         )
       },
       () => {
-        if (generation === this.generation) this.deckUrl = null // try a full load next time
+        if (generation !== this.generation) return
+        this.loading = false
+        this.failed = true
+        this.deckUrl = null // try a full load next time
       }
     )
   }
@@ -119,6 +128,8 @@ export class LiveSlide {
     if (this.timer) clearTimeout(this.timer)
     this.timer = null
     this.live = false
+    this.loading = false
+    this.failed = false
   }
 }
 

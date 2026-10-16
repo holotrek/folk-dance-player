@@ -48,7 +48,14 @@ function setup(online = true) {
     size: () => ({ width: 1920, height: 1080 }),
     onChange
   })
-  return { live, log, onChange, views, load: (ok = true) => finishLoad(ok) }
+  return {
+    live,
+    log,
+    onChange,
+    views,
+    load: (ok = true) => finishLoad(ok),
+    setOnline: (o: boolean) => void (online = o)
+  }
 }
 
 describe('the live Canva view over the saved slide image', () => {
@@ -171,6 +178,29 @@ describe('the live Canva view over the saved slide image', () => {
     expect(log).toEqual([`cover ${image('P6')}`, 'nudge', 'reveal'])
     log.length = 0
     live.show(slide('P6', 6, deckA, `${image('P6')}?v=2`)) // re-captured while live: nothing to do
+    expect(log).toEqual([])
+  })
+
+  test('a slide shown while offline loads once back online, even when only its image changed', async () => {
+    const { live, log, load, setOnline } = setup(false)
+    live.show(slide('P6', 6, deckA, null))
+    expect(log).toEqual([])
+    setOnline(true)
+    live.show(slide('P6', 6)) // the catch-up saved its image: same slide, new image
+    expect(log).toContain(`load ${deckA.viewUrl}#6`)
+    load()
+    await vi.advanceTimersByTimeAsync(11_000)
+    expect(live.isLive(slide('P6', 6))).toBe(true)
+  })
+
+  test('a failed load isn’t retried every time the projector updates', async () => {
+    const { live, log, load } = setup()
+    live.show(slide('P6', 6))
+    load(false)
+    await vi.advanceTimersByTimeAsync(0)
+    log.length = 0
+    live.show(slide('P6', 6))
+    live.show(slide('P6', 6))
     expect(log).toEqual([])
   })
 

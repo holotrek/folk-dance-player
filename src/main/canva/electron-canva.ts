@@ -4,6 +4,7 @@ import type { LiveView } from '../projector/live-slide'
 import { guardCanva } from '../navigation'
 import type { Fetcher } from './canva-client'
 import { isDeckView } from './canva-url'
+import { createCover } from './live-cover'
 import type { CanvaPage } from './slide-capturer'
 
 // Canva's pages run in their own session, sandboxed, away from the app's windows.
@@ -104,24 +105,15 @@ export function createLiveView(window: BrowserWindow): LiveView {
   window.contentView.addChildView(view)
   window.contentView.addChildView(cover) // above the Canva page
   let bounds: Rect = { x: 0, y: 0, width: 0, height: 0 }
-  let shownImage: string | null | undefined
   return {
     load: (url) => load(contents, url),
     nudge: () => nudge(contents, bounds.width, bounds.height),
-    cover: (imageUrl) => {
-      if (imageUrl !== shownImage) void cover.webContents.loadURL(coverPage(imageUrl))
-      shownImage = imageUrl
-      cover.setVisible(true)
-      view.setVisible(true)
-    },
-    reveal: () => {
-      view.setVisible(true)
-      cover.setVisible(false)
-    },
-    hide: () => {
-      cover.setVisible(false)
-      view.setVisible(false)
-    },
+    ...createCover({
+      // Resolves on the page's load event, once its image has loaded.
+      loadCover: (imageUrl) => cover.webContents.loadURL(coverPage(imageUrl)),
+      setCoverVisible: (visible) => cover.setVisible(visible),
+      setPageVisible: (visible) => view.setVisible(visible)
+    }),
     setBounds: (b) => {
       bounds = b
       view.setBounds(b)
