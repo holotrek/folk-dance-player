@@ -1,6 +1,6 @@
 import { parse } from 'plist'
 import { fileURLToPath } from 'url'
-import type { AppleSelection, ApplePreview } from '@shared/import'
+import type { AppleSelection, ApplePreview, TagSample } from '@shared/import'
 import type { RawTags } from './mapping'
 
 export interface AppleTrack {
@@ -105,18 +105,26 @@ const localTracks = (lib: AppleLibrary, ids: number[]): AppleTrack[] =>
 // How many tracks' tags the import's mapping step shows.
 export const TAG_SAMPLE_SIZE = 50
 
-export function previewAppleLibrary(
-  lib: AppleLibrary,
-  random: () => number = Math.random
-): ApplePreview {
-  const local = [...lib.tracks.values()].filter((t) => t.path)
+// Up to TAG_SAMPLE_SIZE tracks' tags, chosen at random when there are more; sorted by title.
+export function sampleTags(tags: TagSample[], random: () => number = Math.random): TagSample[] {
   // A partial Fisher–Yates shuffle: the first TAG_SAMPLE_SIZE slots end up a random sample.
-  const pool = [...local]
+  const pool = [...tags]
   const size = Math.min(TAG_SAMPLE_SIZE, pool.length)
   for (let i = 0; i < size; i++) {
     const j = i + Math.floor(random() * (pool.length - i))
     ;[pool[i], pool[j]] = [pool[j], pool[i]]
   }
+  return pool
+    .slice(0, size)
+    .map((t) => ({ ...t }))
+    .sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''))
+}
+
+export function previewAppleLibrary(
+  lib: AppleLibrary,
+  random: () => number = Math.random
+): ApplePreview {
+  const local = [...lib.tracks.values()].filter((t) => t.path)
   return {
     trackCount: local.length,
     playlists: lib.playlists.map((p) => ({
@@ -124,10 +132,10 @@ export function previewAppleLibrary(
       name: p.name,
       trackCount: localTracks(lib, p.trackIds).length
     })),
-    tagSample: pool
-      .slice(0, size)
-      .map((t) => ({ ...t.tags }))
-      .sort((a, b) => (a.title ?? '').localeCompare(b.title ?? ''))
+    tagSample: sampleTags(
+      local.map((t) => t.tags),
+      random
+    )
   }
 }
 
