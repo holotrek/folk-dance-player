@@ -192,7 +192,7 @@ Schema changes go through numbered migrations, applied at startup inside a trans
 - **Add Music…:** a picker for files and folders. Folders are scanned recursively.
 - **Drag and drop** files or folders onto the library (Music page or Program page library list).
 - **Import from Apple Music…:** pick `Library.xml`. The screen explains how to export it from Music (File → Library → Export Library…).
-- **Sync with Apple Music** (macOS, Settings): reads the Music library directly and keeps the app current (§5.5). While it is on, Import from Apple Music… is hidden.
+- **Sync with Apple Music** (macOS, a switch on the Music page): reads the Music library directly and keeps the app current (§5.5). While it is on, Import from Apple Music… is hidden.
 
 ### 5.2 Mapping step (shown before every import)
 
@@ -351,6 +351,7 @@ PROGRAMS                  [+]
   - **"Different dance" answers** about the removed dance carry over to the kept dance, so dismissed suggestions stay dismissed.
   - **Difficulty and the Canva slide:** the kept dance's values win when both are set.
 - **Actions:** Add Music…, Import from Apple Music…, Favorite/Unfavorite (selection), Re-apply mapping… (selection), Refresh slides.
+- **Sync with Apple Music** (macOS, sync spec §6.1): a switch beside the import buttons and, while sync is on, a status bar below the toolbar (last sync with Details, or a paused state with its fix, and **Sync now**). File → Sync with Apple Music, while sync is off, opens this page and pulses a border around the switch for a moment.
 - **Refresh slides** sits in the header beside Add Music…, once a deck has been added. While images are being saved it shows "Saving slide images… N of M", and afterwards how many couldn't be saved. A "Canva links need checking" notice shows below while a deck's page can't be read, and a refresh that couldn't reach Canva says so.
 - **Re-apply mapping** opens a dialog that shows the selected songs' Artist, Album Artist and Genre tags, with the mapping fields from the import step. They start from the import mapping in Settings, and the choice applies to this run only. It overwrites only the fields the chosen mapping targets: the song's artist, the default pairing's teacher, and the default dance's choreographer and country. If Genre → Country is off, countries are left alone. A default dance shared with other songs is left unchanged (it would change every song using it), and the result reports how many were skipped.
 - **Missing and unsupported files** are visibly flagged.
@@ -363,7 +364,6 @@ PROGRAMS                  [+]
 - Appearance: Light, Dark or System (applied at once)
 - Countdown seconds
 - Remote control: whether the remote's media keys work, and a button that asks macOS for Accessibility permission when they don't (§7.4)
-- Apple Music (macOS): **Sync with Apple Music**, its status (last sync and Details, paused states with their fixes) and **Sync now** (sync spec §6.1)
 - About: the logo, the version and the library's location
 - "Reveal logs"
 

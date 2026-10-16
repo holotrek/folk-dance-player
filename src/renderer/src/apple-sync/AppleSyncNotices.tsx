@@ -21,19 +21,19 @@ export function noticeContent(notice: AppleSyncNotice): {
       return {
         title: PAUSED,
         message:
-          "Folk Dance Player isn't allowed to read your Music library. Settings → Apple Music shows how to allow it.",
+          "Folk Dance Player isn't allowed to read your Music library. The Music page shows how to allow it.",
         color: 'yellow'
       }
     case 'other-library':
       return {
         title: PAUSED,
-        message: 'Music has a different library open. Settings → Apple Music has the choices.',
+        message: 'Music has a different library open. The Music page has the choices.',
         color: 'yellow'
       }
     case 'shrunk':
       return {
         title: PAUSED,
-        message: `${shrinkText(notice)}. Settings → Apple Music has the choices.`,
+        message: `${shrinkText(notice)}. The Music page has the choices.`,
         color: 'yellow'
       }
     case 'failed':

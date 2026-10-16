@@ -1,6 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, test, vi } from 'vitest'
-import { menuTemplate } from '../../../src/main/menu'
+import { menuTemplate, syncAppleMusicFromMenu } from '../../../src/main/menu'
 
 function setup(dev = false, appleSync = false) {
   const actions = {
@@ -67,5 +67,16 @@ describe('the app menu', () => {
     click(sync)
     expect(actions.syncAppleMusic).toHaveBeenCalled()
     expect(setup(false, false).menu.find((m) => m.label === 'File')).toBeUndefined()
+  })
+
+  test('Sync with Apple Music, while sync is off, shows the switch on the Music page', () => {
+    const calls: unknown[] = []
+    const actions = {
+      showPage: (target: unknown) => calls.push(['showPage', target]),
+      syncNow: () => calls.push(['syncNow'])
+    }
+    syncAppleMusicFromMenu('off', actions)
+    syncAppleMusicFromMenu('idle', actions)
+    expect(calls).toEqual([['showPage', { page: 'music', highlight: 'appleSync' }], ['syncNow']])
   })
 })

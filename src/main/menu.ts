@@ -1,4 +1,6 @@
 import type { MenuItemConstructorOptions } from 'electron'
+import type { AppleSyncState } from '@shared/apple-sync'
+import type { PageTarget } from '@shared/contract'
 
 // The macOS menu bar (spec §10.1: Help → Reveal logs). Settings… opens the Settings page; the
 // File menu has Sync with Apple Music (⌘⇧S) where sync is available; the Edit menu gives text fields copy, paste and undo; Window gives Minimize (⌘M) and Zoom. There is
@@ -68,4 +70,14 @@ export function menuTemplate(o: {
       ]
     }
   ]
+}
+
+// File → Sync with Apple Music: syncs now, or, while sync is off, shows the Music page with its
+// sync switch highlighted (that's where sync is turned on).
+export function syncAppleMusicFromMenu(
+  state: AppleSyncState,
+  actions: { showPage(target: PageTarget): void; syncNow(): void }
+): void {
+  if (state === 'off') actions.showPage({ page: 'music', highlight: 'appleSync' })
+  else actions.syncNow()
 }

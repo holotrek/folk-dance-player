@@ -1,60 +1,38 @@
 import { useState } from 'react'
-import { Button, Group, Modal, Stack, Switch, Text, Title } from '@mantine/core'
+import { Button, Group, Modal, Text } from '@mantine/core'
 import { syncParts, type AppleSyncStatus } from '@shared/apple-sync'
 import type { RendererApi } from '@shared/contract'
-import ConfirmDialog from '../components/ConfirmDialog'
-import AppleSyncDialog, { NOT_ALLOWED } from './AppleSyncDialog'
+import { NOT_ALLOWED } from './AppleSyncDialog'
 import { shrinkText } from './AppleSyncNotices'
 import SyncSummaryView from './SyncSummaryView'
-import { useAppleSync } from './useAppleSync'
-import { useAppleSyncFlow } from './useAppleSyncFlow'
 
 const time = (iso: string): string =>
   new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 
-// Settings → Apple Music (sync spec §6.1). macOS only: hidden where sync isn't available.
-export default function AppleMusicSection({ api }: { api: RendererApi }): React.JSX.Element | null {
-  const status = useAppleSync(api)
-  const flow = useAppleSyncFlow(api)
-  const [confirmOff, setConfirmOff] = useState(false)
+// Below the Music page's toolbar while sync is on (sync spec §6.1): the last sync (with Details),
+// or a paused state with its fix, and Sync now.
+export default function AppleSyncStatusBar(props: {
+  api: RendererApi
+  status: AppleSyncStatus | null
+}): React.JSX.Element | null {
+  const { api, status } = props
   const [details, setDetails] = useState(false)
-  if (!status?.available) return null
-  const on = status.state !== 'off'
-
+  if (!status?.available || status.state === 'off') return null
   return (
-    <Stack gap="xs">
-      <Title order={4}>Apple Music</Title>
-      <Switch
-        label="Sync with Apple Music"
-        description="Keeps your songs and Music's playlists in step with the Music app."
-        checked={on}
-        onChange={(e) => (e.currentTarget.checked ? flow.open() : setConfirmOff(true))}
-      />
-      {on && <StatusLine status={status} api={api} onDetails={() => setDetails(true)} />}
-      {on && (
-        <Group>
-          <Button
-            variant="default"
-            loading={status.state === 'syncing'}
-            onClick={() => void api.invoke('appleSync:syncNow')}
-          >
-            Sync now
-          </Button>
-        </Group>
-      )}
-      <AppleSyncDialog flow={flow} api={api} waiting={status.waiting} />
-      <ConfirmDialog
-        opened={confirmOff}
-        title="Turn off Sync with Apple Music?"
-        message="Songs and playlists stay; playlists become editable."
-        confirmLabel="Turn off"
-        onConfirm={() => void api.invoke('appleSync:disable')}
-        onClose={() => setConfirmOff(false)}
-      />
+    <Group gap="sm">
+      <StatusLine status={status} api={api} onDetails={() => setDetails(true)} />
+      <Button
+        size="xs"
+        variant="default"
+        loading={status.state === 'syncing'}
+        onClick={() => void api.invoke('appleSync:syncNow')}
+      >
+        Sync now
+      </Button>
       <Modal opened={details} onClose={() => setDetails(false)} title="Last sync" size="lg">
         {status.lastResult && <SyncSummaryView summary={status.lastResult} />}
       </Modal>
-    </Stack>
+    </Group>
   )
 }
 
@@ -80,7 +58,7 @@ function StatusLine(props: {
     )
   }
   if (status.state === 'paused-shrunk' && status.shrink) {
-    // Keep waiting is doing nothing: sync resumes by itself once Music reports the library again.
+    // Keep waiting needs no button: sync resumes by itself once Music reports the library again.
     return (
       <Group gap="sm">
         <Text size="sm">{`Paused: ${shrinkText(status.shrink)}`}</Text>
@@ -111,7 +89,7 @@ function StatusLine(props: {
   ]
   return (
     <Group gap="sm">
-      <Text size="sm">
+      <Text size="sm" c="dimmed">
         {`Last synced ${time(status.lastResult.finishedAt)} — ${parts.length ? parts.join(', ') : 'no changes'}`}
       </Text>
       <Button size="xs" variant="subtle" onClick={props.onDetails}>

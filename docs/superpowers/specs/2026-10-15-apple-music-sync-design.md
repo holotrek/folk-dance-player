@@ -136,7 +136,7 @@ type SnapshotResult =
 - **Triggers:**
   - at startup, once the window is shown
   - when the control window gains focus, at most once every 10 seconds
-  - Sync now (Settings, and File → Sync with Apple Music, ⌘⇧S)
+  - Sync now (the Music page, and File → Sync with Apple Music, ⌘⇧S)
 - **One at a time:** a trigger during a running sync queues one more sync (never more).
 - **States:** `off`, `idle`, `syncing`, `paused-denied`, `paused-other-library`. A paused sync
   does nothing on focus triggers (no repeated notices). Sync now and the Settings buttons retry.
@@ -298,17 +298,22 @@ After a confirmation ("Songs and playlists stay; playlists become editable"):
 
 ## 6. The interface
 
-### 6.1 Settings → Apple Music
+### 6.1 The Music page's Apple Music controls
 
-- **Sync with Apple Music** switch (§5.8, §5.9).
-- **Status line**, one of:
+Changed after the first test run: sync lives on the Music page, not in Settings.
+
+- **Sync with Apple Music** switch, beside Add Music… and the import buttons (§5.8, §5.9). File →
+  Sync with Apple Music, while sync is off, opens the Music page and pulses a border around it for
+  a moment.
+- **A status bar** below the toolbar while sync is on, with **Sync now**. Its status line is one of:
   - "Last synced 11:42 — 3 added, 1 updated, 2 to review", with **Details** showing the last
     sync's summary in the import summary layout (§7.1)
   - "Paused: Music has a different library open", with **Switch to this library**
+  - "Paused: Music's library looks much smaller than before (N of M songs are missing)", with
+    **Sync anyway** (§7.2)
   - "Folk Dance Player isn't allowed to read your Music library", with **Open Privacy Settings**
     (System Settings → Privacy & Security → Media & Apple Music)
-- **Sync now.**
-- The import mapping and its settings stay where they are.
+- The import mapping and its settings stay in Settings.
 
 ### 6.2 Sidebar
 

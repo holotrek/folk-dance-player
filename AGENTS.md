@@ -28,6 +28,12 @@ MITPlayer.
 
 Newest first. Format: **date — decision.** Why. _Rejected:_ alternatives.
 
+- **2026-10-16 — Sync with Apple Music lives on the Music page, and a menu item that opens a page highlights its control there.**
+  - **Chosen by the user after first testing:** the Settings section was hard to find.
+  - **The Music page has the switch,** `AppleSyncSwitch`, beside the import buttons. While sync is on, it also has `AppleSyncStatusBar` below the toolbar: the status line, Details and Sync now. Settings keeps only the import mapping.
+  - **The highlight:** `app:showPage` carries a `PageTarget` (`{ page, highlight? }`). `<HighlightTarget id>` wrapped around a control pulses a border three times (`HIGHLIGHT_MS`, 2.4 s), with a steady border instead under reduced motion. It is driven by `HighlightProvider`/`useHighlight` in `App`.
+  - **The menu:** File → Sync with Apple Music, while sync is off, opens the Music page and highlights the switch (`syncAppleMusicFromMenu`).
+  - _Rejected:_ keeping the switch in Settings as well (two places for one setting).
 - **2026-10-16 — Fixes from Plan 10's final review, chosen by the user.**
   - **A shrink pause.** A sync that would send more than half of the synced songs, and at least 20 (`SHRINK_MIN_SONGS`), to review pauses (`paused-shrunk`) with **Sync anyway**. Focus syncs retry, so sync resumes by itself when Music reports the library again.
   - **Turning sync on waits.** It waits for an off still in progress and for a running import (`AppleSyncStatus.waiting`), keeping the playlist choices. No sync starts while sync is off.

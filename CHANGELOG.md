@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
-- **Sync with Apple Music** (Settings → Apple Music, on a Mac): reads your Music library directly, with no Library.xml export, and keeps songs and playlists in step when the app starts, when you switch back to it, and with Sync now (File → Sync with Apple Music, ⌘⇧S). Tags follow Music unless you edited the field here, and a message says what each sync changed.
+- **Sync with Apple Music** (a switch on the Music page, on a Mac): reads your Music library directly, with no Library.xml export, and keeps songs and playlists in step when the app starts, when you switch back to it, and with Sync now (File → Sync with Apple Music, ⌘⇧S). Tags follow Music unless you edited the field here, and a message says what each sync changed.
 - Songs deleted from Music wait in **Removed from Apple Music** (in the sidebar) until you keep or remove them; sync never deletes a song by itself.
 - If Music's library suddenly looks much smaller (most of your songs missing), sync pauses and asks before changing anything; it carries on by itself once Music shows the songs again.
 - Music's playlists appear in the sidebar in their folders, read-only, marked with a note; **Duplicate as my playlist** makes a copy you can edit.

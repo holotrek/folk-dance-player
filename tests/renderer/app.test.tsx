@@ -3,6 +3,7 @@ import { Notifications } from '@mantine/notifications'
 import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test } from 'vitest'
+import { APPLE_SYNC_OFF } from '@shared/apple-sync'
 import App from '@renderer/App'
 import { createFakeApi } from './fake-api'
 import { playing, track } from './program/fixtures'
@@ -14,11 +15,12 @@ afterEach(() => {
   delete (window as { api?: unknown }).api
 })
 
-function setup() {
+function setup(extra: Record<string, unknown> = {}) {
   const fake = createFakeApi({
     'player:getState': playing(hora),
     'player:pause': undefined,
-    'app:getInfo': { version: '0.1.0', dbPath: '/data/fdp.sqlite', schemaVersion: 2 }
+    'app:getInfo': { version: '0.1.0', dbPath: '/data/fdp.sqlite', schemaVersion: 2 },
+    ...extra
   })
   ;(window as { api?: unknown }).api = fake.api
   render(
@@ -52,8 +54,17 @@ describe('App', () => {
   test('Settings… in the app menu opens the Settings page', async () => {
     const fake = setup()
     await screen.findByRole('tab', { name: 'Settings' })
-    act(() => fake.emit('app:showPage', 'settings'))
+    act(() => fake.emit('app:showPage', { page: 'settings' }))
     expect(screen.getByRole('tab', { name: 'Settings' })).toHaveAttribute('aria-selected', 'true')
+  })
+
+  test('a menu item that opens a page can highlight its control there', async () => {
+    const fake = setup({ 'appleSync:status': { ...APPLE_SYNC_OFF, available: true } })
+    await screen.findByRole('tab', { name: 'Music' })
+    act(() => fake.emit('app:showPage', { page: 'music', highlight: 'appleSync' }))
+    expect(screen.getByRole('tab', { name: 'Music' })).toHaveAttribute('aria-selected', 'true')
+    const control = await screen.findByRole('switch', { name: /^Sync with Apple Music/ })
+    expect(control.closest('[data-highlight]')).toHaveAttribute('data-highlighted', 'true')
   })
 
   test('the logo sits beside the page tabs', async () => {

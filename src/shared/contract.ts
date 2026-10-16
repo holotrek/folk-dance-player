@@ -287,6 +287,14 @@ type MissingChannels = Exclude<InvokeChannel, (typeof INVOKE_CHANNELS)[number]>
 const allChannelsListed: [MissingChannels] extends [never] ? true : MissingChannels = true
 void allChannelsListed
 
+// A page the main process asks the control window to show (app menu items), and optionally a
+// control there to highlight for a moment.
+export type HighlightId = 'appleSync'
+export interface PageTarget {
+  page: 'settings' | 'music'
+  highlight?: HighlightId
+}
+
 // Every main → renderer event. Add a channel here and to EVENT_CHANNELS.
 export interface EventContract {
   'import:progress': ImportProgress
@@ -303,8 +311,8 @@ export interface EventContract {
   'projector:progress': ProjectorProgress
   // Background slide captures started, progressed or finished.
   'canva:captureStatus': CaptureStatus
-  // To the control window: the app menu asks for a page (Settings…).
-  'app:showPage': 'settings'
+  // To the control window: the app menu asks for a page (Settings…, or the Music page's sync switch).
+  'app:showPage': PageTarget
   // To the control window: sync's state changed (and with it the review count or last result).
   'appleSync:state': AppleSyncStatus
   // To the control window: a toast or notice, once per occurrence (sync spec §6.5).

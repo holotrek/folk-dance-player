@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { APPLE_SYNC_OFF, emptySyncSummary, type AppleSyncStatus } from '@shared/apple-sync'
 import type { InvokeChannel } from '@shared/contract'
-import AppleMusicSection from '@renderer/apple-sync/AppleMusicSection'
+import AppleSyncControls from './controls'
 import AppleSyncNotices from '@renderer/apple-sync/AppleSyncNotices'
 import { createFakeApi } from '../fake-api'
 import { renderWithMantine } from '../render'
@@ -28,7 +28,7 @@ function setup(status: AppleSyncStatus, handlers: Record<string, unknown> = {}) 
   } as Partial<Record<InvokeChannel, unknown>>)
   renderWithMantine(
     <>
-      <AppleMusicSection api={fake.api} />
+      <AppleSyncControls api={fake.api} />
       <AppleSyncNotices api={fake.api} />
     </>
   )

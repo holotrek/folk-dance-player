@@ -17,7 +17,7 @@ import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
-import type { EventChannel, EventContract } from '@shared/contract'
+import type { EventChannel, EventContract, PageTarget } from '@shared/contract'
 import { MEDIA_SCHEME, parseMediaUrl, parseSlideUrl } from '@shared/media'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -48,7 +48,7 @@ import { startUtilityWorker } from './import/utility-worker'
 import { createHandlers } from './ipc/handlers'
 import { createLogger } from './log/logger'
 import { mediaResponse } from './media/media-response'
-import { menuTemplate } from './menu'
+import { menuTemplate, syncAppleMusicFromMenu } from './menu'
 import { KeepAwake } from './power/keep-awake'
 import { ActivityWatcher } from './projector/activity'
 import {
@@ -417,6 +417,11 @@ function startApp(): void {
     copyright: '© 2026 Evan Kaiser',
     credits: 'For folk dance organizers. Inspired by MITPlayer.'
   })
+  // An app menu item that opens a page in the control window, optionally highlighting a control.
+  const showPage = (target: PageTarget): void => {
+    mainWindow.show()
+    mainWindow.webContents.send('app:showPage', target)
+  }
   const reveal = (dir: string) => () =>
     void mkdir(dir, { recursive: true }).then(() => shell.openPath(dir))
   Menu.setApplicationMenu(
@@ -424,20 +429,15 @@ function startApp(): void {
       menuTemplate({
         appName: 'Folk Dance Player',
         dev: is.dev,
-        showSettings: () => {
-          mainWindow.show()
-          mainWindow.webContents.send('app:showPage', 'settings')
-        },
+        showSettings: () => showPage({ page: 'settings' }),
         revealLogs: reveal(log.dir),
         revealBackups: reveal(backupsDir),
         appleSync: appleSync.status().available,
-        // While sync is off, the menu item opens Settings, where the switch is.
-        syncAppleMusic: () => {
-          if (appleSync.status().state === 'off') {
-            mainWindow.show()
-            mainWindow.webContents.send('app:showPage', 'settings')
-          } else void appleSync.syncNow()
-        }
+        syncAppleMusic: () =>
+          syncAppleMusicFromMenu(appleSync.status().state, {
+            showPage,
+            syncNow: () => void appleSync.syncNow()
+          })
       })
     )
   )

@@ -20,14 +20,13 @@ test('sync with Apple Music: turn on, change Music, then focus', async () => {
   const running = await launch(space.userData, { FDP_APPLE_LIBRARY: library })
   try {
     const { page } = running
-    await page.getByRole('tab', { name: 'Settings' }).click()
+    await page.getByRole('tab', { name: 'Music' }).click()
     await page.getByRole('switch', { name: /^Sync with Apple Music/ }).click()
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: 'Start sync', exact: true }).click()
     await expect(page.getByText('Added (2)')).toBeVisible()
     await page.getByRole('button', { name: 'Done' }).click()
 
-    await page.getByRole('tab', { name: 'Music' }).click()
     await page.getByText('IFD2026').click()
     await expect(page.getByText('Week 3')).toBeVisible()
     await expect(page.getByLabel('Apple Music playlist')).toBeVisible()

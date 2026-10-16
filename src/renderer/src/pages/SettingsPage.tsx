@@ -20,7 +20,6 @@ import { colorSchemeFor } from '../appearance'
 import Logo from '../components/Logo'
 import ProjectorDisplay from '../components/ProjectorDisplay'
 import RemoteSection from '../components/RemoteSection'
-import AppleMusicSection from '../apple-sync/AppleMusicSection'
 import ImportMappingFields from '../import/ImportMappingFields'
 import { errorMessage } from '../ipc-error'
 
@@ -126,7 +125,6 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
         </Text>
         <ImportMappingFields value={mapping} onChange={saveMapping} />
       </Stack>
-      <AppleMusicSection api={api} />
       <Stack gap="xs">
         <Title order={4}>Library</Title>
         <TagsInput

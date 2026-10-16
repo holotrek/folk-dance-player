@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Alert, Button, Group, Text, Title } from '@mantine/core'
 import type { ReapplyResult } from '@shared/library'
+import AppleSyncStatusBar from '../apple-sync/AppleSyncStatusBar'
+import AppleSyncSwitch from '../apple-sync/AppleSyncSwitch'
 import { useAppleSync } from '../apple-sync/useAppleSync'
 import ConfirmDialog from '../components/ConfirmDialog'
 import DropZone from '../import/DropZone'
@@ -84,9 +86,11 @@ export default function MusicPage(): React.JSX.Element {
               Import from Apple Music…
             </Button>
           )}
+          <AppleSyncSwitch api={api} status={sync} />
         </Group>
       </Group>
       <SlidesNotices state={slides} />
+      <AppleSyncStatusBar api={api} status={sync} />
       {filter.kind === 'review' && (
         <Group>
           <Text size="sm" c="dimmed" style={{ flex: 1 }}>

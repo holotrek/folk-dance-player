@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import { APPLE_SYNC_OFF, emptySyncSummary, type AppleSyncStatus } from '@shared/apple-sync'
 import type { InvokeChannel } from '@shared/contract'
-import AppleMusicSection from '@renderer/apple-sync/AppleMusicSection'
+import AppleSyncControls from './controls'
 import { createFakeApi } from '../fake-api'
 import { renderWithMantine } from '../render'
 
@@ -33,7 +33,7 @@ function setup(status: AppleSyncStatus = OFF, handlers: Record<string, unknown> 
     'appleSync:openPrivacySettings': undefined,
     ...handlers
   } as Partial<Record<InvokeChannel, unknown>>)
-  renderWithMantine(<AppleMusicSection api={fake.api} />)
+  renderWithMantine(<AppleSyncControls api={fake.api} />)
   return { fake, user: userEvent.setup() }
 }
 
@@ -42,10 +42,10 @@ const turnOn = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.click(await screen.findByRole('button', { name: 'Continue' }))
 }
 
-describe('Settings → Apple Music (sync spec §6.1)', () => {
+describe("the Music page's Apple Music controls (sync spec §6.1)", () => {
   test('is hidden where sync is unavailable', async () => {
     const fake = createFakeApi()
-    renderWithMantine(<AppleMusicSection api={fake.api} />)
+    renderWithMantine(<AppleSyncControls api={fake.api} />)
     await new Promise((r) => setTimeout(r, 0))
     expect(screen.queryByText('Apple Music')).not.toBeInTheDocument()
   })
