@@ -78,4 +78,15 @@ describe('SettingsStore', () => {
     expect(store.get('autoContinue.enabled')).toBe(true)
     expect(() => store.getAll()).not.toThrow()
   })
+
+  test('Apple Music sync settings are validated', () => {
+    expect(store.get('appleSync.enabled')).toBe(false)
+    store.set('appleSync.libraryId', '0123456789ABCDEF')
+    expect(store.get('appleSync.libraryId')).toBe('0123456789ABCDEF')
+    expect(() => store.set('appleSync.libraryId', 'not-an-id')).toThrow(InvalidSettingError)
+    expect(() => store.set('appleSync.lastResult', { finishedAt: 'x' })).toThrow(
+      InvalidSettingError
+    )
+    expect(() => store.set('playlistFolders.open', ['abc'])).toThrow(InvalidSettingError)
+  })
 })

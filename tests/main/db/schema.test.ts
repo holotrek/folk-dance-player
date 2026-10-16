@@ -38,6 +38,7 @@ describe('initial schema', () => {
       'program_items',
       'play_log',
       'library_fts',
+      'playlist_folders',
       'settings'
     ]) {
       expect(names).toContain(t)
