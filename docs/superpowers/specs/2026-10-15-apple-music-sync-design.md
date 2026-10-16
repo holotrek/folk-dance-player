@@ -1,7 +1,7 @@
 # Sync with Apple Music — Design
 
 - **Date:** 2026-10-15
-- **Status:** Draft for review
+- **Status:** Implemented (Plan 10, `docs/superpowers/plans/2026-10-16-plan-10-apple-music-sync.md`)
 - **Extends:** `2026-10-13-folk-dance-player-electron-design.md` (the main spec), §5 Importing music
 - **Spike:** the iTunesLibrary framework read the user's real library (2,169 tracks, 78 playlists) in
   about 0.8 s, with the same persistent IDs, tags and playlists as their exported `Library.xml`
@@ -123,7 +123,8 @@ type SnapshotResult =
 ```
 
 - **`HelperSource`** runs the helper with `execFile`, applies the 30 s timeout, maps exit codes to
-  reasons, and validates the JSON against the snapshot shape.
+  reasons, and validates the JSON against the snapshot shape. The read while turning sync on waits
+  up to 5 minutes instead, because macOS's permission dialog holds it; stdout may be up to 256 MB.
 - **`FileSource`** reads a snapshot from the file named by `FDP_APPLE_LIBRARY`, read fresh on
   every sync, so dev runs and end-to-end tests can change the "Music library" between syncs. When
   the variable is set, `FileSource` replaces `HelperSource` (like `FDP_USER_DATA`, it is for
@@ -205,8 +206,9 @@ For each eligible track, in order:
 3. **No match:** a new song, its automatic dance, and the pairing, using the saved import
    mapping (main spec §5.2). There is no mapping step per sync.
 
-Only new, moved or changed files go through the import worker (tags read from the file for the
-raw `tag_*` columns, size, mtime, fingerprint). Unchanged tracks are compared from the snapshot
+Only new, moved or changed files go through the import worker (size, mtime, duration and the
+fingerprint are read from the file; the tags are Music's). "Unchanged" is the same path, size and
+mtime. Unchanged tracks are compared from the snapshot
 alone, which keeps a typical sync to about a second.
 
 As with `Library.xml`, **tag values come from Music** (the snapshot), not from the file, because
@@ -271,7 +273,8 @@ choreographer (only while that dance has this one song), and that pairing's teac
 3. **The first sync,** with progress (the existing import progress), which records
    `appleSync.libraryId`.
 4. **Playlists edited locally since a `Library.xml` import:** a one-time dialog (like main spec
-   §5.3) lists them. Because every Music playlist gets a mirror, each has two choices:
+   §5.3) lists them. It is asked before the first sync, right after the mapping step, because the
+   first sync writes the mirrors. Because every Music playlist gets a mirror, each has two choices:
    - **Replace with Apple version:** the playlist becomes the mirror; local edits are lost.
    - **Keep my edits as a copy** (the default, so edits are never lost without a choice): the
      edited playlist becomes a local playlist named "Name (my edits)", and a new mirror follows

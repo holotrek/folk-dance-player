@@ -68,3 +68,13 @@ System Settings → Displays: not mirrored, with the laptop as the main display.
 
 - [ ] 15. Turn the Projector switch **off**, then unplug the projector: nothing is left behind and the music keeps playing.
 - [ ] 16. Optional: unplug with the view **up**, a few times. Known issue (`docs/spikes/projector-unplug.md`): about 1 unplug in 4 leaves a grey window until the app quits. The music should keep playing; quitting and reopening the app clears it.
+
+## H. Apple Music
+
+Use a Mac whose Music library has local songs and playlists in a folder.
+
+- [ ] 17. Settings → Apple Music → **Sync with Apple Music**, then Continue: macOS asks whether **Folk Dance Player** may access Media & Apple Music. Allow it: the mapping step shows your tags, and the first sync's summary lists your songs.
+- [ ] 18. The sidebar shows Music's folders (collapsible) and playlists, marked with a note, before your own playlists.
+- [ ] 19. In Music, change a song's genre, delete a song, and edit a playlist. Switch back to Folk Dance Player: within a few seconds a message says what changed, the deleted song is in **Removed from Apple Music**, and the playlist matches Music.
+- [ ] 20. In System Settings → Privacy & Security → Media & Apple Music, turn Folk Dance Player's access off, then choose File → Sync with Apple Music: Settings says Folk Dance Player isn't allowed to read your Music library, and **Open Privacy Settings** opens that page. (If it says sync failed instead, the helper's denial check needs the error the log shows.) Turn access back on.
+- [ ] 21. After installing this release over the previous one, does macOS ask for Music access again? If it does, say so in the release notes.
