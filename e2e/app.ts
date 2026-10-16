@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import {
   _electron as electron,
   type ElectronApplication,
@@ -34,9 +35,12 @@ const PACKAGED = process.env['FDP_APP']
   ? join(process.env['FDP_APP'], 'Contents', 'MacOS', basename(process.env['FDP_APP'], '.app'))
   : null
 
-// Starts the app on the library in `userData`.
-export async function launch(userData: string): Promise<Running> {
-  const env = { ...process.env, FDP_USER_DATA: userData } as Record<string, string>
+// Starts the app on the library in `userData`, with any extra environment (FDP_APPLE_LIBRARY…).
+export async function launch(
+  userData: string,
+  extraEnv: Record<string, string> = {}
+): Promise<Running> {
+  const env = { ...process.env, FDP_USER_DATA: userData, ...extraEnv } as Record<string, string>
   delete env['ELECTRON_RUN_AS_NODE'] // set by VS Code's terminal; Electron would run as Node
   const app = await electron.launch(
     PACKAGED ? { executablePath: PACKAGED, args: [], env } : { args: ['.'], env }
@@ -66,4 +70,48 @@ export async function drag(page: Page, source: Locator, target: Locator): Promis
   await page.mouse.down()
   await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
   await page.mouse.up()
+}
+
+export interface FakeMusicTrack {
+  id: number // becomes the persistent ID
+  title: string // the workspace song's title (its file is <music>/<title>.mp3)
+  genre?: string
+}
+
+// Writes a Music library snapshot (Apple Music sync spec §3.1) at `path`, for FDP_APPLE_LIBRARY.
+// It is read fresh on every sync, so a test changes the "Music library" by writing it again.
+export function writeAppleSnapshot(
+  path: string,
+  music: string,
+  tracks: FakeMusicTrack[],
+  playlists: { id: number; name: string; folder?: string; trackIds: number[] }[] = []
+): void {
+  const pid = (n: number): string => n.toString(16).toUpperCase().padStart(16, '0')
+  const folders = [...new Set(playlists.flatMap((p) => (p.folder ? [p.folder] : [])))]
+  writeFileSync(
+    path,
+    JSON.stringify({
+      version: 1,
+      libraryId: 'AAAAAAAAAAAAAAA1',
+      tracks: tracks.map((t) => ({
+        persistentId: pid(t.id),
+        location: pathToFileURL(join(music, `${t.title}.mp3`)).href,
+        locationType: 'file',
+        mediaKind: 'music',
+        kind: 'MPEG audio file',
+        title: t.title,
+        artist: null,
+        albumArtist: null,
+        genre: t.genre ?? null,
+        durationMs: 30000
+      })),
+      folders: folders.map((name, i) => ({ persistentId: pid(0xf000 + i), name, parentId: null })),
+      playlists: playlists.map((p) => ({
+        persistentId: pid(0xa000 + p.id),
+        name: p.name,
+        parentId: p.folder ? pid(0xf000 + folders.indexOf(p.folder)) : null,
+        itemIds: p.trackIds.map(pid)
+      }))
+    })
+  )
 }
