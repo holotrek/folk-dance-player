@@ -180,6 +180,9 @@ anything, enters `paused-other-library`, and shows **"Music has a different libr
 - **Switch to this library:** `appleSync.libraryId` becomes the new ID and the sync runs. Every
   song from the old library becomes `'gone'` (into the review list), and the new library's tracks
   are added or adopted.
+- **When turning sync on,** a different library is found when the library is first read, so this
+  question comes before the mapping step and the playlist choices are made for the library
+  being synced.
 
 ### 5.2 Eligible tracks
 
@@ -261,6 +264,8 @@ choreographer (only while that dance has this one song), and that pairing's teac
 - **A file matching a synced song** by path or fingerprint is skipped and listed in the import
   summary as **"Already in library (Apple Music)"**.
 - **Copies of local songs** behave as today.
+- **A song waiting in the review list** that Add Music… finds again (same file, or a copy when its
+  old file is gone) counts as **Keep**: it becomes an ordinary local song.
 - **Import from Apple Music… (Library.xml)** is hidden while sync is on.
 
 ### 5.8 Turning sync on
@@ -359,6 +364,14 @@ unreadable, missing. Each category lists its songs in Details, like the import s
   next sync finishes the job.
 - **Sync during a session:** allowed. The worst a mid-session sync can do is relabel a song or
   re-order a mirror; removals only go to the review list. The playing song is never interrupted.
+- **Music's library suddenly much smaller** (added after the final review): if a sync would send
+  more than half of the synced songs, and at least 20, to the review list, it pauses before
+  changing anything (`paused-shrunk`): "Music's library looks much smaller than before (N of M
+  songs are missing)", with **Sync anyway**. Keep waiting needs no button: focus syncs retry, and
+  sync resumes by itself once Music reports the library again.
+- **Turning sync on waits** for an off still in progress ("Waiting for the last sync to
+  finish…") and for a running Add Music import ("Waiting for the import to finish…"), keeping
+  the playlist choices. No sync starts while sync is off.
 
 ### 7.3 Edge cases settled during design
 

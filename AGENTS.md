@@ -28,6 +28,16 @@ MITPlayer.
 
 Newest first. Format: **date — decision.** Why. _Rejected:_ alternatives.
 
+- **2026-10-16 — Fixes from Plan 10's final review, chosen by the user.**
+  - **A shrink pause.** A sync that would send more than half of the synced songs, and at least 20 (`SHRINK_MIN_SONGS`), to review pauses (`paused-shrunk`) with **Sync anyway**. Focus syncs retry, so sync resumes by itself when Music reports the library again.
+  - **Turning sync on waits.** It waits for an off still in progress and for a running import (`AppleSyncStatus.waiting`), keeping the playlist choices. No sync starts while sync is off.
+  - **A different library is found by `preview()`** (`otherLibrary`), so it is asked about before the mapping step. `enable(decisions, switchLibrary)` adopts the open library.
+  - **Gone means "not in the snapshot".** A track Music still has but sync now skips (cloud-only, converted to ALAC) doesn't send its song to review.
+  - **Rows matched before reading are claimed:** another track's audio match can't take them in the same sync.
+  - **Keep all / Remove all act on the songs shown** (a search narrows them), so the confirmation's count is what happens.
+  - **A missing-state change refreshes the lists quietly** (`SyncSummary.missingChanged`).
+  - **Add Music… finding a review-list song counts as Keep.**
+  - **Deferred:** the 30 s timeout of launch and focus syncs while macOS may be asking for access again after an update. This waits for hardware checklist step 21.
 - **2026-10-16 — Sync with Apple Music is `src/main/apple-sync/`: pure modules over the database, a Swift helper, and `AppleSync`.** `parseSnapshot`/`sortTracks` (the snapshot), `createHelperSource`/`createFileSource` (`FDP_APPLE_LIBRARY` for development and end-to-end tests), `applyMusicTags` (the baseline rule), `findSyncRow`/`saveSyncedTrack` (matching, adoption, restoring), `syncPlaylists`, `markGone` and the review actions, `runSync` (the engine) and `AppleSync` (triggers, states, notices). Only `index.ts` touches Electron. The helper (`native/music-library/main.swift`) compiles for `macos12.0` (Electron 44's minimum; `ITLibPlaylist.isPrimary` needs it), and its enum names were checked against the SDK headers. _Rejected:_ a native Node add-on; scripting Music's XML export (sync spec §2).
 - **2026-10-16 — A sync reads only new, moved or changed files.** "Unchanged" is the same path (compared in NFC), size and mtime, from an async `stat` in main; that also notices a file deleted or replaced on disk without reading it. Files that are read use Music's tags (`KnownTags`), as `Library.xml` imports do; only size, mtime, duration and the fingerprint come from the file.
 - **2026-10-16 — Turning sync on reads the library with a 5-minute timeout** (`PERMISSION_TIMEOUT_MS`): the helper waits while macOS's permission dialog is up. Other reads keep 30 s. `execFile`'s `maxBuffer` is 256 MB (its 1 MB default fails above about 3,000 tracks).
