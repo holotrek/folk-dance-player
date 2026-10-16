@@ -13,7 +13,9 @@ const status = (reviewCount: number): AppleSyncStatus => ({
   available: true,
   state: 'idle',
   lastResult: null,
-  reviewCount
+  reviewCount,
+  waiting: null,
+  shrink: null
 })
 
 const row = (songId: number, title: string, isMissing: boolean): LibraryRow => ({

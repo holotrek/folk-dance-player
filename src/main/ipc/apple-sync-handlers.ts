@@ -10,6 +10,7 @@ export type AppleSyncHandlerDeps = Pick<
   | 'disable'
   | 'syncNow'
   | 'switchLibrary'
+  | 'syncAnyway'
   | 'resolve'
   | 'resolveAll'
 > & { openPrivacySettings(): void }
@@ -28,7 +29,8 @@ export function appleSyncHandlers(deps: {
   return {
     'appleSync:status': () => deps.appleSync?.status() ?? APPLE_SYNC_OFF,
     'appleSync:preview': () => sync().preview(),
-    'appleSync:enable': (decisions) => sync().enable(decisions),
+    'appleSync:enable': (decisions, switchLibrary) => sync().enable(decisions, switchLibrary),
+    'appleSync:syncAnyway': () => sync().syncAnyway(),
     'appleSync:disable': () => sync().disable(),
     'appleSync:syncNow': () => sync().syncNow(),
     'appleSync:switchLibrary': () => sync().switchLibrary(),

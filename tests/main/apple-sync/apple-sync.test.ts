@@ -50,6 +50,7 @@ function make(over: Partial<AppleSyncDeps> = {}): AppleSync {
       return runResult()
     },
     findConflicts: () => [],
+    goneEstimate: () => ({ gone: 0, synced: 0 }),
     review: {
       count: () => review,
       resolve: () => undefined,
@@ -301,5 +302,130 @@ describe('turning sync on and off', () => {
     sync.focused()
     await flush()
     expect(runs).toHaveLength(1)
+  })
+})
+
+// Fixes from the final review's minors, chosen by the user.
+describe('after the final review', () => {
+  // Minor 1.
+  test('turning on while turning off still waits for a sync waits for it, then runs', async () => {
+    enabled()
+    let release!: () => void
+    runResult = () => new Promise((resolve) => (release = () => resolve(emptySyncSummary('t'))))
+    const sync = make()
+    void sync.syncNow()
+    await flush()
+    const off = sync.disable()
+    await flush()
+    const on = sync.enable({ X: 'replace' })
+    await flush()
+    expect(statuses.at(-1)?.waiting).toBe('sync')
+    expect(runs).toHaveLength(1)
+    runResult = async () => emptySyncSummary('t')
+    release()
+    await off
+    expect(await on).not.toBeNull()
+    expect(disabled).toBe(1)
+    expect(runs.map((r) => r.decisions)).toEqual([{}, { X: 'replace' }])
+    expect(settings.get('appleSync.enabled')).toBe(true)
+    expect(sync.status()).toMatchObject({ state: 'idle', waiting: null })
+  })
+
+  // Minor 2.
+  test('after turning off, a sync that was waiting for an import never runs', async () => {
+    enabled()
+    runResult = async () => {
+      throw new ImportBusyError()
+    }
+    const sync = make()
+    await sync.syncNow()
+    await sync.disable()
+    const before = readOptions.length
+    sync.importFinished()
+    await flush()
+    expect(readOptions).toHaveLength(before)
+    expect(sync.syncing).toBe(false)
+  })
+
+  // Minor 3.
+  test('the first sync waits for a running import, keeping the choices', async () => {
+    let busy = true
+    runResult = async () => {
+      if (busy) throw new ImportBusyError()
+      return emptySyncSummary('t')
+    }
+    const sync = make()
+    const on = sync.enable({ X: 'replace' })
+    await flush()
+    expect(sync.status().waiting).toBe('import')
+    busy = false
+    sync.importFinished()
+    expect(await on).not.toBeNull()
+    expect(runs.map((r) => r.decisions)).toEqual([{ X: 'replace' }, { X: 'replace' }])
+    expect(sync.status()).toMatchObject({ state: 'idle', waiting: null })
+  })
+
+  // Minor 4.
+  test('the preview says when Music has a different library; switching runs with the choices', async () => {
+    settings.set('appleSync.libraryId', OTHER_ID)
+    const sync = make()
+    expect(await sync.preview()).toMatchObject({ ok: true, otherLibrary: true })
+    await sync.enable({ X: 'replace' }, true)
+    expect(runs.map((r) => r.decisions)).toEqual([{ X: 'replace' }])
+    expect(settings.get('appleSync.libraryId')).toBe(LIBRARY_ID)
+    expect(sync.status().state).toBe('idle')
+  })
+
+  // Minor 5.
+  test('a sync that only changed missing files refreshes the lists, quietly', async () => {
+    enabled()
+    runResult = async () => ({ ...emptySyncSummary('t'), missingChanged: true })
+    const sync = make()
+    await sync.syncNow()
+    expect(changes).toBe(1)
+    expect(notices).toEqual([])
+  })
+
+  // Minor 9.
+  test('a sync that would send most songs to review pauses; Sync anyway runs it', async () => {
+    enabled()
+    const sync = make({ goneEstimate: () => ({ gone: 30, synced: 40 }) })
+    await sync.syncNow()
+    expect(runs).toEqual([])
+    expect(sync.status()).toMatchObject({
+      state: 'paused-shrunk',
+      shrink: { missing: 30, total: 40 }
+    })
+    expect(notices).toEqual([{ kind: 'shrunk', missing: 30, total: 40 }])
+    now += FOCUS_INTERVAL_MS
+    sync.focused()
+    await flush()
+    expect(notices).toHaveLength(1)
+    expect(runs).toEqual([])
+    await sync.syncAnyway()
+    expect(runs).toHaveLength(1)
+    expect(sync.status()).toMatchObject({ state: 'idle', shrink: null })
+  })
+
+  test('a paused shrink resumes by itself once Music reports the library again', async () => {
+    enabled()
+    let estimate = { gone: 30, synced: 40 }
+    const sync = make({ goneEstimate: () => estimate })
+    await sync.syncNow()
+    estimate = { gone: 0, synced: 40 }
+    now += FOCUS_INTERVAL_MS
+    sync.focused()
+    await flush()
+    expect(runs).toHaveLength(1)
+    expect(sync.status().state).toBe('idle')
+  })
+
+  test('fewer than 20 songs, or under half, sync as usual', async () => {
+    enabled()
+    const few = make({ goneEstimate: () => ({ gone: 19, synced: 20 }) })
+    await few.syncNow()
+    const half = make({ goneEstimate: () => ({ gone: 20, synced: 40 }) })
+    await half.syncNow()
+    expect(runs).toHaveLength(2)
   })
 })

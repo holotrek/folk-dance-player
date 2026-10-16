@@ -5,6 +5,10 @@ import type { RendererApi } from '@shared/contract'
 
 const PAUSED = 'Sync with Apple Music is paused'
 
+// "Music's library looks much smaller than before (1,950 of 2,000 songs are missing)"
+export const shrinkText = ({ missing, total }: { missing: number; total: number }): string =>
+  `Music's library looks much smaller than before (${missing.toLocaleString('en-US')} of ${total.toLocaleString('en-US')} songs are missing)`
+
 export function noticeContent(notice: AppleSyncNotice): {
   title?: string
   message: string
@@ -24,6 +28,12 @@ export function noticeContent(notice: AppleSyncNotice): {
       return {
         title: PAUSED,
         message: 'Music has a different library open. Settings → Apple Music has the choices.',
+        color: 'yellow'
+      }
+    case 'shrunk':
+      return {
+        title: PAUSED,
+        message: `${shrinkText(notice)}. Settings → Apple Music has the choices.`,
         color: 'yellow'
       }
     case 'failed':

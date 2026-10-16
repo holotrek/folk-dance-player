@@ -19,6 +19,10 @@ import type { Snapshot } from './snapshot'
 
 export const FOCUS_INTERVAL_MS = 10_000
 
+// A sync that would send at least this many synced songs to review, and more than half of them,
+// pauses first: Music's library looks much smaller than before (a hiccup, an iCloud re-download).
+export const SHRINK_MIN_SONGS = 20
+
 export interface AppleSyncDeps {
   available: boolean
   source: LibrarySource
@@ -29,6 +33,8 @@ export interface AppleSyncDeps {
     onProgress?: (progress: ImportProgress) => void
   ) => Promise<SyncSummary>
   findConflicts: (snapshot: Snapshot) => ApplePlaylistConflict[]
+  // How many synced songs this snapshot would send to review (`gone`), of how many (`synced`).
+  goneEstimate: (snapshot: Snapshot) => { gone: number; synced: number }
   review: {
     count(): number
     resolve(fileIds: number[], action: ReviewAction): void
@@ -57,11 +63,16 @@ export class AppleSync {
   private enabled: boolean
   private state: AppleSyncState
   private running: Promise<void> | null = null
+  private turningOff: Promise<void> | null = null
   private again = false
   private lastFocus = -Infinity
   private failing = false // the last sync failed: a repeat failure isn't noticed again
   private noticedPause: AppleSyncState | null = null
   private waitingForImport = false
+  private importWaiters: (() => void)[] = []
+  private waiting: AppleSyncStatus['waiting'] = null
+  private shrink: AppleSyncStatus['shrink'] = null
+  private skipShrinkCheck = false
   private previewed: Snapshot | null = null
 
   constructor(private readonly deps: AppleSyncDeps) {
@@ -74,7 +85,9 @@ export class AppleSync {
       available: this.deps.available,
       state: this.state,
       lastResult: this.deps.settings.get('appleSync.lastResult'),
-      reviewCount: this.deps.review.count()
+      reviewCount: this.deps.review.count(),
+      waiting: this.waiting,
+      shrink: this.state === 'paused-shrunk' ? this.shrink : null
     }
   }
 
@@ -86,8 +99,9 @@ export class AppleSync {
     if (this.state === 'idle') void this.request()
   }
 
+  // A paused shrink also retries on focus, so sync resumes by itself once Music recovers.
   focused(): void {
-    if (this.state !== 'idle' && this.state !== 'syncing') return
+    if (!['idle', 'syncing', 'paused-shrunk'].includes(this.state)) return
     const now = this.clock()
     if (now - this.lastFocus < FOCUS_INTERVAL_MS) return
     this.lastFocus = now
@@ -103,8 +117,16 @@ export class AppleSync {
     await this.request()
   }
 
+  // "Sync anyway" after a paused shrink: one sync without the check.
+  async syncAnyway(): Promise<void> {
+    if (this.state !== 'paused-shrunk') return
+    this.skipShrinkCheck = true
+    await this.syncNow()
+  }
+
   importFinished(): void {
-    if (!this.waitingForImport) return
+    for (const resume of this.importWaiters.splice(0)) resume()
+    if (!this.waitingForImport || !this.enabled) return
     this.waitingForImport = false
     void this.request()
   }
@@ -129,7 +151,8 @@ export class AppleSync {
   }
 
   // Turning on (§5.8): reading the library makes macOS ask for access, so this read waits as long as
-  // the dialog may be up. The snapshot is kept for enable().
+  // the dialog may be up. The snapshot is kept for enable(). A different library than the last time
+  // sync was on is reported here, so the organizer decides before the mapping step.
   async preview(): Promise<SyncPreview> {
     const read = await this.deps.source.read({ timeoutMs: PERMISSION_TIMEOUT_MS })
     if (!read.ok) return read
@@ -137,18 +160,31 @@ export class AppleSync {
     return {
       ok: true,
       preview: previewSnapshot(read.snapshot, this.deps.random),
-      conflicts: this.deps.findConflicts(read.snapshot)
+      conflicts: this.deps.findConflicts(read.snapshot),
+      otherLibrary: this.otherLibrary(read.snapshot)
     }
   }
 
-  // The first sync, with progress. Returns null when Music has a different library open than the
-  // last time sync was on (the status then offers Switch to this library).
-  async enable(decisions: Record<string, MirrorDecision>): Promise<SyncSummary | null> {
+  // The first sync, with progress. `switchLibrary` adopts the library Music has open (the organizer
+  // chose Switch to this library in the dialog). Returns null when Music has a different library
+  // open than the last time sync was on (the status then offers Switch to this library).
+  async enable(
+    decisions: Record<string, MirrorDecision>,
+    switchLibrary = false
+  ): Promise<SyncSummary | null> {
     if (!this.deps.available) throw new Error('Sync with Apple Music is only available on macOS.')
+    // Turning off waits for a running sync; turning on again waits for that to finish.
+    if (this.turningOff) {
+      this.waiting = 'sync'
+      this.emit()
+      await this.turningOff
+      this.waiting = null
+    }
     const snapshot = this.previewed ?? (await this.readForEnable())
     this.previewed = null
     this.deps.settings.set('appleSync.enabled', true)
     this.enabled = true
+    if (switchLibrary) this.deps.settings.set('appleSync.libraryId', null)
     if (this.otherLibrary(snapshot)) {
       this.pause('paused-other-library', { kind: 'other-library' })
       return null
@@ -156,7 +192,7 @@ export class AppleSync {
     const job = (async (): Promise<SyncSummary> => {
       this.setState('syncing')
       try {
-        const summary = await this.deps.run(snapshot, decisions, this.deps.onProgress)
+        const summary = await this.runAfterImports(snapshot, decisions)
         this.finished(summary, snapshot.libraryId)
         return summary
       } catch (err) {
@@ -181,15 +217,45 @@ export class AppleSync {
   async disable(): Promise<void> {
     this.enabled = false
     this.again = false
+    this.waitingForImport = false
     this.previewed = null
+    this.shrink = null
     this.setState('off')
-    if (this.running) await this.running
-    this.deps.review.disable()
-    this.deps.settings.set('appleSync.enabled', false)
-    this.noticedPause = null
-    this.failing = false
-    this.deps.onLibraryChanged()
-    this.emit()
+    const off = (async () => {
+      if (this.running) await this.running
+      this.deps.review.disable()
+      this.deps.settings.set('appleSync.enabled', false)
+      this.noticedPause = null
+      this.failing = false
+      this.deps.onLibraryChanged()
+      this.emit()
+    })()
+    this.turningOff = off
+    try {
+      await off
+    } finally {
+      if (this.turningOff === off) this.turningOff = null
+    }
+  }
+
+  // The first sync waits for an Add Music import to finish (both use the import worker), keeping
+  // the organizer's choices.
+  private async runAfterImports(
+    snapshot: Snapshot,
+    decisions: Record<string, MirrorDecision>
+  ): Promise<SyncSummary> {
+    for (;;) {
+      try {
+        return await this.deps.run(snapshot, decisions, this.deps.onProgress)
+      } catch (err) {
+        if (!(err instanceof ImportBusyError)) throw err
+        this.waiting = 'import'
+        this.emit()
+        await new Promise<void>((resume) => this.importWaiters.push(resume))
+        this.waiting = null
+        this.emit()
+      }
+    }
   }
 
   private async readForEnable(): Promise<Snapshot> {
@@ -199,6 +265,7 @@ export class AppleSync {
   }
 
   private request(): Promise<void> {
+    if (!this.enabled) return Promise.resolve()
     if (this.running) {
       this.again = true
       return this.running
@@ -228,6 +295,13 @@ export class AppleSync {
     if (this.otherLibrary(read.snapshot)) {
       return this.pause('paused-other-library', { kind: 'other-library' })
     }
+    const skipShrink = this.skipShrinkCheck
+    this.skipShrinkCheck = false
+    const { gone, synced } = this.deps.goneEstimate(read.snapshot)
+    if (!skipShrink && gone >= SHRINK_MIN_SONGS && gone * 2 > synced) {
+      this.shrink = { missing: gone, total: synced }
+      return this.pause('paused-shrunk', { kind: 'shrunk', missing: gone, total: synced })
+    }
     try {
       this.finished(await this.deps.run(read.snapshot, {}), read.snapshot.libraryId)
     } catch (err) {
@@ -252,6 +326,7 @@ export class AppleSync {
     settings.set('appleSync.lastResult', summary)
     this.failing = false
     this.noticedPause = null
+    this.shrink = null
     const parts = syncParts(summary)
     log.info(`Synced with Apple Music${parts.length ? `: ${parts.join(', ')}` : ''}`)
     if (syncChanged(summary)) {
@@ -260,6 +335,9 @@ export class AppleSync {
         kind: 'changed',
         message: syncMessage(summary, this.deps.review.count())
       })
+    } else if (summary.missingChanged) {
+      // A file went missing or came back: the lists' ⚠ and the next-up song refresh, quietly.
+      this.deps.onLibraryChanged()
     }
     this.setState('idle')
   }

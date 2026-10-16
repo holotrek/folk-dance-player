@@ -1,4 +1,4 @@
-import { existsSync, renameSync, rmSync } from 'fs'
+import { existsSync, readFileSync, renameSync, rmSync, writeFileSync } from 'fs'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
@@ -210,6 +210,18 @@ describe('runSync', () => {
     )
     expect(summary.gone).toEqual([])
     expect(reviewCount(db)).toBe(0)
+  })
+
+  // Final review, Minor 5: the lists refresh when a file goes missing or comes back.
+  test('a sync reports when a file went missing or came back, only when it changes', async () => {
+    const first = await sync(library())
+    expect(first.missingChanged).toBe(false)
+    const bytes = readFileSync(hora)
+    rmSync(hora)
+    expect((await sync(library())).missingChanged).toBe(true)
+    expect((await sync(library())).missingChanged).toBe(false)
+    writeFileSync(hora, bytes)
+    expect((await sync(library())).missingChanged).toBe(true)
   })
 
   test('a new track whose file is missing is counted, not added', async () => {

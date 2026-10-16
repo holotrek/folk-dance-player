@@ -2,7 +2,10 @@ import { Accordion, List, ScrollArea, Stack, Text } from '@mantine/core'
 import type { SyncSummary } from '@shared/apple-sync'
 import { fileName } from '../import/file-name'
 
-type FileCategory = Exclude<keyof SyncSummary, 'finishedAt' | 'skipped' | 'playlists'>
+type FileCategory = Exclude<
+  keyof SyncSummary,
+  'finishedAt' | 'skipped' | 'playlists' | 'missingChanged'
+>
 
 const CATEGORIES: { key: FileCategory; label: string }[] = [
   { key: 'added', label: 'Added' },

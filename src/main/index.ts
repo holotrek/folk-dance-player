@@ -24,7 +24,13 @@ import icon from '../../resources/icon.png?asset'
 import { AppleSync } from './apple-sync/apple-sync'
 import { runSync, statFile } from './apple-sync/engine'
 import { createFileSource, createHelperSource } from './apple-sync/library-source'
-import { disableSync, resolveAllReview, resolveReview, reviewCount } from './apple-sync/review'
+import {
+  disableSync,
+  goneEstimate,
+  resolveAllReview,
+  resolveReview,
+  reviewCount
+} from './apple-sync/review'
 import { CanvaService } from './canva/canva-service'
 import { CaptureQueue } from './canva/capture-queue'
 import { slideImagePath } from './canva/decks'
@@ -332,6 +338,8 @@ function startApp(): void {
         db,
         snapshot.playlists.map((p) => p.persistentId)
       ),
+    goneEstimate: (snapshot) =>
+      goneEstimate(db, new Set(snapshot.tracks.map((t) => t.persistentId))),
     review: {
       count: () => reviewCount(db),
       resolve: (ids, action) => resolveReview(db, ids, action, now()),
@@ -541,7 +549,8 @@ function startApp(): void {
       appleSync: {
         status: () => appleSync.status(),
         preview: () => appleSync.preview(),
-        enable: (decisions) => appleSync.enable(decisions),
+        enable: (decisions, switchLibrary) => appleSync.enable(decisions, switchLibrary),
+        syncAnyway: () => appleSync.syncAnyway(),
         disable: () => appleSync.disable(),
         syncNow: () => appleSync.syncNow(),
         switchLibrary: () => appleSync.switchLibrary(),

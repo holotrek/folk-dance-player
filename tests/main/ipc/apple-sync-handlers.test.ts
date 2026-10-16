@@ -53,17 +53,20 @@ describe('Apple Music sync handlers', () => {
       disable: record('disable', Promise.resolve()),
       syncNow: record('syncNow', Promise.resolve()),
       switchLibrary: record('switchLibrary', Promise.resolve()),
+      syncAnyway: record('syncAnyway', Promise.resolve()),
       resolve: record('resolve', undefined),
       resolveAll: record('resolveAll', undefined),
       openPrivacySettings: record('openPrivacySettings', undefined)
     }
     const h = appleSyncHandlers({ appleSync: sync })
-    await h['appleSync:enable']({ X: 'copy' })
+    await h['appleSync:enable']({ X: 'copy' }, true)
+    await h['appleSync:syncAnyway']()
     await h['appleSync:resolve']([1, 2], 'remove')
     await h['appleSync:resolveAll']('keep')
     await h['appleSync:openPrivacySettings']()
     expect(calls).toEqual([
-      ['enable', { X: 'copy' }],
+      ['enable', { X: 'copy' }, true],
+      ['syncAnyway'],
       ['resolve', [1, 2], 'remove'],
       ['resolveAll', 'keep'],
       ['openPrivacySettings']

@@ -1,7 +1,8 @@
 // Types for Sync with Apple Music, shared by main and renderer. Sync spec §3.3, §6, §7.1.
 import type { ApplePlaylistConflict, ApplePreview, ImportSummaryItem } from './import'
 
-export type AppleSyncState = 'off' | 'idle' | 'syncing' | 'paused-denied' | 'paused-other-library'
+export type AppleSyncState =
+  'off' | 'idle' | 'syncing' | 'paused-denied' | 'paused-other-library' | 'paused-shrunk' // Music's library looks much smaller than before (sync now asks first)
 
 // One sync's result (§7.1), kept in the appleSync.lastResult setting and shown by Details.
 export interface SyncSummary {
@@ -17,6 +18,7 @@ export interface SyncSummary {
   unreadable: ImportSummaryItem[]
   skipped: { reason: string; count: number }[] // cloud items, videos, booklets…
   playlists: { created: string[]; updated: string[]; deleted: string[] }
+  missingChanged?: boolean // a song's file went missing or came back: refresh lists, no toast
 }
 
 export interface AppleSyncStatus {
@@ -24,13 +26,20 @@ export interface AppleSyncStatus {
   state: AppleSyncState
   lastResult: SyncSummary | null
   reviewCount: number // songs in "Removed from Apple Music"
+  // Turning sync on is waiting: for the last sync to finish (sync was just turned off), or for an
+  // Add Music import to finish.
+  waiting: 'sync' | 'import' | null
+  // While paused-shrunk: how many synced songs Music no longer reports, of how many.
+  shrink: { missing: number; total: number } | null
 }
 
 export const APPLE_SYNC_OFF: AppleSyncStatus = {
   available: false,
   state: 'off',
   lastResult: null,
-  reviewCount: 0
+  reviewCount: 0,
+  waiting: null,
+  shrink: null
 }
 
 // Shown once per occurrence (§6.5): a toast after a sync that changed something, or a notice.
@@ -39,6 +48,7 @@ export type AppleSyncNotice =
   | { kind: 'denied' }
   | { kind: 'other-library' }
   | { kind: 'failed'; detail: string }
+  | { kind: 'shrunk'; missing: number; total: number }
 
 // A playlist edited locally since a Library.xml import, when sync is turned on (§5.8 step 4).
 export type MirrorDecision = 'replace' | 'copy'
@@ -48,7 +58,12 @@ export type ReviewAction = 'keep' | 'remove'
 // Reading the library before turning sync on: the mapping step's tag preview and the playlists
 // that need a decision.
 export type SyncPreview =
-  | { ok: true; preview: ApplePreview; conflicts: ApplePlaylistConflict[] }
+  | {
+      ok: true
+      preview: ApplePreview
+      conflicts: ApplePlaylistConflict[]
+      otherLibrary: boolean // Music has a different library open than the last time sync was on
+    }
   | { ok: false; reason: 'denied' | 'unavailable' | 'failed'; detail: string }
 
 // One of Music's playlist folders (§6.2).
@@ -72,7 +87,8 @@ export function emptySyncSummary(finishedAt: string): SyncSummary {
     unsupported: [],
     unreadable: [],
     skipped: [],
-    playlists: { created: [], updated: [], deleted: [] }
+    playlists: { created: [], updated: [], deleted: [] },
+    missingChanged: false
   }
 }
 

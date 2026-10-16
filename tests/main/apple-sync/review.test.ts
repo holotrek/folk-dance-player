@@ -2,6 +2,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, test } from 'vitest'
 import {
   disableSync,
+  goneEstimate,
   markGone,
   resolveAllReview,
   resolveReview,
@@ -41,7 +42,7 @@ beforeEach(() => {
 
 describe('markGone (sync spec §5.5)', () => {
   test('synced songs Music no longer has go to the review list, noting whether the file exists', () => {
-    const gone = markGone(db, new Set([pid(1)]), (path) => path !== '/m/B.mp3')
+    const { gone } = markGone(db, new Set([pid(1)]), (path) => path !== '/m/B.mp3')
     expect(gone).toEqual([{ path: '/m/B.mp3' }])
     expect(state(a)).toMatchObject({ sync: 'synced' })
     expect(state(b)).toMatchObject({ sync: 'gone', missing: 1 })
@@ -51,7 +52,7 @@ describe('markGone (sync spec §5.5)', () => {
 
   test('a song already in the review list is not reported again', () => {
     markGone(db, new Set([pid(1)]), () => true)
-    expect(markGone(db, new Set([pid(1)]), () => true)).toEqual([])
+    expect(markGone(db, new Set([pid(1)]), () => true).gone).toEqual([])
   })
 })
 
@@ -100,5 +101,22 @@ describe('disableSync (sync spec §5.9)', () => {
       db.prepare('SELECT apple_sync, apple_persistent_id AS pid FROM playlists').get()
     ).toEqual({ apple_sync: 0, pid: pid(100) })
     expect(reviewCount(db)).toBe(0)
+  })
+})
+
+describe('goneEstimate (the shrink check)', () => {
+  test('counts synced songs a snapshot no longer has, of all synced songs', () => {
+    expect(goneEstimate(db, new Set([pid(1)]))).toEqual({ gone: 1, synced: 2 })
+    expect(goneEstimate(db, new Set([pid(1), pid(2)]))).toEqual({ gone: 0, synced: 2 })
+  })
+})
+
+describe('markGone reports missing-state changes (a quiet refresh)', () => {
+  test('a gone song whose file disappears, or comes back, counts as a change', () => {
+    const live = new Set([pid(1)])
+    expect(markGone(db, live, () => true).missingChanged).toBe(false)
+    expect(markGone(db, live, () => false).missingChanged).toBe(true)
+    expect(markGone(db, live, () => false).missingChanged).toBe(false)
+    expect(markGone(db, live, () => true).missingChanged).toBe(true)
   })
 })

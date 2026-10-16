@@ -4,6 +4,7 @@ import { syncParts, type AppleSyncStatus } from '@shared/apple-sync'
 import type { RendererApi } from '@shared/contract'
 import ConfirmDialog from '../components/ConfirmDialog'
 import AppleSyncDialog, { NOT_ALLOWED } from './AppleSyncDialog'
+import { shrinkText } from './AppleSyncNotices'
 import SyncSummaryView from './SyncSummaryView'
 import { useAppleSync } from './useAppleSync'
 import { useAppleSyncFlow } from './useAppleSyncFlow'
@@ -41,7 +42,7 @@ export default function AppleMusicSection({ api }: { api: RendererApi }): React.
           </Button>
         </Group>
       )}
-      <AppleSyncDialog flow={flow} api={api} />
+      <AppleSyncDialog flow={flow} api={api} waiting={status.waiting} />
       <ConfirmDialog
         opened={confirmOff}
         title="Turn off Sync with Apple Music?"
@@ -74,6 +75,17 @@ function StatusLine(props: {
           onClick={() => void api.invoke('appleSync:switchLibrary')}
         >
           Switch to this library
+        </Button>
+      </Group>
+    )
+  }
+  if (status.state === 'paused-shrunk' && status.shrink) {
+    // Keep waiting is doing nothing: sync resumes by itself once Music reports the library again.
+    return (
+      <Group gap="sm">
+        <Text size="sm">{`Paused: ${shrinkText(status.shrink)}`}</Text>
+        <Button size="xs" variant="default" onClick={() => void api.invoke('appleSync:syncAnyway')}>
+          Sync anyway
         </Button>
       </Group>
     )

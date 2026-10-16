@@ -89,7 +89,7 @@ export function saveSyncedTrack(
   db: DatabaseSync,
   input: SyncTrackInput,
   ctx: SyncSaveContext
-): { outcome: SyncOutcome; fileId: number } {
+): { outcome: SyncOutcome; fileId: number; missingChanged?: boolean } {
   const { track, facts } = input
   const row =
     (input.rowId !== null
@@ -161,5 +161,7 @@ export function saveSyncedTrack(
             : tagsChanged || replaced
               ? 'updated'
               : 'unchanged'
-  return { outcome, fileId: row.id }
+  // Whether the file went missing or came back, for a quiet refresh of the lists.
+  const missingChanged = (input.missing ? 1 : 0) !== row.is_missing
+  return { outcome, fileId: row.id, ...(missingChanged && { missingChanged }) }
 }

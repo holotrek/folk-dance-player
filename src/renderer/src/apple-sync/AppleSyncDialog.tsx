@@ -1,4 +1,5 @@
 import { Alert, Button, Group, Loader, Modal, Stack, Text } from '@mantine/core'
+import type { AppleSyncStatus } from '@shared/apple-sync'
 import type { RendererApi } from '@shared/contract'
 import ImportMappingFields from '../import/ImportMappingFields'
 import ImportProgressStep from '../import/ImportProgressStep'
@@ -14,6 +15,7 @@ export const NOT_ALLOWED = "Folk Dance Player isn't allowed to read your Music l
 // The turn-on dialog (sync spec §5.8).
 export default function AppleSyncDialog(props: {
   flow: AppleSyncFlow
+  waiting?: AppleSyncStatus['waiting'] // the first sync is waiting for a sync or an import
   api: RendererApi
 }): React.JSX.Element {
   const { flow, api } = props
@@ -104,8 +106,34 @@ export default function AppleSyncDialog(props: {
           onCancel={flow.close}
         />
       )}
-      {state.step === 'running' && (
-        <ImportProgressStep progress={state.progress} cancelling={false} />
+      {state.step === 'running' &&
+        (props.waiting ? (
+          <Group>
+            <Loader size="sm" />
+            <Text>
+              {props.waiting === 'sync'
+                ? 'Waiting for the last sync to finish…'
+                : 'Waiting for the import to finish…'}
+            </Text>
+          </Group>
+        ) : (
+          <ImportProgressStep progress={state.progress} cancelling={false} />
+        ))}
+      {state.step === 'otherLibrary' && (
+        <Stack>
+          <Text fw={500}>Music has a different library open</Text>
+          <Text size="sm">
+            It isn&apos;t the library that was synced before. Keep waiting until Music has that
+            library open again, or switch: songs from the old library go to Removed from Apple Music
+            for you to keep or remove.
+          </Text>
+          <Group justify="flex-end">
+            <Button variant="default" onClick={() => void flow.keepWaiting()}>
+              Keep waiting
+            </Button>
+            <Button onClick={flow.switchLibrary}>Switch to this library</Button>
+          </Group>
+        </Stack>
       )}
       {state.step === 'summary' && (
         <Stack>

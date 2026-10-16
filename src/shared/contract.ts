@@ -170,12 +170,15 @@ export interface InvokeContract {
   'appleSync:status': { args: []; result: AppleSyncStatus }
   'appleSync:preview': { args: []; result: SyncPreview }
   'appleSync:enable': {
-    args: [decisions: Record<string, MirrorDecision>]
+    // switchLibrary: adopt the library Music has open (chosen before the mapping step).
+    args: [decisions: Record<string, MirrorDecision>, switchLibrary?: boolean]
     result: SyncSummary | null
   }
   'appleSync:disable': { args: []; result: void }
   'appleSync:syncNow': { args: []; result: void }
   'appleSync:switchLibrary': { args: []; result: void }
+  // After a paused shrink (Music's library looks much smaller): one sync without the check.
+  'appleSync:syncAnyway': { args: []; result: void }
   'appleSync:resolve': { args: [fileIds: number[], action: ReviewAction]; result: void }
   'appleSync:resolveAll': { args: [action: ReviewAction]; result: void }
   'appleSync:openPrivacySettings': { args: []; result: void }
@@ -273,6 +276,7 @@ export const INVOKE_CHANNELS = [
   'appleSync:disable',
   'appleSync:syncNow',
   'appleSync:switchLibrary',
+  'appleSync:syncAnyway',
   'appleSync:resolve',
   'appleSync:resolveAll',
   'appleSync:openPrivacySettings'

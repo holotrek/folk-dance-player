@@ -9,29 +9,53 @@ import { inTransaction } from '../db/transaction'
 const IN_REVIEW = "apple_sync = 'gone' AND removed_at IS NULL"
 
 // After every file is saved: synced songs whose track is no longer in the snapshot go to the review
-// list, and every song there notes whether its file is still on disk. Returns the newly gone songs.
+// list, and every song there notes whether its file is still on disk. Returns the newly gone songs,
+// and whether any song's missing state changed (the lists then refresh, quietly).
 export function markGone(
   db: DatabaseSync,
   livePids: ReadonlySet<string>,
   exists: (path: string) => boolean = existsSync
-): ImportSummaryItem[] {
+): { gone: ImportSummaryItem[]; missingChanged: boolean } {
   const rows = db
     .prepare(
-      `SELECT id, path, apple_persistent_id AS pid, apple_sync AS sync FROM files
-       WHERE apple_sync IN ('synced', 'gone') AND removed_at IS NULL`
+      `SELECT id, path, apple_persistent_id AS pid, apple_sync AS sync, is_missing AS missing
+       FROM files WHERE apple_sync IN ('synced', 'gone') AND removed_at IS NULL`
     )
-    .all() as { id: number; path: string; pid: string | null; sync: 'synced' | 'gone' }[]
+    .all() as {
+    id: number
+    path: string
+    pid: string | null
+    sync: 'synced' | 'gone'
+    missing: number
+  }[]
   const update = db.prepare(
     "UPDATE files SET apple_sync = 'gone', is_missing = ?, missing_reason = ? WHERE id = ?"
   )
   const gone: ImportSummaryItem[] = []
+  let missingChanged = false
   for (const row of rows) {
     if (row.pid !== null && livePids.has(row.pid)) continue
-    const missing = !exists(row.path)
-    update.run(missing ? 1 : 0, missing ? 'not_found' : null, row.id)
+    const missing = exists(row.path) ? 0 : 1
+    update.run(missing, missing ? 'not_found' : null, row.id)
+    if (missing !== row.missing) missingChanged = true
     if (row.sync === 'synced') gone.push({ path: row.path })
   }
-  return gone
+  return { gone, missingChanged }
+}
+
+// For the shrink check (AppleSync): how many synced songs a snapshot would send to review
+// (`inSnapshot` holds every persistent ID it has), of how many synced songs.
+export function goneEstimate(
+  db: DatabaseSync,
+  inSnapshot: ReadonlySet<string>
+): { gone: number; synced: number } {
+  const pids = db
+    .prepare(
+      "SELECT apple_persistent_id AS pid FROM files WHERE apple_sync = 'synced' AND removed_at IS NULL"
+    )
+    .all()
+    .map((r) => r.pid as string | null)
+  return { gone: pids.filter((p) => p === null || !inSnapshot.has(p)).length, synced: pids.length }
 }
 
 export function reviewCount(db: DatabaseSync): number {

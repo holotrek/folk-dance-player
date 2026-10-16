@@ -68,11 +68,14 @@ export async function runSync(
   const ctx = { mapping: deps.mapping, livePids }
   const total = eligible.length
   let done = 0
+  let missingChanged = false
   const report = (currentPath: string | null): void =>
     deps.onProgress?.({ phase: 'reading', done, total, currentPath })
 
   const save = (input: SyncTrackInput): void => {
-    const { outcome } = inTransaction(db, () => saveSyncedTrack(db, input, ctx))
+    const saved = inTransaction(db, () => saveSyncedTrack(db, input, ctx))
+    const { outcome } = saved
+    if (saved.missingChanged) missingChanged = true
     const path = input.track.path
     if (outcome === 'taken') summary.unreadable.push({ path, detail: TAKEN_DETAIL })
     else if (outcome !== 'unchanged') summary[outcome].push({ path })
@@ -120,7 +123,9 @@ export async function runSync(
   // Gone means no longer in the snapshot (§5.5): a track Music still has but that is skipped now
   // (cloud-only, converted to an unsupported format) keeps its song out of the review list.
   const inSnapshot = new Set(snapshot.tracks.map((t) => t.persistentId))
-  summary.gone = inTransaction(db, () => markGone(db, inSnapshot, deps.exists))
+  const marked = inTransaction(db, () => markGone(db, inSnapshot, deps.exists))
+  summary.gone = marked.gone
+  summary.missingChanged = missingChanged || marked.missingChanged
   summary.playlists = inTransaction(db, () =>
     syncPlaylists(db, snapshot, syncedFileIds(db), decisions, deps.now())
   )
