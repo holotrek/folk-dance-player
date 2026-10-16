@@ -5,7 +5,7 @@ import { fileName } from './file-name'
 export default function ImportProgressStep(props: {
   progress: ImportProgress | null
   cancelling: boolean
-  onCancel: () => void
+  onCancel?: () => void // no Cancel button without it (the first Apple Music sync)
 }): React.JSX.Element {
   const { progress } = props
   const reading = progress?.phase === 'reading' && progress.total > 0
@@ -30,16 +30,18 @@ export default function ImportProgressStep(props: {
           <Text>Looking for music…</Text>
         </Group>
       )}
-      <Group justify="flex-end">
-        <Button
-          variant="default"
-          onClick={props.onCancel}
-          loading={props.cancelling}
-          aria-label="Cancel import"
-        >
-          Cancel
-        </Button>
-      </Group>
+      {props.onCancel && (
+        <Group justify="flex-end">
+          <Button
+            variant="default"
+            onClick={props.onCancel}
+            loading={props.cancelling}
+            aria-label="Cancel import"
+          >
+            Cancel
+          </Button>
+        </Group>
+      )}
     </Stack>
   )
 }
