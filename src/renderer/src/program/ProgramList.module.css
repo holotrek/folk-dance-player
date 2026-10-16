@@ -101,3 +101,8 @@
   right: 30px;
   margin-block: auto;
 }
+
+/* A song removed from the library (sync spec §6.4), still in the program or its history. */
+.row[data-removed='true'] {
+  opacity: 0.55;
+}

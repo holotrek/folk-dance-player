@@ -52,8 +52,11 @@ interface Row {
 
 // The Music page's rows (spec §6.3): search, sidebar filter and sort are all done here.
 export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[] {
-  const where: string[] = []
+  // A removed song (sync spec §6.4) is never listed; the review list shows songs Music no longer
+  // has that haven't been decided yet.
+  const where: string[] = ['f.removed_at IS NULL']
   const params: (string | number)[] = []
+  if (query.filter.kind === 'review') where.push("f.apple_sync = 'gone'")
   const fts = toFtsQuery(query.search)
   if (fts) {
     where.push('s.id IN (SELECT rowid FROM library_fts WHERE library_fts MATCH ?)')

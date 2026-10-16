@@ -131,14 +131,16 @@ function sameNameSuggestions(
     `SELECT c.id AS danceId, c.name, c.choreographer, c.country FROM dances c
      WHERE lower(trim(c.name)) = lower(trim(?)) AND c.id <> ?
        AND c.id NOT IN (SELECT dance_id FROM dance_songs WHERE song_id = ?)
-       AND EXISTS (SELECT 1 FROM dance_songs u WHERE u.dance_id = c.id)
+       AND EXISTS (SELECT 1 FROM dance_songs u JOIN songs us ON us.id = u.song_id
+         JOIN files uf ON uf.id = us.file_id WHERE u.dance_id = c.id AND uf.removed_at IS NULL)
        AND NOT EXISTS (SELECT 1 FROM distinct_dances x
          WHERE x.dance_a = min(c.id, ?) AND x.dance_b = max(c.id, ?))
      ORDER BY c.id`
   )
   const titles = db.prepare(
     `SELECT s.title FROM dance_songs ds JOIN songs s ON s.id = ds.song_id
-     WHERE ds.dance_id = ? ORDER BY s.title COLLATE NOCASE`
+     JOIN files f ON f.id = s.file_id
+     WHERE ds.dance_id = ? AND f.removed_at IS NULL ORDER BY s.title COLLATE NOCASE`
   )
   return dances.flatMap((d) =>
     (

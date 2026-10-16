@@ -21,6 +21,7 @@ export interface Track {
   teacher: string | null
   durationMs: number | null
   isMissing: boolean
+  isRemoved: boolean // removed from the library (sync spec §6.4): shown greyed, never played
   isFavorite: boolean
   danceCount: number // dances linked to the song; > 1 offers the Dance menu
 }

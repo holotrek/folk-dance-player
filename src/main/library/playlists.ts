@@ -19,7 +19,9 @@ const touch = (db: DatabaseSync, playlistId: number): void => {
 export function listPlaylists(db: DatabaseSync): PlaylistSummary[] {
   return db
     .prepare(
-      `SELECT p.id, p.name, p.source, (SELECT COUNT(*) FROM playlist_items i WHERE i.playlist_id = p.id) AS itemCount
+      `SELECT p.id, p.name, p.source,
+         (SELECT COUNT(*) FROM playlist_items i JOIN files f ON f.id = i.file_id
+          WHERE i.playlist_id = p.id AND f.removed_at IS NULL) AS itemCount
        FROM playlists p ORDER BY p.name COLLATE NOCASE, p.id`
     )
     .all() as unknown as PlaylistSummary[]

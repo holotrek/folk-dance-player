@@ -6,6 +6,7 @@ export type LibraryFilter =
   | { kind: 'favorites' }
   | { kind: 'holding' } // the Program page's holding panel (spec §6.2)
   | { kind: 'playlist'; playlistId: number }
+  | { kind: 'review' } // "Removed from Apple Music" (sync spec §6.2)
 
 export type SortColumn =
   | 'title'
