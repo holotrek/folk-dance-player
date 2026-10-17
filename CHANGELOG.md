@@ -19,6 +19,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Adding a song you removed from the library brings it back with its dances, notes and history.
 - Songs removed from the library stay in past programs and Previously played, greyed and labeled "removed", and a program skips them.
 
+### Changed
+
+- Folk Dance Player is now signed and notarized by Apple, so a downloaded copy opens normally, without the "unidentified developer" warning or Open Anyway in System Settings.
+
 ### Fixed
 
 - Esc closes the projector view over the laptop the first time it's pressed, even right after turning the view on.

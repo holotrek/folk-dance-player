@@ -81,16 +81,25 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 
 ### Signing and notarizing
 
-Until there's an Apple Developer ID, `npm run dist` makes an **ad-hoc signed** app (`identity: '-'` in `electron-builder.yml`): it runs on Apple silicon, and a downloaded copy opens with System Settings → Privacy & Security → Open Anyway. To sign and notarize instead (not yet tested):
+`npm run dist` makes an **ad-hoc signed** app (`identity: '-'` in `electron-builder.yml`), so it builds for anyone and in CI without a certificate. It runs on Apple silicon, and a downloaded copy opens with System Settings → Privacy & Security → Open Anyway. To make a release build signed with a Developer ID (tested end to end):
 
-1. Install the "Developer ID Application" certificate in your keychain.
-2. Set `APPLE_ID`, `APPLE_APP_SPECIFIC_PASSWORD` and `APPLE_TEAM_ID` (for notarization).
-3. Run:
+1. Install the "Developer ID Application" certificate **and its private key** in your keychain (an "Apple Distribution" certificate is for the App Store and won't pass Gatekeeper). Check with `security find-identity -v -p codesigning`.
+2. Build and sign (the identity is the name without the "Developer ID Application:" prefix):
 
    ```bash
    npm run build && env -u ELECTRON_RUN_AS_NODE npx electron-builder --mac --publish never \
-     -c.mac.identity="Developer ID Application: <name> (<team>)" \
-     -c.mac.hardenedRuntime=true -c.mac.notarize=true
+     -c.mac.identity="<name> (<team>)" -c.mac.hardenedRuntime=true -c.mac.notarize=false
    ```
+
+3. Check it: `codesign --verify --deep --strict "dist/mac-universal/Folk Dance Player.app"`.
+4. Notarize the `.dmg` with `notarytool`, which shows progress and can be checked later (electron-builder's own notarize step is silent while it waits on Apple). Store credentials once with `xcrun notarytool store-credentials "Folk Dance Player"`, then:
+
+   ```bash
+   xcrun notarytool submit "dist/Folk Dance Player-<version>-universal.dmg" --keychain-profile "Folk Dance Player" --no-wait
+   xcrun notarytool info <submission-id> --keychain-profile "Folk Dance Player"   # Accepted / Invalid
+   xcrun stapler staple "dist/Folk Dance Player-<version>-universal.dmg"
+   ```
+
+   An account's first submission can take hours. Don't use `notarytool wait` in a terminal you need. The ticket is stapled to the `.dmg`, not the app inside it; check the app by mounting the dmg and running `spctl -a -t exec -vv` on it ("Notarized Developer ID"). `spctl` on the dmg itself says "no usable signature", which is normal: only the app is signed.
 
 In CI, the certificate (as `CSC_LINK` and `CSC_KEY_PASSWORD`) and the notarization credentials become repo secrets, passed to Create Release's build job.

@@ -56,13 +56,17 @@ describe('Music folders and mirrors in the sidebar', () => {
     const { fake, user } = renderSidebar()
     const group = await screen.findByRole('group', { name: 'Playlists' })
     await within(group).findByText('IFD2026')
-    expect(within(group).queryByText('Monday')).not.toBeInTheDocument()
+    // A collapsed Mantine NavLink keeps its children in a hidden <Activity>: React renders them
+    // (display: none) when it gets to it, which is sooner on a busy runner. Check visibility.
+    within(group)
+      .queryAllByText('Monday')
+      .forEach((monday) => expect(monday).not.toBeVisible())
     const loose = within(group).getByText('Loose')
     const mine = within(group).getByText('Mine')
     expect(loose.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await user.click(within(group).getByText('IFD2026'))
     await user.click(await within(group).findByText('Week 3'))
-    expect(await within(group).findByText('Monday')).toBeInTheDocument()
+    await waitFor(() => expect(within(group).getByText('Monday')).toBeVisible(), { timeout: 5000 })
     await waitFor(() =>
       expect(fake.settings['playlistFolders.open']).toEqual([
         'FFFFFFFFFFFFFFF1',
