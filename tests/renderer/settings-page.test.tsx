@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import type { RendererApi } from '@shared/contract'
 import type { RemoteStatus } from '@shared/program'
+import { APPLE_SYNC_OFF } from '@shared/apple-sync'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 import SettingsPage from '@renderer/pages/SettingsPage'
 import { renderWithMantine } from './render'
@@ -18,6 +19,7 @@ function fakeApi(
       calls.push([channel, ...args])
       if (channel === 'settings:getAll') return current
       if (channel === 'remote:status' || channel === 'remote:requestAccess') return remote()
+      if (channel === 'appleSync:status') return APPLE_SYNC_OFF
       if (channel === 'projector:displays')
         return [
           { id: 1, label: 'Built-in Retina Display', primary: true, internal: true },

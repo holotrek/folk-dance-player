@@ -173,7 +173,15 @@ The projector uses the same parts with a different emphasis (§8.2): the dance n
 - **Projector:** `projector.displayId`, `projector.enabled`
 - **Laptop mode:** `autoFullscreen.enabled`, `autoFullscreen.seconds` (edited in the player bar as "Auto-show when playing", 5–3600 s)
 - **Appearance:** `appearance` (`system` (default), `light` or `dark`)
+- **Apple Music sync:** `appleSync.enabled` (bool), `appleSync.libraryId` (the synced library's ID), `appleSync.lastResult` (the last sync's summary), `playlistFolders.open` (the sidebar's open Music folders, by persistent ID)
 - **Other:** `window.bounds`, `currentProgramId`
+
+**Sync with Apple Music (migration 004, `2026-10-15-apple-music-sync-design.md` §4)**
+
+- **`files.apple_sync`:** `NULL` not synced, `'synced'` follows Music, `'gone'` Music no longer has it (the review list).
+- **`files.removed_at`:** the soft delete. A removed song is hidden everywhere songs are listed but kept in history; adding the same file back clears it.
+- **`files.sync_baseline`:** the mapped values sync last wrote, so a field edited in the app is never overwritten by Music.
+- **`playlists.apple_sync`** (`1` for a read-only mirror of a Music playlist), **`playlists.folder_id`**, and the **`playlist_folders`** table (Music's folders: name, parent, persistent ID, order).
 
 Schema changes go through numbered migrations, applied at startup inside a transaction. Migration 001 has not been released, so this model is written into 001 directly. The empty development database created by Plan 1 must be deleted once.
 
@@ -184,7 +192,7 @@ Schema changes go through numbered migrations, applied at startup inside a trans
 - **Add Music…:** a picker for files and folders. Folders are scanned recursively.
 - **Drag and drop** files or folders onto the library (Music page or Program page library list).
 - **Import from Apple Music…:** pick `Library.xml`. The screen explains how to export it from Music (File → Library → Export Library…).
-- **Sync with Apple Music** (macOS, Settings): reads the Music library directly and keeps the app current (§5.5). While it is on, Import from Apple Music… is hidden.
+- **Sync with Apple Music** (macOS, a switch on the Music page): reads the Music library directly and keeps the app current (§5.5). While it is on, Import from Apple Music… is hidden.
 
 ### 5.2 Mapping step (shown before every import)
 
@@ -226,7 +234,8 @@ The Music page has **Re-apply mapping to selected**. Its dialog shows the select
 - **File already known by path:** the raw tags, size and mtime are refreshed. Song, dance and pairing fields are only filled where currently empty.
 - **New path whose `content_hash` matches a missing file:** treated as a move. The existing file row's path is updated, and its song, prefs, playlist memberships, program items and play log all carry over.
 - **Errors are per file.** An unreadable file is recorded and skipped, never aborting the batch.
-- **Summary at the end:** added, updated, relinked, already present, not found on disk (XML), unsupported format, unreadable. Each category expands to list its files.
+- **Summary at the end:** added, updated, relinked, restored, already present, already in library (Apple Music), not found on disk (XML), unsupported format, unreadable. Each category expands to list its files.
+- **While Apple Music sync is on,** a file matching a synced song (by path or fingerprint) is skipped as **Already in library (Apple Music)**, and a removed song added again is **restored** with all its data (as a local song).
 
 ### 5.5 Sync with Apple Music
 
@@ -260,6 +269,7 @@ PROGRAMS                  [+]
 - **Library and playlist entries** filter the library list. Songs can be dropped onto a playlist (or Favorites) to add them. While the list shows a playlist or Favorites, a tinted note above it says so ("Showing playlist “Balkan”", "Showing Favorites") with **Show all music**, on both the Program and Music pages.
 - **The playlist list** scrolls on its own once it fills 40% of the sidebar, so a large Apple Music library's playlists never push Programs off screen.
 - **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
+- **With Apple Music sync on** (sync spec §6.2, §6.3): LIBRARY gains **Removed from Apple Music (N)** while songs wait for review (Keep, Remove, Keep all, Remove all). PLAYLISTS shows Music's folders as collapsible groups and Music's playlists as read-only mirrors, marked with a note icon, before the local playlists. A mirror's only option is **Duplicate as my playlist**; dropping songs on it says "Edit this playlist in Music."
 - **Programs** are loaded only from the sidebar; there is no dropdown.
   - Each entry shows how many songs are left to play.
   - Loading another program while a song plays or counts down asks first ("Load another program?"), because the next song will come from it.
@@ -341,6 +351,7 @@ PROGRAMS                  [+]
   - **"Different dance" answers** about the removed dance carry over to the kept dance, so dismissed suggestions stay dismissed.
   - **Difficulty and the Canva slide:** the kept dance's values win when both are set.
 - **Actions:** Add Music…, Import from Apple Music…, Favorite/Unfavorite (selection), Re-apply mapping… (selection), Refresh slides.
+- **Sync with Apple Music** (macOS, sync spec §6.1): a switch beside the import buttons and, while sync is on, a status bar below the toolbar (last sync with Details, or a paused state with its fix, and **Sync now**). File → Sync with Apple Music, while sync is off, opens this page and pulses a border around the switch for a moment.
 - **Refresh slides** sits in the header beside Add Music…, once a deck has been added. While images are being saved it shows "Saving slide images… N of M", and afterwards how many couldn't be saved. A "Canva links need checking" notice shows below while a deck's page can't be read, and a refresh that couldn't reach Canva says so.
 - **Re-apply mapping** opens a dialog that shows the selected songs' Artist, Album Artist and Genre tags, with the mapping fields from the import step. They start from the import mapping in Settings, and the choice applies to this run only. It overwrites only the fields the chosen mapping targets: the song's artist, the default pairing's teacher, and the default dance's choreographer and country. If Genre → Country is off, countries are left alone. A default dance shared with other songs is left unchanged (it would change every song using it), and the result reports how many were skipped.
 - **Missing and unsupported files** are visibly flagged.
@@ -388,6 +399,7 @@ PROGRAMS                  [+]
 - **Reaching a STOP marker** always halts, regardless of auto-continue. The marker is marked played. While halted, the projector shows the **next** dance and its slide. ▶ resumes.
 - **Speed** ranges from 0.5× to 1.5× using `playbackRate` with `preservesPitch = true`. It resets to 1.0× for each new song unless the 🔒 toggle next to the speed slider is on. **Volume** is global, and starts at 100% each time the app opens.
 - **Missing file at play time:** when the next song's file isn't on disk, it is skipped: left in the program, unplayed and flagged ⚠, while the song after it plays. A control-window warning names it, also when no playable song is left. A preview or replay of a missing file only shows the warning; whatever was playing or counting down carries on.
+- **A removed song** (Apple Music sync's Remove, sync spec §6.4) is skipped the same way ("Skipped removed song: …"). The program and Previously played show it greyed and labeled "removed", and it can't be replayed. A song only *gone* from Music (still in the review list) plays as usual.
 - **A double-click on ▶ or ⏸** counts as one press, since ▶ turns into ⏸ under the pointer.
 - **Transport icons** are drawn (SVG), not characters: ⏸ and ⏹ render as colored emoji on macOS while ▶ doesn't.
 - **Unreadable file at play time** (the file is there but can't be played): a warning is shown, and the program continues as if the song had ended. With auto-continue on, the next item plays; with it off, playback halts.
@@ -576,6 +588,7 @@ Approach A (chosen): **the main process owns all state; the control window plays
 - **Audio reaches `<audio>` through an `fdp-media://file/<id>` scheme.** It looks up the path by file id, so the renderer never names a path. It answers Range requests itself, because seeking needs them.
 - **Saved Canva slides are served as `fdp-media://slide/<deck>/<page>?v=<captured at>`.** The version makes a re-captured image load fresh.
 - **Canva in main** (`src/main/canva/`): pure modules with injected pieces (a `Fetcher`, a `SlideCapturer`, a `LiveView`), and one Electron file, `electron-canva.ts`. A slide's position is always looked up from its page ID.
+- **Sync with Apple Music in main** (`src/main/apple-sync/`, sync spec §3): pure modules over the database (snapshot parsing, matching, the tag baseline, playlist mirrors, the review list, the engine) and `AppleSync` (triggers, states, notices). The Music library is read by a bundled Swift helper, `native/music-library/main.swift`, built by `npm run build:helper` into `Contents/Resources/fdp-music-library`; `FDP_APPLE_LIBRARY` points sync at a snapshot JSON file instead, for development and end-to-end tests.
 - **`FDP_USER_DATA`:** setting it points the app at another data folder, so end-to-end tests and smoke runs never touch the real library.
 - **The typed IPC contract** lives in one shared `contract.ts`, used by main, the preloads and the renderers. Preloads expose only that API (`contextIsolation: true`, no `nodeIntegration`).
 - **Tooling:**
@@ -614,6 +627,7 @@ The music never stops because of a side failure, and the projector never shows a
   - Songs and dances: the automatic one-to-one dance on import, never linking by name, default-dance fallback, linking and unlinking, merging dances.
   - Labels: song omitted when it equals the dance name; choreographer shown only when a song's dances have more than one choreographer; no empty parentheses for traditional dances. Cover all four examples in §4.
 - **Database (in-memory SQLite):** migrations, repositories, `library_fts` search across songs and their dances (it must stay current when a dance or teacher changes), autocomplete queries, the playlist overwrite-protection decision.
+- **Apple Music sync** (`tests/main/apple-sync/`, sync spec §8): the snapshot and eligibility, the helper runner (stub executables for each exit code, a timeout, invalid JSON, output over 1 MB), matching and adoption, the tag baseline, playlist mirrors and folders, the review list, the engine over real MP3s on the in-process worker, and `AppleSync`'s triggers and states. Removed songs are hidden from lists and skipped in a program.
 - **End-to-end (Playwright + Electron, `e2e/`):** each test starts the app on a throwaway library of silent MP3s. They run on the build (`npm run test:e2e`) and on the packaged app (`npm run test:e2e:dist`):
   - import a folder, then search
   - drag into a program and reorder (drags move in steps, as a person's do; a single jump can lose the drop)
@@ -621,6 +635,7 @@ The music never stops because of a side failure, and the projector never shows a
   - save and load a program, also after a restart
   - Settings… in the app menu opens the Settings page
   - each start backs up the library, and the log says so
+  - Apple Music sync: turn it on with an `FDP_APPLE_LIBRARY` snapshot, change the snapshot, focus the app, and check the toast, the review list and a mirror (`e2e/apple-sync.spec.ts`)
 - **Manual pre-release checklist (real hardware):** `docs/manual-testing/pre-release-hardware.md`, a step-by-step list with checkboxes, run on the packaged app. It covers:
   - the view over the laptop (Esc, the mouse, auto-show)
   - extended mode with a projector, and mirror mode
@@ -628,6 +643,7 @@ The music never stops because of a side failure, and the projector never shows a
   - how audio sounds at 0.75× and 0.5× speed
   - sleep and wake, and keeping the Mac awake
   - unplugging the projector
+  - Apple Music sync: the permission dialog names the app, the real library syncs, a refused permission shows the Settings help, and whether an update asks again
 
 ## 11. Spike findings (2026-10-13)
 

@@ -18,7 +18,8 @@
     "test:e2e": "npm run build && env -u ELECTRON_RUN_AS_NODE playwright test",
     "test:e2e:dist": "env -u ELECTRON_RUN_AS_NODE FDP_APP=\"dist/mac-universal/Folk Dance Player.app\" playwright test",
     "format": "prettier --write .",
-    "dist": "npm run build && env -u ELECTRON_RUN_AS_NODE electron-builder --mac --publish never",
+    "build:helper": "sh scripts/build-helper.sh",
+    "dist": "npm run build && npm run build:helper && env -u ELECTRON_RUN_AS_NODE electron-builder --mac --publish never",
     "icon": "env -u ELECTRON_RUN_AS_NODE electron scripts/make-icon.cjs",
     "postinstall": "install-electron"
   },
@@ -27,6 +28,7 @@
     "@electron-toolkit/utils": "4.0.0",
     "@mantine/core": "9.6.3",
     "@mantine/hooks": "9.6.3",
+    "@mantine/notifications": "9.6.3",
     "@tanstack/react-virtual": "3.14.13",
     "zustand": "5.0.15"
   },

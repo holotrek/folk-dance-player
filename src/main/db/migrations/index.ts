@@ -2,6 +2,7 @@ import type { Migration } from '../migrate'
 import { initial } from './001-initial'
 import { distinctDances } from './002-distinct-dances'
 import { holdingOrder } from './003-holding-order'
+import { appleSync } from './004-apple-sync'
 
 // Append new migrations here; versions must stay 1..n in order.
-export const MIGRATIONS: readonly Migration[] = [initial, distinctDances, holdingOrder]
+export const MIGRATIONS: readonly Migration[] = [initial, distinctDances, holdingOrder, appleSync]

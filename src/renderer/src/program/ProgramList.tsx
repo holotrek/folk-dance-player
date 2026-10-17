@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActionIcon, Button, Group, Menu, Text, Title } from '@mantine/core'
+import { ActionIcon, Badge, Button, Group, Menu, Text, Title } from '@mantine/core'
 import type { SongDance } from '@shared/library'
 import type { ProgramItem } from '@shared/program'
 import { PauseIcon } from '../components/icons'
@@ -223,6 +223,7 @@ export default function ProgramList(): React.JSX.Element {
               item.kind === 'stop' ? classes.stop : '',
               dropTarget === item.id ? classes.dropBefore : ''
             ].join(' ')}
+            data-removed={item.kind === 'track' && item.isRemoved ? 'true' : undefined}
             draggable
             onDragStart={(e) => setDraggedItems(e.dataTransfer, [item.id])}
             onDragOver={(e) => {
@@ -254,6 +255,11 @@ export default function ProgramList(): React.JSX.Element {
                   </Text>
                 )}
                 <span className={classes.label}>{item.label}</span>
+                {item.isRemoved && (
+                  <Badge size="xs" variant="light" color="gray">
+                    removed
+                  </Badge>
+                )}
                 <Text span size="xs" c="dimmed">
                   {item.country}
                 </Text>

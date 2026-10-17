@@ -1,4 +1,5 @@
 import { createStore, type StoreApi } from 'zustand/vanilla'
+import type { PlaylistFolder } from '@shared/apple-sync'
 import type { RendererApi } from '@shared/contract'
 import type { LibraryFilter, LibraryRow, LibrarySort, PlaylistSummary } from '@shared/library'
 
@@ -10,6 +11,7 @@ export interface LibraryState {
   sort: LibrarySort
   rows: LibraryRow[]
   playlists: PlaylistSummary[]
+  folders: PlaylistFolder[] // Music's playlist folders (sync spec §6.2)
   selected: number[] // song ids, in the order they were selected
   anchor: number | null // last clicked song, for shift-click ranges
   scrollTo: number | null // a song the table should scroll into view (then calls `scrolled`)
@@ -44,6 +46,7 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
     sort: TITLE_SORT,
     rows: [],
     playlists: [],
+    folders: [],
     selected: [],
     anchor: null,
     scrollTo: null,
@@ -51,15 +54,17 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
     async refresh() {
       const request = ++latest
       const { search, filter, sort } = get()
-      const [rows, playlists] = await Promise.all([
+      const [rows, playlists, folders] = await Promise.all([
         api.invoke('library:list', { search, filter, sort }),
-        api.invoke('playlists:list')
+        api.invoke('playlists:list'),
+        api.invoke('playlists:folders')
       ])
       if (request !== latest) return // a newer refresh already started
       const present = new Set(rows.map((r) => r.songId))
       set((s) => ({
         rows,
         playlists,
+        folders,
         selected: s.selected.filter((id) => present.has(id)),
         anchor: s.anchor !== null && present.has(s.anchor) ? s.anchor : null
       }))

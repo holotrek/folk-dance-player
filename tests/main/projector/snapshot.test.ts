@@ -14,6 +14,7 @@ const track = (id: number, dance: string, extra: Partial<Track> = {}): Track => 
   teacher: null,
   durationMs: 180_000,
   isMissing: false,
+  isRemoved: false,
   isFavorite: false,
   danceCount: 1,
   ...extra

@@ -6,6 +6,7 @@ export type LibraryFilter =
   | { kind: 'favorites' }
   | { kind: 'holding' } // the Program page's holding panel (spec §6.2)
   | { kind: 'playlist'; playlistId: number }
+  | { kind: 'review' } // "Removed from Apple Music" (sync spec §6.2)
 
 export type SortColumn =
   | 'title'
@@ -122,6 +123,8 @@ export interface PlaylistSummary {
   name: string
   source: 'local' | 'apple_xml'
   itemCount: number
+  mirror: boolean // a read-only mirror of a Music playlist (sync spec §6.3)
+  folderId: number | null // its Music folder
 }
 
 // Autocomplete lists (spec §4): teachers and choreographers share one list.

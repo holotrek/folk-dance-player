@@ -109,6 +109,13 @@ export function addLibrarySong(
   return { fileId, songId, danceId }
 }
 
+// Soft-removes a song, as the review list's Remove does (sync spec §5.5).
+export function removeSong(db: DatabaseSync, fileId: number): void {
+  db.prepare(
+    "UPDATE files SET apple_sync = 'gone', removed_at = '2026-10-16T12:00:00.000Z' WHERE id = ?"
+  ).run(fileId)
+}
+
 export function setDefaultDance(db: DatabaseSync, songId: number, danceId: number): void {
   db.prepare(
     `INSERT INTO song_prefs (song_id, default_dance_id) VALUES (?, ?)

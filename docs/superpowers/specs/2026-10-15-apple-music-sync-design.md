@@ -1,7 +1,7 @@
 # Sync with Apple Music — Design
 
 - **Date:** 2026-10-15
-- **Status:** Draft for review
+- **Status:** Implemented (Plan 10, `docs/superpowers/plans/2026-10-16-plan-10-apple-music-sync.md`)
 - **Extends:** `2026-10-13-folk-dance-player-electron-design.md` (the main spec), §5 Importing music
 - **Spike:** the iTunesLibrary framework read the user's real library (2,169 tracks, 78 playlists) in
   about 0.8 s, with the same persistent IDs, tags and playlists as their exported `Library.xml`
@@ -110,6 +110,10 @@ AppleSync (main)                      triggers, one sync at a time, pause states
 - **Exit codes:** `0` success; `2` access denied; `3` the library couldn't be opened (any other
   `ITLibrary` error). Any other code, a crash, output that isn't a valid snapshot, or no exit within
   30 seconds counts as a failed read.
+  **Seen on hardware (2026-10-16):** a refused permission, or an app that doesn't declare Music
+  use, comes back as exit `3` with a dropped connection to `com.apple.amp.library.framework`
+  (Cocoa error 4097), not a TCC error. `HelperSource` reports that as access denied. macOS asks
+  only once; after a refusal, access is turned back on in System Settings.
 
 ### 3.2 `LibrarySource`
 
@@ -123,7 +127,8 @@ type SnapshotResult =
 ```
 
 - **`HelperSource`** runs the helper with `execFile`, applies the 30 s timeout, maps exit codes to
-  reasons, and validates the JSON against the snapshot shape.
+  reasons, and validates the JSON against the snapshot shape. The read while turning sync on waits
+  up to 5 minutes instead, because macOS's permission dialog holds it; stdout may be up to 256 MB.
 - **`FileSource`** reads a snapshot from the file named by `FDP_APPLE_LIBRARY`, read fresh on
   every sync, so dev runs and end-to-end tests can change the "Music library" between syncs. When
   the variable is set, `FileSource` replaces `HelperSource` (like `FDP_USER_DATA`, it is for
@@ -135,7 +140,7 @@ type SnapshotResult =
 - **Triggers:**
   - at startup, once the window is shown
   - when the control window gains focus, at most once every 10 seconds
-  - Sync now (Settings, and File → Sync with Apple Music, ⌘⇧S)
+  - Sync now (the Music page, and File → Sync with Apple Music, ⌘⇧S)
 - **One at a time:** a trigger during a running sync queues one more sync (never more).
 - **States:** `off`, `idle`, `syncing`, `paused-denied`, `paused-other-library`. A paused sync
   does nothing on focus triggers (no repeated notices). Sync now and the Settings buttons retry.
@@ -179,6 +184,9 @@ anything, enters `paused-other-library`, and shows **"Music has a different libr
 - **Switch to this library:** `appleSync.libraryId` becomes the new ID and the sync runs. Every
   song from the old library becomes `'gone'` (into the review list), and the new library's tracks
   are added or adopted.
+- **When turning sync on,** a different library is found when the library is first read, so this
+  question comes before the mapping step and the playlist choices are made for the library
+  being synced.
 
 ### 5.2 Eligible tracks
 
@@ -205,8 +213,9 @@ For each eligible track, in order:
 3. **No match:** a new song, its automatic dance, and the pairing, using the saved import
    mapping (main spec §5.2). There is no mapping step per sync.
 
-Only new, moved or changed files go through the import worker (tags read from the file for the
-raw `tag_*` columns, size, mtime, fingerprint). Unchanged tracks are compared from the snapshot
+Only new, moved or changed files go through the import worker (size, mtime, duration and the
+fingerprint are read from the file; the tags are Music's). "Unchanged" is the same path, size and
+mtime. Unchanged tracks are compared from the snapshot
 alone, which keeps a typical sync to about a second.
 
 As with `Library.xml`, **tag values come from Music** (the snapshot), not from the file, because
@@ -259,6 +268,8 @@ choreographer (only while that dance has this one song), and that pairing's teac
 - **A file matching a synced song** by path or fingerprint is skipped and listed in the import
   summary as **"Already in library (Apple Music)"**.
 - **Copies of local songs** behave as today.
+- **A song waiting in the review list** that Add Music… finds again (same file, or a copy when its
+  old file is gone) counts as **Keep**: it becomes an ordinary local song.
 - **Import from Apple Music… (Library.xml)** is hidden while sync is on.
 
 ### 5.8 Turning sync on
@@ -271,7 +282,8 @@ choreographer (only while that dance has this one song), and that pairing's teac
 3. **The first sync,** with progress (the existing import progress), which records
    `appleSync.libraryId`.
 4. **Playlists edited locally since a `Library.xml` import:** a one-time dialog (like main spec
-   §5.3) lists them. Because every Music playlist gets a mirror, each has two choices:
+   §5.3) lists them. It is asked before the first sync, right after the mapping step, because the
+   first sync writes the mirrors. Because every Music playlist gets a mirror, each has two choices:
    - **Replace with Apple version:** the playlist becomes the mirror; local edits are lost.
    - **Keep my edits as a copy** (the default, so edits are never lost without a choice): the
      edited playlist becomes a local playlist named "Name (my edits)", and a new mirror follows
@@ -290,17 +302,22 @@ After a confirmation ("Songs and playlists stay; playlists become editable"):
 
 ## 6. The interface
 
-### 6.1 Settings → Apple Music
+### 6.1 The Music page's Apple Music controls
 
-- **Sync with Apple Music** switch (§5.8, §5.9).
-- **Status line**, one of:
+Changed after the first test run: sync lives on the Music page, not in Settings.
+
+- **Sync with Apple Music** switch, beside Add Music… and the import buttons (§5.8, §5.9). File →
+  Sync with Apple Music, while sync is off, opens the Music page and pulses a border around it for
+  a moment.
+- **A status bar** below the toolbar while sync is on, with **Sync now**. Its status line is one of:
   - "Last synced 11:42 — 3 added, 1 updated, 2 to review", with **Details** showing the last
     sync's summary in the import summary layout (§7.1)
   - "Paused: Music has a different library open", with **Switch to this library**
+  - "Paused: Music's library looks much smaller than before (N of M songs are missing)", with
+    **Sync anyway** (§7.2)
   - "Folk Dance Player isn't allowed to read your Music library", with **Open Privacy Settings**
     (System Settings → Privacy & Security → Media & Apple Music)
-- **Sync now.**
-- The import mapping and its settings stay where they are.
+- The import mapping and its settings stay in Settings.
 
 ### 6.2 Sidebar
 
@@ -356,6 +373,14 @@ unreadable, missing. Each category lists its songs in Details, like the import s
   next sync finishes the job.
 - **Sync during a session:** allowed. The worst a mid-session sync can do is relabel a song or
   re-order a mirror; removals only go to the review list. The playing song is never interrupted.
+- **Music's library suddenly much smaller** (added after the final review): if a sync would send
+  more than half of the synced songs, and at least 20, to the review list, it pauses before
+  changing anything (`paused-shrunk`): "Music's library looks much smaller than before (N of M
+  songs are missing)", with **Sync anyway**. Keep waiting needs no button: focus syncs retry, and
+  sync resumes by itself once Music reports the library again.
+- **Turning sync on waits** for an off still in progress ("Waiting for the last sync to
+  finish…") and for a running Add Music import ("Waiting for the import to finish…"), keeping
+  the playlist choices. No sync starts while sync is off.
 
 ### 7.3 Edge cases settled during design
 

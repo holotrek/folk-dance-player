@@ -1,3 +1,5 @@
+import { isSyncSummary, type SyncSummary } from './apple-sync'
+
 export type TagTarget = 'artist' | 'teacher' | 'choreographer' | 'ignore'
 
 // The control window's colors: the Mac's light/dark choice, or always light or dark.
@@ -26,6 +28,12 @@ export interface Settings {
   'window.bounds': WindowBounds | null
   currentProgramId: number | null
   appearance: Appearance
+  // Sync with Apple Music (sync spec §4).
+  'appleSync.enabled': boolean
+  'appleSync.libraryId': string | null
+  'appleSync.lastResult': SyncSummary | null
+  // Music's playlist folders that are open in the sidebar, by persistent ID.
+  'playlistFolders.open': string[]
 }
 
 export type SettingKey = keyof Settings
@@ -54,7 +62,11 @@ export const DEFAULT_SETTINGS: Settings = {
   'autoFullscreen.seconds': 15,
   'window.bounds': null,
   currentProgramId: null,
-  appearance: 'system'
+  appearance: 'system',
+  'appleSync.enabled': false,
+  'appleSync.libraryId': null,
+  'appleSync.lastResult': null,
+  'playlistFolders.open': []
 }
 
 export const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS) as readonly SettingKey[]
@@ -62,6 +74,7 @@ export const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS) as readonly SettingKey
 const TAG_TARGETS: readonly unknown[] = ['artist', 'teacher', 'choreographer', 'ignore']
 
 const isBool = (v: unknown): boolean => typeof v === 'boolean'
+const isPersistentId = (v: unknown): boolean => typeof v === 'string' && /^[0-9A-F]{16}$/.test(v)
 const isIntIn =
   (min: number, max: number) =>
   (v: unknown): boolean =>
@@ -98,7 +111,11 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'autoFullscreen.seconds': isIntIn(5, 3600),
   'window.bounds': isBoundsOrNull,
   currentProgramId: isIdOrNull,
-  appearance: (v) => v === 'system' || v === 'light' || v === 'dark'
+  appearance: (v) => v === 'system' || v === 'light' || v === 'dark',
+  'appleSync.enabled': isBool,
+  'appleSync.libraryId': (v) => v === null || isPersistentId(v),
+  'appleSync.lastResult': (v) => v === null || isSyncSummary(v),
+  'playlistFolders.open': (v) => Array.isArray(v) && v.length <= 1000 && v.every(isPersistentId)
 }
 
 export function isSettingKey(key: unknown): key is SettingKey {

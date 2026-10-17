@@ -1,4 +1,5 @@
 import { MantineProvider } from '@mantine/core'
+import { Notifications } from '@mantine/notifications'
 import { render, type RenderResult } from '@testing-library/react'
 import type { RendererApi } from '@shared/contract'
 import { LibraryProvider } from '@renderer/library/LibraryProvider'
@@ -15,6 +16,7 @@ export function renderWithLibrary(
 ): RenderResult {
   return render(
     <MantineProvider theme={testTheme}>
+      <Notifications />
       <LibraryProvider api={api}>
         <ProgramProvider api={api}>
           <EditSongProvider onShowMusic={onShowMusic}>{ui}</EditSongProvider>

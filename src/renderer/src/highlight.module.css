@@ -1,0 +1,29 @@
+/* A control an app menu item points at: a border fades in and out three times (HIGHLIGHT_MS). */
+.target {
+  display: inline-flex;
+  border-radius: var(--mantine-radius-md);
+}
+
+.target[data-highlighted='true'] {
+  animation: pulse 0.8s ease-in-out 3;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 transparent;
+  }
+  50% {
+    box-shadow:
+      0 0 0 2px var(--mantine-primary-color-filled),
+      0 0 0 6px color-mix(in srgb, var(--mantine-primary-color-filled) 25%, transparent);
+  }
+}
+
+/* No motion: a steady border for the same time. */
+@media (prefers-reduced-motion: reduce) {
+  .target[data-highlighted='true'] {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--mantine-primary-color-filled);
+  }
+}

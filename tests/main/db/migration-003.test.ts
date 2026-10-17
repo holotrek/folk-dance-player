@@ -15,7 +15,7 @@ describe('migration 003: holding order', () => {
     hold.run(kolo.fileId, 1)
     hold.run(hora.fileId, 1)
     hold.run(free.fileId, 0)
-    expect(migrate(db, MIGRATIONS)).toEqual({ from: 2, to: 3 })
+    expect(migrate(db, MIGRATIONS.slice(0, 3))).toEqual({ from: 2, to: 3 })
     expect(getSchemaVersion(db)).toBe(3)
     const rows = db
       .prepare('SELECT file_id AS fileId, holding_position AS pos FROM file_prefs ORDER BY file_id')

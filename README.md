@@ -12,6 +12,7 @@ coming up — while you keep programming on your laptop.
 ## Features
 
 - **Import your music.** Add files or folders, drag and drop, or import from Apple Music's `Library.xml` (the whole library or chosen playlists).
+- **Sync with Apple Music** (Mac). Read your Music library directly: songs, tags and playlists (in their folders) stay in step with the Music app, and nothing you add here (dances, programs, notes, slides) is ever lost.
 - **Organize it.** Link each song to the dances done to it: one tune can carry several dances, and one dance can be done to many tunes. Record each dance's country, choreographer, dance type, difficulty and notes, and who taught it to your group, with autocomplete. Use favorites, a holding area and playlists.
 - **Search** by song title, dance name, teacher, choreographer or country. Accents don't matter: "pasa" finds "Paşa".
 - **Build programs** (the dances for a session) by drag and drop, with STOP/Teaching markers. Save and reload them.

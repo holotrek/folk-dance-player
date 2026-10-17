@@ -4,7 +4,13 @@ import type { DatabaseSync } from 'node:sqlite'
 import { mapTags, type ImportMapping, type MappedTags } from './mapping'
 import type { FileFacts } from './read-file'
 
-export type SaveOutcome = 'added' | 'updated' | 'relinked' | 'unchanged'
+export type SaveOutcome =
+  | 'added'
+  | 'updated'
+  | 'relinked'
+  | 'unchanged'
+  | 'restored' // a removed song added again (sync spec §7.3)
+  | 'appleSynced' // already in the library through Apple Music sync (§5.7)
 
 export interface SaveContext {
   source: 'files' | 'apple_xml'
@@ -12,7 +18,7 @@ export interface SaveContext {
   mapping: ImportMapping
 }
 
-interface FileRow {
+export interface FileRow {
   id: number
   path: string
   file_size: number
@@ -25,6 +31,8 @@ interface FileRow {
   tag_genre: string | null
   apple_persistent_id: string | null
   is_missing: number
+  apple_sync: 'synced' | 'gone' | null
+  removed_at: string | null
 }
 
 // The file columns an import writes, keyed by column name.
@@ -104,7 +112,7 @@ function fillEmpty(
 
 // The pairing for the song's default dance (song_prefs.default_dance_id), if it is still linked,
 // and how many songs that dance is linked to.
-function defaultPairing(
+export function defaultPairing(
   db: DatabaseSync,
   songId: number
 ): { id: number; danceId: number; songCount: number } | undefined {
@@ -144,7 +152,7 @@ function fillEmptyFields(db: DatabaseSync, fileId: number, mapped: MappedTags): 
 
 // A new file gets its song, an automatic dance with the song's title, the pairing between them,
 // and that dance as the song's default (spec §4). Never linked to an existing dance by name.
-function insertFile(
+export function insertFile(
   db: DatabaseSync,
   facts: FileFacts,
   ctx: SaveContext,
@@ -193,24 +201,73 @@ function insertFile(
   return fileId
 }
 
+// Sync spec §5.7: while sync is on, Music owns a synced song's file and tags, so Add Music… leaves
+// it alone. §7.3: a removed song added again comes back as a local song with all its data.
+function findSynced(db: DatabaseSync, facts: FileFacts): FileRow | undefined {
+  return db
+    .prepare(
+      "SELECT * FROM files WHERE content_hash = ? AND apple_sync = 'synced' ORDER BY id LIMIT 1"
+    )
+    .get(facts.contentHash) as FileRow | undefined
+}
+
+function findRemoved(db: DatabaseSync, facts: FileFacts): FileRow | undefined {
+  return db
+    .prepare(
+      'SELECT * FROM files WHERE content_hash = ? AND removed_at IS NOT NULL ORDER BY id LIMIT 1'
+    )
+    .get(facts.contentHash) as FileRow | undefined
+}
+
+const restore = (db: DatabaseSync, fileId: number): void =>
+  void db.prepare('UPDATE files SET removed_at = NULL, apple_sync = NULL WHERE id = ?').run(fileId)
+
+// Adding a song that waits in "Removed from Apple Music" counts as Keep: an ordinary local song.
+const keepIfInReview = (db: DatabaseSync, row: FileRow): void => {
+  if (row.apple_sync === 'gone' && row.removed_at === null)
+    db.prepare('UPDATE files SET apple_sync = NULL WHERE id = ?').run(row.id)
+}
+
 export function saveImportedFile(
   db: DatabaseSync,
   facts: FileFacts,
   ctx: SaveContext
 ): { outcome: SaveOutcome; fileId: number } {
   const mapped = mapTags(facts.tags, facts.path, ctx.mapping)
+  const fromFiles = ctx.source === 'files'
 
   const existing = findExisting(db, facts, ctx)
   if (existing) {
+    if (fromFiles && existing.apple_sync === 'synced') {
+      return { outcome: 'appleSynced', fileId: existing.id }
+    }
     const fileChanged = updateFile(db, existing, facts, ctx)
     const songChanged = fillEmptyFields(db, existing.id, mapped)
+    keepIfInReview(db, existing)
+    if (existing.removed_at !== null) {
+      restore(db, existing.id)
+      return { outcome: 'restored', fileId: existing.id }
+    }
     return { outcome: fileChanged || songChanged ? 'updated' : 'unchanged', fileId: existing.id }
+  }
+
+  if (fromFiles) {
+    const synced = findSynced(db, facts)
+    if (synced) return { outcome: 'appleSynced', fileId: synced.id }
+    const removed = findRemoved(db, facts)
+    if (removed) {
+      updateFile(db, removed, facts, ctx)
+      fillEmptyFields(db, removed.id, mapped)
+      restore(db, removed.id)
+      return { outcome: 'restored', fileId: removed.id }
+    }
   }
 
   const moved = findMoved(db, facts)
   if (moved) {
     updateFile(db, moved, facts, ctx)
     fillEmptyFields(db, moved.id, mapped)
+    keepIfInReview(db, moved)
     return { outcome: 'relinked', fileId: moved.id }
   }
 

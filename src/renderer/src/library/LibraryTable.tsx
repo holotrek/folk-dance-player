@@ -66,6 +66,17 @@ const NUMBER_COLUMN: Column = {
   )
 }
 
+// In the review list: whether the song's file is still on disk (sync spec §6.2).
+const FILE_COLUMN: Column = {
+  sort: null,
+  label: 'File',
+  render: (r) => (
+    <Text span size="xs" c="dimmed">
+      {r.isMissing ? 'File gone' : 'File still on disk'}
+    </Text>
+  )
+}
+
 // Last in every row: its "⋯" menu (Edit details, favorites), shown on hover.
 const MENU_COLUMN: Column = {
   sort: null,
@@ -105,9 +116,11 @@ export default function LibraryTable({
   const scrollTo = useLibrary((s) => s.scrollTo)
   const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
   const inPlaylist = filter.kind === 'playlist'
+  const playlists = useLibrary((s) => s.playlists)
   const COLUMNS = [
     ...(inPlaylist ? [NUMBER_COLUMN] : []),
     ...(compact ? COMPACT_COLUMNS : ALL_COLUMNS),
+    ...(filter.kind === 'review' ? [FILE_COLUMN] : []),
     MENU_COLUMN
   ]
   const scroll = useRef<HTMLDivElement>(null)
@@ -130,7 +143,11 @@ export default function LibraryTable({
 
   const chosen = new Set(selected)
   // A search hides some of the playlist, so a move can't be placed within the whole order.
-  const reorderable = filter.kind === 'playlist' && sort.column === 'position' && search === ''
+  // A mirror of a Music playlist is read-only (sync spec §6.3): no reordering, no drops.
+  const mirror =
+    filter.kind === 'playlist' && playlists.some((p) => p.id === filter.playlistId && p.mirror)
+  const reorderable =
+    filter.kind === 'playlist' && !mirror && sort.column === 'position' && search === ''
 
   const onHeader = (column: SortColumn): void => {
     const direction = sort.column === column && sort.direction === 'asc' ? 'desc' : 'asc'

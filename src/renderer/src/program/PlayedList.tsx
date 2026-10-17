@@ -23,31 +23,40 @@ export default function PlayedList(): React.JSX.Element {
             Nothing played yet
           </Text>
         )}
-        {played.map((entry) => (
-          <div
-            key={entry.logId}
-            role="listitem"
-            className={classes.row}
-            draggable={entry.track !== null}
-            onDragStart={(e) =>
-              entry.track && setDraggedFiles(e.dataTransfer, [entry.track.fileId])
-            }
-            onDoubleClick={() => entry.track && void api.invoke('player:replay', entry.logId)}
-            title={entry.track ? 'Double-click to play again' : undefined}
-          >
-            <Text span size="xs" c="dimmed" w={60}>
-              {clock(entry.playedAt)}
-            </Text>
-            <span className={classes.label}>
-              {entry.track?.label ?? 'Removed from the library'}
-            </span>
-            {entry.kind !== 'program' && (
-              <Badge size="xs" variant="light">
-                {entry.kind === 'preview' ? 'Preview' : 'Replay'}
-              </Badge>
-            )}
-          </div>
-        ))}
+        {played.map((entry) => {
+          // A removed song (sync spec §6.4) stays in the history, greyed, but can't be played.
+          const removed = entry.track?.isRemoved === true
+          const track = removed ? null : entry.track
+          return (
+            <div
+              key={entry.logId}
+              role="listitem"
+              className={classes.row}
+              data-removed={removed ? 'true' : undefined}
+              draggable={track !== null}
+              onDragStart={(e) => track && setDraggedFiles(e.dataTransfer, [track.fileId])}
+              onDoubleClick={() => track && void api.invoke('player:replay', entry.logId)}
+              title={track ? 'Double-click to play again' : undefined}
+            >
+              <Text span size="xs" c="dimmed" w={60}>
+                {clock(entry.playedAt)}
+              </Text>
+              <span className={classes.label}>
+                {entry.track?.label ?? 'Removed from the library'}
+              </span>
+              {removed && (
+                <Badge size="xs" variant="light" color="gray">
+                  removed
+                </Badge>
+              )}
+              {entry.kind !== 'program' && (
+                <Badge size="xs" variant="light">
+                  {entry.kind === 'preview' ? 'Preview' : 'Replay'}
+                </Badge>
+              )}
+            </div>
+          )
+        })}
       </div>
     </section>
   )

@@ -29,6 +29,22 @@ export async function runWorkerJob(
         if (isCancelled()) break
         post({ type: 'file', result: await readAudioFile(path), apple: null })
       }
+    } else if (job.kind === 'read-known') {
+      // Sync with Apple Music: Music's tags; the file gives size, mtime and the fingerprint.
+      post({ type: 'planned', total: job.tracks.length, unsupported: [], playlists: [] })
+      for (const track of job.tracks) {
+        if (isCancelled()) break
+        const result = await readAudioFile(track.path, {
+          tags: track.tags,
+          durationMs: track.durationMs,
+          kind: track.kind
+        })
+        post({
+          type: 'file',
+          result,
+          apple: { trackId: track.key, persistentId: track.persistentId }
+        })
+      }
     } else {
       const { tracks, playlists } = selectAppleImport(
         await loadAppleLibrary(job.xmlPath),

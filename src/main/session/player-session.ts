@@ -36,6 +36,13 @@ const MIN_SPEED = 0.5
 const MAX_SPEED = 1.5
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v))
 
+// The next song to play, and the songs passed over on the way to it.
+interface Picked {
+  item: Extract<ProgramItem, { kind: 'track' }> | null
+  skipped: string[] // missing files
+  removed: string[] // removed songs
+}
+
 // Spec §7: decides what plays. The control window owns the <audio> element and reports back
 // (ended / failed); no renderer decides what plays next. No Electron imports, so it's unit-tested.
 export class PlayerSession {
@@ -195,7 +202,7 @@ export class PlayerSession {
   private advanceToStop(): void {
     const programId = this.ports.programId()
     if (programId === null) return this.sync()
-    this.warnSkipped(this.pick(false, false).skipped)
+    this.warnSkipped(this.pick(false, false))
     const head = this.ports.unplayedItems(programId)[0]
     if (head?.kind === 'stop') {
       this.ports.markPlayed(head.id)
@@ -246,35 +253,41 @@ export class PlayerSession {
   }
 
   // Finds the next song to play. STOP markers are passed (and, when `consume`, marked played)
-  // or end the search; songs whose file is missing are skipped and left in the program, flagged.
-  // `skipped` names them, whether or not a song was found.
-  private pick(
-    passStops: boolean,
-    consume: boolean
-  ): { item: Extract<ProgramItem, { kind: 'track' }> | null; skipped: string[] } {
-    const skipped: string[] = []
+  // or end the search; songs whose file is missing, and removed songs (sync spec §6.4), are skipped
+  // and left in the program. `skipped` and `removed` name them, whether or not a song was found.
+  private pick(passStops: boolean, consume: boolean): Picked {
+    const picked: Picked = { item: null, skipped: [], removed: [] }
     const programId = this.ports.programId()
-    if (programId === null) return { item: null, skipped }
+    if (programId === null) return picked
     for (const item of this.ports.unplayedItems(programId)) {
       if (item.kind === 'stop') {
-        if (!passStops) return { item: null, skipped }
+        if (!passStops) return picked
         if (consume) this.ports.markPlayed(item.id)
         continue
       }
-      if (this.ports.checkFile(item.fileId)) return { item, skipped }
-      skipped.push(item.label)
+      if (item.isRemoved) {
+        picked.removed.push(item.label)
+        continue
+      }
+      if (this.ports.checkFile(item.fileId)) return { ...picked, item }
+      picked.skipped.push(item.label)
     }
-    return { item: null, skipped }
+    return picked
   }
 
-  private warnSkipped(skipped: string[]): void {
-    if (skipped.length) this.update({ warning: `Skipped missing file: ${skipped.join(', ')}` })
+  private warnSkipped({ skipped, removed }: Picked): void {
+    const parts = [
+      skipped.length ? `Skipped missing file: ${skipped.join(', ')}` : null,
+      removed.length ? `Skipped removed song: ${removed.join(', ')}` : null
+    ].filter(Boolean)
+    if (parts.length) this.update({ warning: parts.join(' · ') })
   }
 
   // Starts the program's next song now.
   private advance(passStops: boolean): void {
-    const { item, skipped } = this.pick(passStops, true)
-    this.warnSkipped(skipped)
+    const picked = this.pick(passStops, true)
+    const { item } = picked
+    this.warnSkipped(picked)
     if (!item) return this.sync()
     this.ports.markPlayed(item.id)
     this.start('program', item.id, item)
@@ -310,6 +323,7 @@ export class PlayerSession {
           teacher,
           durationMs: track.durationMs,
           isMissing: false,
+          isRemoved: false,
           isFavorite: track.isFavorite,
           danceCount: track.danceCount
         }
