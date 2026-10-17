@@ -56,7 +56,9 @@ describe('Music folders and mirrors in the sidebar', () => {
     const { fake, user } = renderSidebar()
     const group = await screen.findByRole('group', { name: 'Playlists' })
     await within(group).findByText('IFD2026')
-    expect(within(group).queryByText('Monday')).not.toBeInTheDocument()
+    // A collapsed Mantine NavLink drops its children only once Collapse's state has settled, which a
+    // slow runner can reach after the first assertion.
+    await waitFor(() => expect(within(group).queryByText('Monday')).not.toBeInTheDocument())
     const loose = within(group).getByText('Loose')
     const mine = within(group).getByText('Mine')
     expect(loose.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
