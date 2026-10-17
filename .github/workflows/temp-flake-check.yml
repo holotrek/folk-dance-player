@@ -7,7 +7,10 @@ name: Temp flake check
 on:
   push:
     branches: [ci/developer-id-signing]
-    paths: [.github/workflows/temp-flake-check.yml, tests/renderer/library/mirrors.test.tsx]
+    paths:
+      - .github/workflows/temp-flake-check.yml
+      - tests/renderer/library/mirrors.test.tsx
+      - tests/renderer/appearance.test.tsx
   workflow_dispatch:
 
 permissions:
@@ -31,13 +34,13 @@ jobs:
       - run: npm ci
       - name: Full suite, once
         run: npm test
-      - name: The test, 10 times with the CPU busy
+      - name: The two tests, 10 times with the CPU busy
         run: |
           for _ in $(seq "$(sysctl -n hw.ncpu)"); do yes > /dev/null & done
           failed=0
           for i in $(seq 10); do
             echo "run $i"
-            npx vitest run tests/renderer/library/mirrors.test.tsx || failed=1
+            npx vitest run tests/renderer/library/mirrors.test.tsx tests/renderer/appearance.test.tsx || failed=1
           done
           kill $(jobs -p) || true
           exit $failed

@@ -66,7 +66,7 @@ describe('Music folders and mirrors in the sidebar', () => {
     expect(loose.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await user.click(within(group).getByText('IFD2026'))
     await user.click(await within(group).findByText('Week 3'))
-    await waitFor(() => expect(within(group).getByText('Monday')).toBeVisible())
+    await waitFor(() => expect(within(group).getByText('Monday')).toBeVisible(), { timeout: 5000 })
     await waitFor(() =>
       expect(fake.settings['playlistFolders.open']).toEqual([
         'FFFFFFFFFFFFFFF1',

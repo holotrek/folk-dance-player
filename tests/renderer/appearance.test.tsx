@@ -17,5 +17,10 @@ describe('appearance at startup', () => {
     await waitFor(() =>
       expect(document.documentElement).toHaveAttribute('data-mantine-color-scheme', 'dark')
     )
+    // Mantine removes its temporary "no transitions" style 10 ms after a color scheme change. Wait
+    // for that, or the timer can fire after the test environment is gone ("document is not defined").
+    await waitFor(() =>
+      expect(document.querySelector('[data-mantine-disable-transition]')).not.toBeInTheDocument()
+    )
   })
 })
