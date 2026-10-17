@@ -157,7 +157,12 @@ export class AppleSync {
   // sync was on is reported here, so the organizer decides before the mapping step.
   async preview(): Promise<SyncPreview> {
     const read = await this.deps.source.read({ timeoutMs: PERMISSION_TIMEOUT_MS })
-    if (!read.ok) return read
+    if (!read.ok) {
+      this.deps.log.warn(
+        `Couldn't read the Music library to turn sync on (${read.reason}): ${read.detail}`
+      )
+      return read
+    }
     this.previewed = read.snapshot
     return {
       ok: true,
@@ -262,7 +267,12 @@ export class AppleSync {
 
   private async readForEnable(): Promise<Snapshot> {
     const read = await this.deps.source.read({ timeoutMs: PERMISSION_TIMEOUT_MS })
-    if (!read.ok) throw new Error(read.detail || 'The Music library could not be read.')
+    if (!read.ok) {
+      this.deps.log.warn(
+        `Couldn't read the Music library to turn sync on (${read.reason}): ${read.detail}`
+      )
+      throw new Error(read.detail || 'The Music library could not be read.')
+    }
     return read.snapshot
   }
 

@@ -110,6 +110,10 @@ AppleSync (main)                      triggers, one sync at a time, pause states
 - **Exit codes:** `0` success; `2` access denied; `3` the library couldn't be opened (any other
   `ITLibrary` error). Any other code, a crash, output that isn't a valid snapshot, or no exit within
   30 seconds counts as a failed read.
+  **Seen on hardware (2026-10-16):** a refused permission, or an app that doesn't declare Music
+  use, comes back as exit `3` with a dropped connection to `com.apple.amp.library.framework`
+  (Cocoa error 4097), not a TCC error. `HelperSource` reports that as access denied. macOS asks
+  only once; after a refusal, access is turned back on in System Settings.
 
 ### 3.2 `LibrarySource`
 

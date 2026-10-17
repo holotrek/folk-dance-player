@@ -28,6 +28,10 @@ MITPlayer.
 
 Newest first. Format: **date — decision.** Why. _Rejected:_ alternatives.
 
+- **2026-10-16 — A refused Music permission is a dropped connection, and the app (not the helper) recognizes it.** Seen on hardware: with Media & Apple Music access off, and for any app that doesn't declare Music use, iTunesLibrary fails with Cocoa error 4097 ("connection to service named com.apple.amp.library.framework"), not a TCC error. The helper exits 3, and `createHelperSource` reports that as `denied`, so the organizer gets the Privacy help. The rule lives in TypeScript, where a stub helper tests it; the Swift helper can't be tested without real access.
+  - **Development builds can't read Music:** `npm start`/`npm run dev` runs Electron's own `Electron.app`, which doesn't declare Music use. Test with `FDP_APPLE_LIBRARY`, or with the packaged app opened through `open --env FDP_USER_DATA=… <app>` from Terminal.
+  - **macOS asks only once.** After a refusal, access is turned on in System Settings.
+  - **Logging:** failed reads while turning sync on are now logged.
 - **2026-10-16 — Sync with Apple Music lives on the Music page, and a menu item that opens a page highlights its control there.**
   - **Chosen by the user after first testing:** the Settings section was hard to find.
   - **The Music page has the switch,** `AppleSyncSwitch`, beside the import buttons. While sync is on, it also has `AppleSyncStatusBar` below the toolbar: the status line, Details and Sync now. Settings keeps only the import mapping.

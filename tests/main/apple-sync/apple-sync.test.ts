@@ -29,6 +29,7 @@ let changes: number
 let now: number
 let review: number
 let disabled: number
+let warnings: string[]
 
 const ok = (s: Snapshot = snapshot()): SnapshotResult => ({ ok: true, snapshot: s })
 const changed = (): SyncSummary => ({ ...emptySyncSummary('t'), added: [{ path: '/m/a.mp3' }] })
@@ -61,7 +62,7 @@ function make(over: Partial<AppleSyncDeps> = {}): AppleSync {
     onNotice: (n) => notices.push(n),
     onLibraryChanged: () => void changes++,
     onProgress: () => undefined,
-    log: { info: () => undefined, warn: () => undefined, error: () => undefined },
+    log: { info: () => undefined, warn: (m) => void warnings.push(m), error: () => undefined },
     clock: () => now,
     random: () => 0,
     ...over
@@ -80,6 +81,7 @@ beforeEach(() => {
   now = 100_000
   review = 0
   disabled = 0
+  warnings = []
 })
 
 const enabled = () => {
@@ -265,11 +267,12 @@ describe('turning sync on and off', () => {
     expect(sync.status().state).toBe('idle')
   })
 
-  test('a denied preview is reported, and sync stays off', async () => {
+  test('a denied preview is reported and logged, and sync stays off', async () => {
     reads = [{ ok: false, reason: 'denied', detail: 'TCC' }]
     const sync = make()
     expect(await sync.preview()).toEqual({ ok: false, reason: 'denied', detail: 'TCC' })
     expect(sync.status().state).toBe('off')
+    expect(warnings).toEqual(["Couldn't read the Music library to turn sync on (denied): TCC"])
   })
 
   test('turning on with a different library than last time pauses', async () => {

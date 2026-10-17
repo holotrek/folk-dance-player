@@ -6830,3 +6830,4 @@ Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"
 **After the first hands-on test (chosen by the user):**
 - **Sync moved to the Music page.** `AppleSyncSwitch` sits beside the import buttons; `AppleSyncStatusBar` (status line, Details, Sync now) sits below the toolbar while sync is on. The Settings section is gone; Settings keeps only the import mapping.
 - **A highlight for menu targets.** `app:showPage` carries a `PageTarget`, and `<HighlightTarget>` pulses a border around the control. File → Sync with Apple Music, while sync is off, opens the Music page with the switch highlighted.
+- **A refused permission reports as a dropped connection** (Cocoa error 4097 to `com.apple.amp.library.framework`), seen on the packaged app. `createHelperSource` maps it to `denied`, so the Privacy help shows. Failed reads while turning sync on are logged. Allowing access on the packaged app worked: the dialog named Folk Dance Player and the first sync finished.

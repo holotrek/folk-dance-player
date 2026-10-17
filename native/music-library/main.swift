@@ -95,8 +95,9 @@ let library: ITLibrary
 do {
   library = try ITLibrary(apiVersion: "1.1")
 } catch {
-  // macOS reports a refused Media & Apple Music permission through TCC ("TCC not granted" in the
-  // spike); anything else means the library couldn't be opened.
+  // A refused Media & Apple Music permission can say "TCC not granted" (the spike), but on
+  // hardware it came back as a dropped connection to com.apple.amp.library.framework (Cocoa error
+  // 4097) with exit 3; the app maps that to access denied (library-source.ts).
   let text = String(describing: error)
   fail(text.contains("TCC") || text.lowercased().contains("not authorized") ? 2 : 3, text)
 }

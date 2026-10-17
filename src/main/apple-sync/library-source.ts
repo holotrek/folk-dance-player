@@ -53,6 +53,11 @@ export const runHelper: RunHelper = (path, { timeoutMs, maxBuffer }) =>
     )
   })
 
+// Seen on hardware: with Media & Apple Music access off, or for an app that doesn't declare Music
+// use (a development build), macOS doesn't report a TCC error: iTunesLibrary's service drops the
+// connection (Cocoa error 4097 for com.apple.amp.library.framework). That is access denied.
+const REFUSED = /com\.apple\.amp\.library/
+
 function parse(text: string): SnapshotResult {
   try {
     return { ok: true, snapshot: parseSnapshot(JSON.parse(text)) }
@@ -77,6 +82,7 @@ export function createHelperSource(helperPath: string, run: RunHelper = runHelpe
         }
       }
       if (result.code === 2) return { ok: false, reason: 'denied', detail }
+      if (result.code === 3 && REFUSED.test(detail)) return { ok: false, reason: 'denied', detail }
       if (result.code === 3) return { ok: false, reason: 'unavailable', detail }
       if (result.code !== 0) {
         return {

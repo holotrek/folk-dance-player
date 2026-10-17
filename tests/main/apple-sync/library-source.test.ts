@@ -38,6 +38,15 @@ describe('createHelperSource', () => {
     expect(result).toEqual({ ok: false, reason: 'denied', detail: 'TCC not granted' })
   })
 
+  // Seen on hardware: with Media & Apple Music access off (or for an app that doesn't declare
+  // Music use), iTunesLibrary fails with a connection error to its service, not a TCC error.
+  test('the Music library service refusing the connection is access denied', async () => {
+    const error =
+      'Error Domain=NSCocoaErrorDomain Code=4097 "connection to service named com.apple.amp.library.framework" UserInfo={NSDebugDescription=connection to service named com.apple.amp.library.framework}'
+    const result = await createHelperSource(stub(`echo '${error}' >&2; exit 3`)).read()
+    expect(result).toEqual({ ok: false, reason: 'denied', detail: error })
+  })
+
   test('exit 3 is an unavailable library', async () => {
     const result = await createHelperSource(stub('echo nope >&2; exit 3')).read()
     expect(result).toMatchObject({ ok: false, reason: 'unavailable' })
