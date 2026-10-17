@@ -1,13 +1,13 @@
 # TEMPORARY: delete before merging PR #26. Stress-tests tests/renderer/library/mirrors.test.tsx on
 # macOS, where it failed 2 runs in 3. Each of the 10 jobs runs the full suite once (the failing
 # conditions), then the test 10 times with the CPU busy. Run it again from the Actions tab
-# ("Re-run all jobs"), or by pushing a change to this file.
+# ("Re-run all jobs" reuses the same commit), or by pushing a change to this file or the test.
 name: Temp flake check
 
 on:
   push:
     branches: [ci/developer-id-signing]
-    paths: [.github/workflows/temp-flake-check.yml]
+    paths: [.github/workflows/temp-flake-check.yml, tests/renderer/library/mirrors.test.tsx]
   workflow_dispatch:
 
 permissions:
