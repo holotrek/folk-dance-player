@@ -411,6 +411,8 @@ function startApp(): void {
   // Sync triggers (sync spec §3.3): once the window is shown, and whenever it gains focus.
   mainWindow.once('show', () => appleSync.started())
   mainWindow.on('focus', () => appleSync.focused())
+  // Back from editing a deck in Canva: re-read the decks so slide numbers and titles follow.
+  mainWindow.on('focus', () => void canva.focused())
   app.setAboutPanelOptions({
     applicationName: 'Folk Dance Player',
     applicationVersion: app.getVersion(),

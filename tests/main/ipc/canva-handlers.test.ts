@@ -79,9 +79,19 @@ describe('Canva handlers', () => {
     expect(h['canva:captureStatus']()).toEqual({ running: true, done: 1, total: 3, failed: 0 })
   })
 
+  test('refresh decks re-reads them and saves no images', async () => {
+    const { h, queued, changes } = setup()
+    await h['canva:addDeck'](VIEW)
+    const before = changes()
+    expect(await h['canva:refreshDecks']()).toEqual({ decks: 1, formatChanged: 0, unreachable: 0 })
+    expect(changes()).toBeGreaterThan(before)
+    expect(queued).toEqual([])
+  })
+
   test('without Canva (tests, or before startup) nothing is captured', async () => {
     const { h } = setup(false)
     expect(h['canva:captureStatus']()).toEqual(CAPTURES_IDLE)
     await expect(h['canva:addDeck'](VIEW)).rejects.toThrow("Canva slides aren't available")
+    await expect(h['canva:refreshDecks']()).rejects.toThrow("Canva slides aren't available")
   })
 })

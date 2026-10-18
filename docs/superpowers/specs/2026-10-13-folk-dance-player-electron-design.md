@@ -530,7 +530,7 @@ Verified in the spike with a real 42-slide deck (§11):
   - **The presentation title** from the page's `<title>` / `og:title`, for example "Dance n' Jam Tunes". This is how decks are listed in dropdowns.
   - **The ordered list of slides** from the design data embedded in the page. Each slide has a stable page ID (for example `PBrWDbC9tVSzgzvW`) and, if the slide is named in Canva, a title (for example "Ali Paşa").
   - Both are stored in `canva_decks`.
-  - **Refreshed** at startup when online, and on "Refresh slides".
+  - **Refreshed** at startup when online, on "Refresh slides", when the control window gains focus (at most once a minute, online only; slide lists only, no image captures), and when the slide dialog opens. A deck edited in Canva otherwise leaves stale numbers and titles, and the projector's live slide is addressed by its saved position.
 - **Linking a slide to a dance:**
   - The user picks a deck and enters a **slide number**. The app converts it to that slide's **page ID** right away and shows a preview, with the slide's title, to confirm.
   - **Alternatively,** the user can paste a page link from Canva's share menu. A `canva.link/…` short link redirects to `…/edit?ui=<base64 of {"D":{"T":{"A":"<pageId>"}}}>`, which yields the page ID directly.

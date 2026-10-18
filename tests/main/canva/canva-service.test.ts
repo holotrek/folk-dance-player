@@ -3,7 +3,12 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import type { Fetcher } from '../../../src/main/canva/canva-client'
 import { CanvaService } from '../../../src/main/canva/canva-service'
-import { getDanceSlide, listDecks, type CaptureTarget } from '../../../src/main/canva/decks'
+import {
+  deckPages,
+  getDanceSlide,
+  listDecks,
+  type CaptureTarget
+} from '../../../src/main/canva/decks'
 import { addDance } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 
@@ -18,7 +23,10 @@ function setup(pages = fixture) {
   const db = createTestDb()
   let body = pages
   let online = true
+  let now = 0
+  let fetches = 0
   const fetcher: Fetcher = async () => {
+    fetches++
     if (!online) throw new Error('offline')
     return { status: 200, text: async () => body, headers: { get: () => null } }
   }
@@ -29,13 +37,16 @@ function setup(pages = fixture) {
     fetcher,
     queue: { enqueue: (t) => void queued.push(t) },
     online: () => online,
-    onChange: () => void changes++
+    onChange: () => void changes++,
+    clock: () => now
   })
   return {
     db,
     service,
     queued,
     changes: () => changes,
+    fetches: () => fetches,
+    advance: (ms: number) => (now += ms),
     setBody: (b: string) => (body = b),
     setOnline: (o: boolean) => (online = o)
   }
@@ -146,5 +157,61 @@ describe('Canva service', () => {
     setBody('<html><title>x</title></html>')
     expect(await service.refreshDecks()).toEqual({ decks: 1, formatChanged: 1, unreachable: 0 })
     expect(listDecks(db)[0].pageCount).toBe(4)
+  })
+
+  describe('when the app window gains focus', () => {
+    // A deck page in the format Canva's view page uses, with the slides given as [id, title].
+    const deckHtml = (slides: [string, string][]) =>
+      '<html><head><meta property="og:title" content="Edited deck"></head><body>' +
+      slides.map(([id, name]) => `{"A?":"i","Z":{},"a":"${id}","B":"${name}"}`).join('') +
+      '</body></html>'
+
+    test('the decks are re-read, so slide numbers follow an edit made in Canva', async () => {
+      const { db, service, setBody } = setup(deckHtml([['PAAAAAAAA', 'Old first']]))
+      const deckId = await service.addDeck(VIEW)
+      setBody(
+        deckHtml([
+          ['PNEWSLIDE', 'New first'],
+          ['PAAAAAAAA', 'Old first']
+        ])
+      )
+      await service.focused()
+      expect(deckPages(db, deckId).map((p) => p.title)).toEqual(['New first', 'Old first'])
+    })
+
+    test('it waits a minute before reading again', async () => {
+      const { service, advance, fetches } = setup()
+      await service.addDeck(VIEW)
+      const afterAdd = fetches()
+      await service.focused()
+      expect(fetches()).toBe(afterAdd + 1)
+      advance(30_000)
+      await service.focused()
+      expect(fetches()).toBe(afterAdd + 1)
+      advance(30_000)
+      await service.focused()
+      expect(fetches()).toBe(afterAdd + 2)
+    })
+
+    test('it does nothing offline, and tries again once back online', async () => {
+      const { service, setOnline, fetches } = setup()
+      await service.addDeck(VIEW)
+      const afterAdd = fetches()
+      setOnline(false)
+      await service.focused()
+      expect(fetches()).toBe(afterAdd)
+      setOnline(true)
+      await service.focused()
+      expect(fetches()).toBe(afterAdd + 1)
+    })
+
+    test('it never captures slide images (only Refresh slides does)', async () => {
+      const { db, service, queued } = setup()
+      const deckId = await service.addDeck(VIEW)
+      service.linkSlide(addDance(db, { name: 'Ali Paşa' }), deckId, 3)
+      queued.length = 0
+      await service.focused()
+      expect(queued).toEqual([])
+    })
   })
 })

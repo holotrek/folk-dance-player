@@ -15,6 +15,9 @@ import {
   type CaptureTarget
 } from './decks'
 
+// Focusing the window re-reads the decks at most this often.
+const FOCUS_INTERVAL_MS = 60_000
+
 const UNREACHED =
   "Couldn't reach Canva to save the slide image. It's tried again when you're back online, or with Refresh slides."
 
@@ -23,6 +26,8 @@ const UNREACHED =
 // re-reads every deck and re-captures linked slides.
 export class CanvaService {
   private waiting = false // a capture was skipped offline and waits for `catchUp`
+  private lastFocusRead = -Infinity
+  private reading = false // a focus read is under way
 
   constructor(
     private readonly deps: {
@@ -31,6 +36,7 @@ export class CanvaService {
       queue: { enqueue(targets: CaptureTarget[]): void }
       online(): boolean
       onChange(): void // decks or a dance's slide changed
+      clock?(): number // milliseconds; Date.now unless a test says otherwise
     }
   ) {}
 
@@ -70,6 +76,22 @@ export class CanvaService {
 
   async refreshDecks(): Promise<RefreshSummary> {
     return (await this.refreshAll()).summary
+  }
+
+  // The window gained focus, often after editing a deck in Canva: re-read the decks so slide numbers,
+  // titles and the projector's slides follow the edit. Once a minute at most, never offline, and
+  // without capturing images (Refresh slides does that).
+  async focused(): Promise<void> {
+    if (!this.deps.online() || this.reading) return
+    const now = (this.deps.clock ?? Date.now)()
+    if (now - this.lastFocusRead < FOCUS_INTERVAL_MS) return
+    this.lastFocusRead = now
+    this.reading = true
+    try {
+      await this.refreshAll()
+    } finally {
+      this.reading = false
+    }
   }
 
   // "Refresh slides": re-read every deck, then re-capture every linked slide.
