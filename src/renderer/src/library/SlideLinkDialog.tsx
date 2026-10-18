@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -27,6 +27,7 @@ export default function SlideLinkDialog(props: {
   danceId: number
   danceName: string
   initialDeckId: number | null
+  initialPageId: string | null // the dance's slide, if it has one: the number starts on it
   onClose: () => void
 }): React.JSX.Element {
   const api = useLibraryApi()
@@ -43,6 +44,7 @@ export default function SlideLinkDialog(props: {
   const [checking, setChecking] = useState(false) // re-reading the decks from Canva
   const [unreached, setUnreached] = useState(false) // Canva couldn't be reached: the list is saved
   const [reread, setReread] = useState(0) // counts re-reads, so the slide list is fetched again
+  const typed = useRef(false) // the number was typed: the dance's slide no longer sets it
 
   useEffect(() => {
     if (!props.opened) return
@@ -51,6 +53,7 @@ export default function SlideLinkDialog(props: {
     setDeckLink('')
     setPageLink('')
     setPosition(1)
+    typed.current = false
     void api.invoke('canva:decks').then((list) => {
       setDecks(list)
       setAdding(list.length === 0)
@@ -82,13 +85,22 @@ export default function SlideLinkDialog(props: {
   }, [api, props.opened])
 
   useEffect(() => {
+    if (!props.opened) return
     let live = true
     if (deckId === null) setPages([])
     else void api.invoke('canva:deckPages', deckId).then((list) => live && setPages(list))
     return () => {
       live = false
     }
-  }, [api, deckId, reread])
+  }, [api, props.opened, deckId, reread])
+
+  // Changing a dance's slide starts on the number it has in its deck now (not slide 1), and follows
+  // it when the deck is re-read, until a number is typed. A slide gone from its deck leaves the 1.
+  useEffect(() => {
+    if (typed.current || props.initialPageId === null || deckId !== props.initialDeckId) return
+    const index = pages.findIndex((p) => p.id === props.initialPageId)
+    if (index >= 0) setPosition(index + 1)
+  }, [pages, deckId, props.initialDeckId, props.initialPageId])
 
   const act = async (action: () => Promise<unknown>, close: boolean): Promise<void> => {
     setBusy(true)
@@ -179,7 +191,10 @@ export default function SlideLinkDialog(props: {
                   max={pages.length || undefined}
                   allowDecimal={false}
                   value={position}
-                  onChange={setPosition}
+                  onChange={(value) => {
+                    typed.current = true
+                    setPosition(value)
+                  }}
                   w={140}
                 />
                 {page ? (
