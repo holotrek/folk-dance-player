@@ -202,6 +202,21 @@ export function getDanceSlide(db: DatabaseSync, danceId: number): DanceSlide | n
   }
 }
 
+// The slides linked to these dances (a dance with none is skipped).
+export function slidesOfDances(
+  db: DatabaseSync,
+  danceIds: number[]
+): { deckId: number; pageId: string }[] {
+  if (danceIds.length === 0) return []
+  const marks = danceIds.map(() => '?').join(', ')
+  return db
+    .prepare(
+      `SELECT DISTINCT canva_deck_id AS deckId, canva_page_id AS pageId FROM dance_prefs
+       WHERE dance_id IN (${marks}) AND canva_deck_id IS NOT NULL AND canva_page_id IS NOT NULL`
+    )
+    .all(...danceIds) as { deckId: number; pageId: string }[]
+}
+
 export interface CaptureTarget {
   deckId: number
   pageId: string

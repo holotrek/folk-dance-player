@@ -25,8 +25,11 @@ function setup(pages = fixture) {
   let online = true
   let now = 0
   let fetches = 0
-  const fetcher: Fetcher = async () => {
+  let upcoming: number[] = []
+  const urls: string[] = []
+  const fetcher: Fetcher = async (url) => {
     fetches++
+    urls.push(url)
     if (!online) throw new Error('offline')
     return { status: 200, text: async () => body, headers: { get: () => null } }
   }
@@ -38,7 +41,8 @@ function setup(pages = fixture) {
     queue: { enqueue: (t) => void queued.push(t) },
     online: () => online,
     onChange: () => void changes++,
-    clock: () => now
+    clock: () => now,
+    upcomingDances: () => upcoming
   })
   return {
     db,
@@ -46,6 +50,8 @@ function setup(pages = fixture) {
     queued,
     changes: () => changes,
     fetches: () => fetches,
+    urls,
+    setUpcoming: (ids: number[]) => (upcoming = ids),
     advance: (ms: number) => (now += ms),
     setBody: (b: string) => (body = b),
     setOnline: (o: boolean) => (online = o)
@@ -212,6 +218,45 @@ describe('Canva service', () => {
       queued.length = 0
       await service.focused()
       expect(queued).toEqual([])
+    })
+  })
+
+  describe("the current program's dances come first", () => {
+    const OTHER = 'https://www.canva.com/design/DAOTHER0000/TOK2abcdefgh/view'
+
+    test('the decks holding their slides are re-read before the others', async () => {
+      const { db, service, urls, setUpcoming } = setup()
+      await service.addDeck(VIEW)
+      const second = await service.addDeck(OTHER)
+      const tonight = addDance(db, { name: 'Tonight' })
+      service.linkSlide(tonight, second, 2)
+      setUpcoming([tonight])
+      urls.length = 0
+      await service.refreshDecks()
+      expect(urls).toEqual([OTHER, VIEW])
+    })
+
+    test('with no program, decks are read in the order they were added', async () => {
+      const { service, urls } = setup()
+      await service.addDeck(VIEW)
+      await service.addDeck(OTHER)
+      urls.length = 0
+      await service.refreshDecks()
+      expect(urls).toEqual([VIEW, OTHER])
+    })
+
+    test('Refresh slides saves their images first', async () => {
+      const { db, service, queued, setUpcoming } = setup()
+      const first = await service.addDeck(VIEW)
+      const second = await service.addDeck(OTHER)
+      const older = addDance(db, { name: 'Not tonight' })
+      const tonight = addDance(db, { name: 'Tonight' })
+      service.linkSlide(older, first, 1)
+      service.linkSlide(tonight, second, 2)
+      setUpcoming([tonight])
+      queued.length = 0
+      await service.refreshSlides()
+      expect(queued.flat().map((t) => t.deckId)).toEqual([second, first])
     })
   })
 })

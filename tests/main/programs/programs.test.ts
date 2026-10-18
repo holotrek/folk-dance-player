@@ -17,7 +17,8 @@ import {
   removeItems,
   renameProgram,
   reorderItems,
-  setItemDance
+  setItemDance,
+  upcomingDanceIds
 } from '../../../src/main/programs/programs'
 import { addDance, addLibrarySong, link } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
@@ -60,6 +61,15 @@ describe('programs', () => {
       ['Tue Oct 14', 0]
     ])
     expect(listPrograms(db, 'OCT').map((p) => p.name)).toEqual(['Tue Oct 14'])
+  })
+
+  test('the dances still to come: unplayed tracks in order, without STOP markers or played items', () => {
+    const p = createProgram(db, 'Tonight')
+    const [first] = addTracks(db, p, [hora.fileId, kolo.fileId, tune.fileId])
+    addStop(db, p)
+    markPlayed(db, first)
+    expect(upcomingDanceIds(db, p)).toEqual([kolo.danceId, tune.danceId])
+    expect(upcomingDanceIds(db, 9999)).toEqual([])
   })
 
   test('renames, rejecting a blank name, and deletes', () => {

@@ -109,6 +109,13 @@ export function getProgram(db: DatabaseSync, programId: number): ProgramDetail |
   return { ...program, items: rows.map(toItem) }
 }
 
+// The dances still to come in a program, in order: what the projector will need (an unknown
+// program has none). A song with no dance is left out.
+export function upcomingDanceIds(db: DatabaseSync, programId: number): number[] {
+  const items = getProgram(db, programId)?.items ?? []
+  return items.flatMap((i) => (i.kind === 'track' && i.danceId !== null ? [i.danceId] : []))
+}
+
 // Next up (spec §7.2): the first unplayed item by position.
 export function nextItem(db: DatabaseSync, programId: number): ProgramItem | null {
   const row = db
