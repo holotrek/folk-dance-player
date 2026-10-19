@@ -57,8 +57,8 @@ built on its own.
 | # | Change | Where it lives | State |
 |---|--------|----------------|-------|
 | 3.1 | Slide numbers stay right when a Canva deck is edited | Canva service, slide dialog | **Built** in draft PR #28 |
-| 3.2 | One label order: `Dance ♪ Song` | `shared/labels.ts`, lists, Now Playing | Planned |
-| 3.3 | Artist and Choreographer columns | Music table, Program page library | Planned |
+| 3.2 | One label order: `Dance ♪ Song` | `shared/labels.ts`, lists, Now Playing | Built (Plan 11) |
+| 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
 | 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Planned |
 | 3.5 | "Same as song" for a dance's name | Song editor | Planned |
 | 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Planned |
@@ -640,7 +640,7 @@ migration and the "copy a file into the app's data folder" helper.
    app window? Is one PDF per dance enough?
 6. **§3.4, old settings.** When an old mapping sent both tags to one field, is "Artist tag wins"
    the right way to convert it? (It only affects someone who set it up that way.)
-7. **§3.2, the choreographer.** Is `Dance (Choreographer) ♪ Song` the right place for it?
+7. ~~**§3.2, the choreographer.**~~ Decided 2026-10-19: `Dance (Choreographer) ♪ Song`.
 8. **§3.10, following the bottom.** Is it right that the control window's list follows new songs
    only while the organizer is at the bottom, or should it always jump to the newest?
 9. **§3.11, a playing song.** End Program lets the song that is playing finish and nothing

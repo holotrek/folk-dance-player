@@ -133,13 +133,13 @@ One shared function builds every song/dance label, so the control window and the
 - **Dance:** the dance name.
 - **Choreographer**, in parentheses. Shown only when the song is linked to dances by **more than one choreographer**, which is when it's needed to tell them apart. A dance with no choreographer (a traditional dance) never shows empty parentheses.
 
-The control window uses the one-line form `Song | Dance (Choreographer)`:
+Every list uses the one-line form `Dance (Choreographer) ♪ Song` (the dance first, as on the projector). Now Playing, in the control window and on the projector, is the one place it takes two lines: the dance, with ♪ and the song smaller below.
 
 | Song | Dance | Choreographers linked to the song | Label |
 |---|---|---|---|
-| Hora de la Munte | Hora Mare | none (traditional) | Hora de la Munte \| Hora Mare |
+| Hora de la Munte | Hora Mare | none (traditional) | Hora Mare ♪ Hora de la Munte |
 | Svornato | Svornato | Jaap Leegwater and others | Svornato (Jaap Leegwater) |
-| Pusteno Ludo | Pravo Rhodopsko Oro | Yves Moreau and others | Pusteno Ludo \| Pravo Rhodopsko Oro (Yves Moreau) |
+| Pusteno Ludo | Pravo Rhodopsko Oro | Yves Moreau and others | Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo |
 | Hora Fetelor | Hora Fetelor | one, or none | Hora Fetelor |
 
 The projector uses the same parts with a different emphasis (§8.2): the dance name and choreographer are large, and the song title is smaller.
@@ -323,13 +323,13 @@ PROGRAMS                  [+]
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
 - **Holding panel:** files with `in_holding`, above the library list, in the order they were placed (`holding_position`). Drag and drop works as in the program: the whole panel takes drops; dropped on a held song, songs go before it, and anywhere else at the end; held songs dragged within the panel move. ✕ releases one, and held songs can be dragged into the program.
 - **Song menus:** every song row in the library list (on both pages) and in Holding has a "⋯" menu, shown on hover (and on the selected library row), or by right-clicking the row: **Edit details** and **Add to / Remove from favorites**. **Edit details** (also in a program item's menu) switches to the Music page with that song selected alone, scrolled into view, and its editor open. If the current filter or search hides the song, the list goes back to All Music without the search.
-- **Library list:** one row per song, showing its default dance's name, country and teacher. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection, and the search carries over between the Program and Music pages.
+- **Library list:** one row per song, showing its default dance's name, country, teacher, artist and choreographer. As the list narrows, columns disappear completely in this order: Artist, Teacher, Choreographer, Country, Time. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection, and the search carries over between the Program and Music pages.
 
 ### 6.3 Music page
 
 - **Table:** one row per song, for browsing, sorting, searching and selecting. It is virtualized, so it stays fast with large libraries. Editing happens in the side editor, not in the table. Click selects, ⌘-click adds to the selection, Shift-click selects a range, and ⌘A (Ctrl+A on Windows) selects every song shown while the table has focus. Selected rows can be dragged onto a playlist or Favorites.
   - **Columns:** song title, artist, dance (the default dance's name), country, teacher, choreographer, dance type, difficulty, favorite, slide, duration, path and status.
-  - **Song / Dance** shows the label (§4), with a "+N" badge when the song has more than one dance.
+  - **Dance / Song** shows the label (§4) and sorts by dance name, then song title, with a "+N" badge when the song has more than one dance.
   - **In a playlist** (shown in its own order), a **#** column numbers the songs in the playlist's order (whatever the sort or search). Dropping rows onto another row moves them there, and onto the space below the last row moves them to the end. **Remove from playlist** removes the selection. Reordering is off while a search is active, because the search hides part of the playlist.
   - **When one song is selected,** the side editor opens beside the table. A dance shared with other songs says so ("Also used by 2 other songs"), because edits apply to all of them.
 - **Selected song:** a side editor with two sections.
