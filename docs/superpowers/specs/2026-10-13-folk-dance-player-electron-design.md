@@ -167,7 +167,7 @@ The projector uses the same parts with a different emphasis (§8.2): the dance n
 
 **Settings keys:**
 
-- **Import:** `import.artistTagTarget`, `import.albumArtistTagTarget` (each one of `artist|teacher|choreographer|ignore`), `import.genreIsCountry` (bool)
+- **Import:** `import.artistFrom`, `import.teacherFrom`, `import.choreographerFrom` (each one of `artistTag|albumArtistTag|ignore`: which tag fills that field), `import.genreIsCountry` (bool)
 - **Library:** `danceTypeSuggestions` (string[])
 - **Playback:** `autoContinue.enabled` (default `true`), `autoContinue.seconds` (default 5), `countdown.seconds`
 - **Projector:** `projector.displayId`, `projector.enabled`
@@ -198,14 +198,16 @@ Schema changes go through numbered migrations, applied at startup inside a trans
 
 The step shows the current values, which can be changed for this import and are remembered for next time:
 
-- **"Artist" tag goes to:** Artist (the song's artist) | Teacher (the pairing's teacher) | Choreographer (the dance's choreographer) | ignore
-- **"Album Artist" tag goes to:** the same choices
+- **Populate Artist from:** Artist tag | Album Artist tag | Ignore (the song's artist)
+- **Populate Teacher from:** the same choices (the pairing's teacher)
+- **Populate Choreographer from:** the same choices (the dance's choreographer)
+- Each field has exactly one source, so two tags can never feed one field; one tag may feed several fields.
 - **Genre → Country:** on or off. If on, the genre becomes the new dance's country.
 - **Tag preview (Apple Music imports):** a scrolling table (its header stays in place) of up to 50 tracks' Name, Artist, Album Artist and Genre, read from the XML. When the library has more tracks, the 50 are chosen at random, so the organizer can see which tag holds teachers or choreographers. A file import has no preview, because tags are read only after the mapping is chosen.
 
 Mapping is applied once, when a song and its automatic dance are created. It is not stored per song.
 
-The Music page has **Re-apply mapping to selected**. Its dialog shows the selected songs' tags (the same table, up to 50 songs) and the mapping choices, which start from the import settings and apply to that run only. It deliberately overwrites the mapped fields from the raw tags: the song's artist, its default dance's choreographer and country, and that pairing's teacher. All fields remain freely editable afterwards.
+The Music page has **Re-apply mapping to selected**. Its dialog shows the selected songs' tags (the same table, up to 50 songs) and the mapping choices, which start from the import settings and apply to that run only. It deliberately overwrites the fields that have a source in the mapping, from the raw tags: the song's artist, its default dance's choreographer and country, and that pairing's teacher. All fields remain freely editable afterwards.
 
 ### 5.3 Apple Music XML
 

@@ -59,7 +59,7 @@ built on its own.
 | 3.1 | Slide numbers stay right when a Canva deck is edited | Canva service, slide dialog | **Built** in PR #28 (ready to merge) |
 | 3.2 | One label order: `Dance ♪ Song` | `shared/labels.ts`, lists, Now Playing | Built (Plan 11) |
 | 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
-| 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Planned |
+| 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Built (Plan 13) |
 | 3.5 | "Same as song" for a dance's name | Song editor | Planned |
 | 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Planned |
 | 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Planned |
@@ -616,12 +616,12 @@ for the maintainer to decide, before any plan is written.
 
 | Migration | Change |
 |-----------|--------|
-| `005-dance-attachments` | `dance_prefs`: `notes_pdf_name`, `notes_pdf_path`, `slide_image_name`, `slide_image_path`, `slide_source` (§3.6, §3.7) |
-| `006-import-mapping` | Rewrites the saved import settings from two keys to three (§3.4) |
+| `006-dance-attachments` | `dance_prefs`: `notes_pdf_name`, `notes_pdf_path`, `slide_image_name`, `slide_image_path`, `slide_source` (§3.6, §3.7) |
+| `005-import-mapping` | Rewrites the saved import settings from two keys to three (§3.4); built |
 | `007-holding-items` | New `holding_items` table (song, dance, position; unique per pair) replacing `file_prefs.in_holding`/`holding_position`; copies existing held songs (§3.12) |
 
 No migration for §3.5 under the recommended design, or for §3.13 (two new settings keys). §3.1 to §3.3 and §3.8 to §3.11 change no tables.
-Migrations 001 to 004 are untouched. The next number is 005; if another change lands first, these
+Migrations 001 to 005 are untouched (005 is the import mapping). The next number is 006; if another change lands first, these
 take the next free numbers.
 
 Files the app now writes outside the database: `dance-notes/` and `slide-images/` in the app data
@@ -639,7 +639,7 @@ Each item is its own pull request, small enough to review on its own.
    it reuses the same CSS grid.
 3. **§3.4**: independent; a migration and a settings change, so give it its own release note.
 4. **§3.5, §3.6, §3.7**: all in the song editor's dance section; do §3.5 first (smallest), then
-   the two attachments sharing one migration (`005`).
+   the two attachments sharing one migration (`006`).
 5. **§3.8, §3.9**: both in the Program page; §3.9's header line should land after §3.8 so the
    header is arranged once.
 6. **§3.10, §3.11**: small and independent; §3.10 is a good first change if a quick win is wanted.
