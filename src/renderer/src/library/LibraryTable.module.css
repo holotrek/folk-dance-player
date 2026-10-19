@@ -84,7 +84,7 @@
 /* The Program page's list (compact) drops columns completely as it narrows, in this order:
    Artist, Teacher, Choreographer, Country, Time. Each breakpoint is the width at which the
    columns still shown no longer fit their minimums (tuned for a numbered list too). */
-@container (max-width: 640px) {
+@container (max-width: 690px) {
   .compact .header,
   .compact .item {
     --w-artist: 0px;
@@ -96,7 +96,7 @@
   }
 }
 
-@container (max-width: 570px) {
+@container (max-width: 620px) {
   .compact .header,
   .compact .item {
     --w-teacher: 0px;
@@ -108,7 +108,7 @@
   }
 }
 
-@container (max-width: 495px) {
+@container (max-width: 545px) {
   .compact .header,
   .compact .item {
     --w-choreographer: 0px;

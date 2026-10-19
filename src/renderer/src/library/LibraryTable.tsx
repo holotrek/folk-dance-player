@@ -83,8 +83,7 @@ const ALL_COLUMNS: Column[] = [
     key: 'choreographer',
     sort: 'choreographer',
     label: 'Choreographer',
-    width: 'minmax(90px, 1fr)',
-    compactWidth: 'minmax(60px, 1fr)',
+    width: 'minmax(110px, 1fr)', // wide enough for its own header and sort arrow
     render: (r) => text(r.choreographer)
   },
   {
