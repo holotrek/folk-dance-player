@@ -5,6 +5,7 @@ import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
 import FavoriteToggle from './FavoriteToggle'
 import { carriesFiles, getDraggedFiles, setDraggedFiles } from './drag'
+import { useColumnOrder } from './useColumnOrder'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
 import SongMenu, { openRowMenu } from './SongMenu'
@@ -153,12 +154,9 @@ const MENU_COLUMN: Column = {
   )
 }
 
-// The Program page's library list (spec §6.2): the dance and song, then country,
-// choreographer, teacher, artist and time. As it narrows, the CSS drops columns completely in this
-// order: Artist, Teacher, Choreographer, Country, Time (0.3.0 spec §3.3); the first column never
-// goes.
-const COMPACT_KEYS = ['favorite', 'dance', 'country', 'choreographer', 'teacher', 'artist', 'time']
-const COMPACT_COLUMNS = COMPACT_KEYS.map((k) => ALL_COLUMNS.find((c) => c.key === k)!)
+// The movable columns are ordered by the organizer (0.3.0 spec §3.13); everything else is fixed.
+const FIXED_FIRST = ['favorite', 'dance']
+const columnByKey = (key: string): Column => ALL_COLUMNS.find((c) => c.key === key)!
 
 // Spec §6.3: browse, sort, search and select songs; drag them onto playlists or the program.
 // Virtualized, so large libraries stay fast. In a playlist (in its own order), dropping songs on a
@@ -181,9 +179,13 @@ export default function LibraryTable({
   const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
   const inPlaylist = filter.kind === 'playlist'
   const playlists = useLibrary((s) => s.playlists)
+  // The Program page's library list (spec §6.2) shows fewer columns than the Music page's table. As
+  // it narrows, the CSS drops columns completely in this order, wherever they are: Artist, Teacher,
+  // Choreographer, Country, Time (0.3.0 spec §3.3); the first column never goes.
+  const { order } = useColumnOrder(api, compact ? 'program' : 'music')
   const COLUMNS = [
     ...(inPlaylist ? [NUMBER_COLUMN] : []),
-    ...(compact ? COMPACT_COLUMNS : ALL_COLUMNS),
+    ...[...FIXED_FIRST, ...order].map(columnByKey),
     ...(filter.kind === 'review' ? [FILE_COLUMN] : []),
     MENU_COLUMN
   ]
@@ -247,9 +249,9 @@ export default function LibraryTable({
       }}
     >
       <div className={classes.header} role="row" style={{ gridTemplateColumns: template }}>
-        {COLUMNS.map((c, i) => (
+        {COLUMNS.map((c) => (
           <div
-            key={i}
+            key={c.key}
             role="columnheader"
             data-column={c.key}
             aria-sort={
