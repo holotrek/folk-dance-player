@@ -10,7 +10,7 @@ describe('migration 004: Apple Music sync', () => {
     migrate(db, MIGRATIONS.slice(0, 3))
     const song = addLibrarySong(db, { title: 'Kolo' })
     db.prepare("INSERT INTO playlists (name, source) VALUES ('Mine', 'local')").run()
-    expect(migrate(db, MIGRATIONS)).toEqual({ from: 3, to: 4 })
+    expect(migrate(db, MIGRATIONS.slice(0, 4))).toEqual({ from: 3, to: 4 })
     expect(getSchemaVersion(db)).toBe(4)
 
     expect(

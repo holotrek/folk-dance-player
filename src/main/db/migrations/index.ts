@@ -3,6 +3,13 @@ import { initial } from './001-initial'
 import { distinctDances } from './002-distinct-dances'
 import { holdingOrder } from './003-holding-order'
 import { appleSync } from './004-apple-sync'
+import { importMapping } from './005-import-mapping'
 
 // Append new migrations here; versions must stay 1..n in order.
-export const MIGRATIONS: readonly Migration[] = [initial, distinctDances, holdingOrder, appleSync]
+export const MIGRATIONS: readonly Migration[] = [
+  initial,
+  distinctDances,
+  holdingOrder,
+  appleSync,
+  importMapping
+]
