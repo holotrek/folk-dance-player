@@ -65,7 +65,7 @@ describe('library store', () => {
     await store.getState().setFilter({ kind: 'playlist', playlistId: 7 })
     expect((fake.callsTo('library:list').at(-1)![0] as LibraryQuery).sort.column).toBe('position')
     await store.getState().setFilter({ kind: 'all' })
-    expect((fake.callsTo('library:list').at(-1)![0] as LibraryQuery).sort.column).toBe('title')
+    expect((fake.callsTo('library:list').at(-1)![0] as LibraryQuery).sort.column).toBe('dance')
   })
 
   test('selects with click, toggle (⌘) and range (shift)', async () => {
@@ -157,7 +157,7 @@ describe('library store', () => {
     rows = [row(1), row(2), row(3)]
     await store.getState().reveal(3)
     expect(fake.callsTo('library:list').at(-1)).toEqual([
-      { search: '', filter: { kind: 'all' }, sort: { column: 'title', direction: 'asc' } }
+      { search: '', filter: { kind: 'all' }, sort: { column: 'dance', direction: 'asc' } }
     ])
     expect(store.getState()).toMatchObject({ search: '', selected: [3], scrollTo: 3 })
   })

@@ -30,8 +30,8 @@ const ALL_COLUMNS: Column[] = [
       )
   },
   {
-    sort: 'title',
-    label: 'Song / Dance',
+    sort: 'dance',
+    label: 'Dance / Song',
     render: (r) => (
       <Group gap={6} wrap="nowrap">
         <span className={classes.cell}>{r.label}</span>
@@ -93,7 +93,7 @@ const MENU_COLUMN: Column = {
 }
 
 // The Program page's library list (spec §6.2): the song and its dance, country and teacher.
-const COMPACT = new Set(['', 'Song / Dance', 'Country', 'Teacher', 'Time'])
+const COMPACT = new Set(['', 'Dance / Song', 'Country', 'Teacher', 'Time'])
 const COMPACT_COLUMNS = ALL_COLUMNS.filter((c) => COMPACT.has(c.label))
 
 // Spec §6.3: browse, sort, search and select songs; drag them onto playlists or the program.

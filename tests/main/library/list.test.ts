@@ -161,6 +161,22 @@ describe('listLibrary', () => {
     expect(titles({ sort: { column: 'country', direction: 'desc' } })).toEqual(['A', 'B', 'C'])
   })
 
+  test('sorts by dance name, then song title, a song with no dance under its own title', () => {
+    addLibrarySong(db, { title: 'Zeta', dance: { name: 'Alunelul' } })
+    addLibrarySong(db, { title: 'Alpha', dance: { name: 'Alunelul' } })
+    addLibrarySong(db, { title: 'Beta' })
+    expect(titles({ sort: { column: 'dance', direction: 'asc' } })).toEqual([
+      'Alpha',
+      'Zeta',
+      'Beta'
+    ])
+    expect(titles({ sort: { column: 'dance', direction: 'desc' } })).toEqual([
+      'Beta',
+      'Alpha',
+      'Zeta'
+    ])
+  })
+
   test('sorts by duration numerically', () => {
     addLibrarySong(db, { title: 'Long', durationMs: 300_000 })
     addLibrarySong(db, { title: 'Short', durationMs: 90_000 })

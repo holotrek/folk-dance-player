@@ -33,7 +33,7 @@ export interface LibraryState {
 
 export type LibraryStore = StoreApi<LibraryState>
 
-const TITLE_SORT: LibrarySort = { column: 'title', direction: 'asc' }
+const DEFAULT_SORT: LibrarySort = { column: 'dance', direction: 'asc' }
 const PLAYLIST_SORT: LibrarySort = { column: 'position', direction: 'asc' }
 
 // The library state shared by the sidebar, the Music page table and the song editor (spec §6).
@@ -43,7 +43,7 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
   const store = createStore<LibraryState>()((set, get) => ({
     filter: { kind: 'all' },
     search: '',
-    sort: TITLE_SORT,
+    sort: DEFAULT_SORT,
     rows: [],
     playlists: [],
     folders: [],
@@ -76,7 +76,7 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
         filter.kind === 'playlist'
           ? PLAYLIST_SORT
           : get().sort.column === 'position'
-            ? TITLE_SORT
+            ? DEFAULT_SORT
             : get().sort
       set({ filter, sort, selected: [], anchor: null })
       await get().refresh()
@@ -122,7 +122,7 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
 
     async reveal(songId) {
       if (!get().rows.some((r) => r.songId === songId)) {
-        const sort = get().sort.column === 'position' ? TITLE_SORT : get().sort
+        const sort = get().sort.column === 'position' ? DEFAULT_SORT : get().sort
         set({ filter: { kind: 'all' }, search: '', sort })
         await get().refresh()
       }
