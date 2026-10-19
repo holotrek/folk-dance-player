@@ -39,3 +39,18 @@ export function getDraggedItems(dataTransfer: DataTransfer | null): number[] {
     return []
   }
 }
+
+// Dragging a column header, to move its column (0.3.0 spec §3.13). Carries the column's key.
+export const COLUMN_MIME = 'application/x-fdp-column'
+
+export function setDraggedColumn(dataTransfer: DataTransfer, key: string): void {
+  dataTransfer.setData(COLUMN_MIME, key)
+  dataTransfer.effectAllowed = 'move'
+}
+
+export const carriesColumn = (dataTransfer: DataTransfer | null): boolean =>
+  !!dataTransfer && Array.from(dataTransfer.types ?? []).includes(COLUMN_MIME)
+
+export function getDraggedColumn(dataTransfer: DataTransfer | null): string | null {
+  return carriesColumn(dataTransfer) ? dataTransfer!.getData(COLUMN_MIME) || null : null
+}

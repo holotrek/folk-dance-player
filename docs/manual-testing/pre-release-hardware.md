@@ -85,3 +85,7 @@ Use a Mac whose Music library has local songs and playlists in a folder.
 - [ ] 23. For a dance whose song has a different name, every list reads `Dance ♪ Song`; Now Playing (control window and projector) shows the dance large with ♪ song smaller below.
 - [ ] 24. On the Program page, narrow the library list step by step: columns disappear completely in the order Artist, Teacher, Choreographer, Country, Time, with no gap left behind, and Dance / Song never does.
 - [ ] 25. On the Music page, the Artist column is next to Dance / Song, and its header sorts.
+- [ ] 26. Drag a column header on the Music page, with a real mouse and with the trackpad: a line shows where it will land, and the column moves there. Dance / Song, the star and the ⋯ column can't be dragged. Do the same on the Program page's list: it keeps its own order.
+- [ ] 27. Quit and reopen the app: both lists keep their orders. Right-click a header, **Reset columns**: the default order returns.
+- [ ] 28. With a header focused (Tab to it), Alt+← and Alt+→ move its column and the focus stays on it.
+- [ ] 29. Reorder the Program page's columns, then narrow the list: columns still disappear Artist, Teacher, Choreographer, Country, Time wherever they are, and come back in place when it widens.

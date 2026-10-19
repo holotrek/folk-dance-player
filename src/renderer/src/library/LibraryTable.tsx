@@ -1,10 +1,19 @@
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Group, Text, UnstyledButton } from '@mantine/core'
+import { Badge, Group, Menu, Text, UnstyledButton } from '@mantine/core'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
 import FavoriteToggle from './FavoriteToggle'
-import { carriesFiles, getDraggedFiles, setDraggedFiles } from './drag'
+import { MOVABLE, moveColumn, nudgeColumn } from './column-order'
+import {
+  carriesColumn,
+  carriesFiles,
+  getDraggedColumn,
+  getDraggedFiles,
+  setDraggedColumn,
+  setDraggedFiles
+} from './drag'
+import { useColumnOrder } from './useColumnOrder'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
 import SongMenu, { openRowMenu } from './SongMenu'
@@ -153,12 +162,9 @@ const MENU_COLUMN: Column = {
   )
 }
 
-// The Program page's library list (spec §6.2): the dance and song, then country,
-// choreographer, teacher, artist and time. As it narrows, the CSS drops columns completely in this
-// order: Artist, Teacher, Choreographer, Country, Time (0.3.0 spec §3.3); the first column never
-// goes.
-const COMPACT_KEYS = ['favorite', 'dance', 'country', 'choreographer', 'teacher', 'artist', 'time']
-const COMPACT_COLUMNS = COMPACT_KEYS.map((k) => ALL_COLUMNS.find((c) => c.key === k)!)
+// The movable columns are ordered by the organizer (0.3.0 spec §3.13); everything else is fixed.
+const FIXED_FIRST = ['favorite', 'dance']
+const columnByKey = (key: string): Column => ALL_COLUMNS.find((c) => c.key === key)!
 
 // Spec §6.3: browse, sort, search and select songs; drag them onto playlists or the program.
 // Virtualized, so large libraries stay fast. In a playlist (in its own order), dropping songs on a
@@ -181,9 +187,19 @@ export default function LibraryTable({
   const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
   const inPlaylist = filter.kind === 'playlist'
   const playlists = useLibrary((s) => s.playlists)
+  // The Program page's library list (spec §6.2) shows fewer columns than the Music page's table. As
+  // it narrows, the CSS drops columns completely in this order, wherever they are: Artist, Teacher,
+  // Choreographer, Country, Time (0.3.0 spec §3.3); the first column never goes.
+  const list = compact ? 'program' : 'music'
+  const { order, save, reset } = useColumnOrder(api, list)
+  const isDefaultOrder = order.join() === MOVABLE[list].join()
+  // A right-click on a header opens "Reset columns" where it was clicked.
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
+  // Where a dragged column would land: before this column key, or at the end.
+  const [landing, setLanding] = useState<string | 'end' | null>(null)
   const COLUMNS = [
     ...(inPlaylist ? [NUMBER_COLUMN] : []),
-    ...(compact ? COMPACT_COLUMNS : ALL_COLUMNS),
+    ...[...FIXED_FIRST, ...order].map(columnByKey),
     ...(filter.kind === 'review' ? [FILE_COLUMN] : []),
     MENU_COLUMN
   ]
@@ -222,6 +238,19 @@ export default function LibraryTable({
     void setSort({ column, direction })
   }
 
+  // A header dropped on: a movable column lands before it; the star, Dance / Song and # mean the
+  // first data column; the File and ⋯ headers mean the end.
+  // Over a movable header's right half, it lands before the next movable column (or at the end).
+  const landingFor = (key: string, rightHalf = false): string | 'end' => {
+    const i = order.indexOf(key)
+    if (i >= 0) return rightHalf ? (order[i + 1] ?? 'end') : key
+    return FIXED_FIRST.includes(key) || key === 'number' ? order[0] : 'end'
+  }
+  const inRightHalf = (e: React.DragEvent<HTMLElement>): boolean => {
+    const box = e.currentTarget.getBoundingClientRect()
+    return e.clientX > box.left + box.width / 2
+  }
+
   // Moves the dropped songs before `target`, or to the end when it is null.
   const dropOn = (target: LibraryRow | null, fileIds: number[]): void => {
     if (filter.kind !== 'playlist') return
@@ -246,12 +275,69 @@ export default function LibraryTable({
         }
       }}
     >
-      <div className={classes.header} role="row" style={{ gridTemplateColumns: template }}>
-        {COLUMNS.map((c, i) => (
+      <Menu
+        opened={menuAt !== null}
+        onChange={(open) => !open && setMenuAt(null)}
+        position="bottom-start"
+        withinPortal
+      >
+        <Menu.Target>
+          <span
+            aria-hidden
+            style={{
+              position: 'fixed',
+              left: menuAt?.x ?? 0,
+              top: menuAt?.y ?? 0,
+              width: 0,
+              height: 0
+            }}
+          />
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item disabled={isDefaultOrder} onClick={reset}>
+            Reset columns
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+      <div
+        className={classes.header}
+        role="row"
+        style={{ gridTemplateColumns: template }}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          setMenuAt({ x: e.clientX, y: e.clientY })
+        }}
+      >
+        {COLUMNS.map((c) => (
           <div
-            key={i}
+            key={c.key}
             role="columnheader"
             data-column={c.key}
+            className={
+              landing === c.key
+                ? classes.dropColumn
+                : landing === 'end' && c.key === order.at(-1)
+                  ? classes.dropColumnEnd
+                  : undefined
+            }
+            draggable={order.includes(c.key)}
+            onDragStart={(e) => order.includes(c.key) && setDraggedColumn(e.dataTransfer, c.key)}
+            onDragOver={(e) => {
+              if (!carriesColumn(e.dataTransfer)) return
+              e.preventDefault()
+              setLanding(landingFor(c.key, inRightHalf(e)))
+            }}
+            onDragLeave={() => setLanding(null)}
+            onDragEnd={() => setLanding(null)}
+            onDrop={(e) => {
+              const dragged = getDraggedColumn(e.dataTransfer)
+              setLanding(null)
+              if (!dragged) return
+              e.preventDefault()
+              const target = landingFor(c.key, inRightHalf(e))
+              const next = moveColumn(order, dragged, target === 'end' ? null : target)
+              if (next.join() !== order.join()) save(next)
+            }}
             aria-sort={
               c.sort && sort.column === c.sort
                 ? sort.direction === 'asc'
@@ -261,7 +347,19 @@ export default function LibraryTable({
             }
           >
             {c.sort ? (
-              <UnstyledButton fz="sm" fw={600} onClick={() => onHeader(c.sort!)}>
+              <UnstyledButton
+                fz="sm"
+                fw={600}
+                onClick={() => onHeader(c.sort!)}
+                // Alt+←/→ moves the column (0.3.0 spec §3.13); the button keeps the focus.
+                onKeyDown={(e) => {
+                  if (!e.altKey || !order.includes(c.key)) return
+                  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+                  e.preventDefault()
+                  const next = nudgeColumn(order, c.key, e.key === 'ArrowLeft' ? -1 : 1)
+                  if (next.join() !== order.join()) save(next)
+                }}
+              >
                 {c.label}
                 {sort.column === c.sort ? (sort.direction === 'asc' ? ' ▲' : ' ▼') : ''}
               </UnstyledButton>

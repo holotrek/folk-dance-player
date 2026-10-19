@@ -107,6 +107,51 @@ test('a program is saved, and loads again, also after a restart', async () => {
   await expect(programItems()).toHaveText([/Hora/, /Kolo/])
 })
 
+test('a column dragged to a new place stays there after a restart', async () => {
+  const header = (name: RegExp) =>
+    running.page.getByRole('table', { name: 'Songs' }).getByRole('columnheader', { name })
+  const headerNames = () =>
+    running.page
+      .getByRole('table', { name: 'Songs' })
+      .getByRole('columnheader')
+      .allTextContents()
+      .then((names) => names.map((n) => n.replace(/ [▲▼]$/, '')).filter(Boolean))
+  const DEFAULT = ['Dance / Song', 'Country', 'Choreographer', 'Teacher', 'Artist', 'Type']
+
+  await running.page.getByRole('tab', { name: 'Music' }).click()
+  await expect(running.page.getByText('3 songs in your library')).toBeVisible()
+  expect((await headerNames()).slice(0, 6)).toEqual(DEFAULT)
+
+  await drag(running.page, header(/^Artist/), header(/^Country/))
+  await expect
+    .poll(async () => (await headerNames()).slice(0, 3))
+    .toEqual(['Dance / Song', 'Artist', 'Country'])
+
+  // Restart: the Music page opens with the column where it was put.
+  await running.app.close()
+  running = await launch(space.userData)
+  await running.page.getByRole('tab', { name: 'Music' }).click()
+  await expect
+    .poll(async () => (await headerNames()).slice(0, 3))
+    .toEqual(['Dance / Song', 'Artist', 'Country'])
+})
+
+test('Alt+→ moves a column and the focus stays on its header', async () => {
+  const table = running.page.getByRole('table', { name: 'Songs' })
+  await running.page.getByRole('tab', { name: 'Music' }).click()
+  const button = table.getByRole('columnheader', { name: /^Choreographer/ }).getByRole('button')
+  await button.focus()
+  await running.page.keyboard.press('Alt+ArrowRight')
+  await expect(table.getByRole('columnheader')).toContainText(
+    ['', 'Dance / Song', 'Country', 'Teacher', 'Choreographer', 'Artist'],
+    { useInnerText: true }
+  )
+  await expect(button).toBeFocused()
+  await running.page.keyboard.press('Alt+ArrowRight') // and it can be pressed again
+  await expect(table.getByRole('columnheader').nth(4)).toContainText('Artist')
+  await expect(table.getByRole('columnheader').nth(5)).toContainText('Choreographer')
+})
+
 test('Settings… in the app menu opens the Settings page', async () => {
   await running.app.evaluate(({ Menu }) => {
     const app = Menu.getApplicationMenu()!.items[0].submenu!

@@ -34,6 +34,10 @@ export interface Settings {
   'appleSync.lastResult': SyncSummary | null
   // Music's playlist folders that are open in the sidebar, by persistent ID.
   'playlistFolders.open': string[]
+  // The movable columns of the Music page table and the Program page's library list, in order, by
+  // column key. The empty list is the default order (0.3.0 spec §3.13).
+  'library.columns.music': string[]
+  'library.columns.program': string[]
 }
 
 export type SettingKey = keyof Settings
@@ -66,7 +70,9 @@ export const DEFAULT_SETTINGS: Settings = {
   'appleSync.enabled': false,
   'appleSync.libraryId': null,
   'appleSync.lastResult': null,
-  'playlistFolders.open': []
+  'playlistFolders.open': [],
+  'library.columns.music': [],
+  'library.columns.program': []
 }
 
 export const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS) as readonly SettingKey[]
@@ -97,6 +103,11 @@ const isSuggestionList = (v: unknown): boolean =>
   v.length <= 100 &&
   v.every((s) => typeof s === 'string' && s.trim().length > 0)
 
+const isColumnOrder = (v: unknown): boolean =>
+  Array.isArray(v) &&
+  v.length <= 40 &&
+  v.every((k) => typeof k === 'string' && k.length > 0 && k.length <= 40)
+
 const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'import.artistTagTarget': isTagTarget,
   'import.albumArtistTagTarget': isTagTarget,
@@ -115,7 +126,9 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'appleSync.enabled': isBool,
   'appleSync.libraryId': (v) => v === null || isPersistentId(v),
   'appleSync.lastResult': (v) => v === null || isSyncSummary(v),
-  'playlistFolders.open': (v) => Array.isArray(v) && v.length <= 1000 && v.every(isPersistentId)
+  'playlistFolders.open': (v) => Array.isArray(v) && v.length <= 1000 && v.every(isPersistentId),
+  'library.columns.music': isColumnOrder,
+  'library.columns.program': isColumnOrder
 }
 
 export function isSettingKey(key: unknown): key is SettingKey {

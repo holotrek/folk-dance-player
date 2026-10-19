@@ -79,6 +79,31 @@ describe('SettingsStore', () => {
     expect(() => store.getAll()).not.toThrow()
   })
 
+  test('the column orders default to empty (the default order)', () => {
+    expect(store.get('library.columns.music')).toEqual([])
+    expect(store.get('library.columns.program')).toEqual([])
+  })
+
+  test('saves and reads back a column order', () => {
+    store.set('library.columns.music', ['artist', 'country'])
+    expect(new SettingsStore(db).get('library.columns.music')).toEqual(['artist', 'country'])
+  })
+
+  test('rejects a column order that is not a list of short strings', () => {
+    expect(() => store.set('library.columns.music', [1] as never)).toThrow(InvalidSettingError)
+    expect(() =>
+      store.set(
+        'library.columns.program',
+        Array.from({ length: 41 }, (_, i) => `c${i}`)
+      )
+    ).toThrow(InvalidSettingError)
+  })
+
+  test('a corrupt stored column order falls back to the default', () => {
+    db.prepare("INSERT INTO settings (key, value) VALUES ('library.columns.music', '\"x\"')").run()
+    expect(store.get('library.columns.music')).toEqual([])
+  })
+
   test('Apple Music sync settings are validated', () => {
     expect(store.get('appleSync.enabled')).toBe(false)
     store.set('appleSync.libraryId', '0123456789ABCDEF')

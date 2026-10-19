@@ -1,7 +1,7 @@
 # Release 0.3.0 — Design
 
 - **Date:** 2026-10-18
-- **Status:** Draft, for the maintainer's review. §3.1 (PR #28) is built and ready to merge; §3.2 and §3.3 are built (PR #30). Nothing else in §3 is built.
+- **Status:** Draft, for the maintainer's review. §3.1, §3.2 and §3.3 are built and merged; §3.13 is built (Plan 12). Nothing else in §3 is built.
 - **Extends:** `2026-10-13-folk-dance-player-electron-design.md` (the main spec): §4 Labels, §5.2
   Import mapping, §6 Library and Program pages, §7 Playback, §8 Projector and Canva slides
 - **Ships:** 0.3.0, after 0.2.0 (the first published release) is out
@@ -68,7 +68,7 @@ built on its own.
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Planned |
 | 3.11 | End Program, then Start New Program | Program list, sidebar | Planned |
 | 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned |
-| 3.13 | Reorder columns in the Music and Program lists | `LibraryTable`, settings | Planned |
+| 3.13 | Reorder columns in the Music and Program lists | `LibraryTable`, settings | Built (Plan 12) |
 
 ## 3. Details
 
