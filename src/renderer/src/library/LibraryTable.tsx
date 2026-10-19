@@ -11,15 +11,24 @@ import SongMenu, { openRowMenu } from './SongMenu'
 import classes from './LibraryTable.module.css'
 
 interface Column {
+  key: string // `data-column` on its header and cells, which the CSS collapses by (see the module)
   sort: SortColumn | null
   label: string
+  width: string // its grid track; `compactWidth` on the Program page's narrower list
+  compactWidth?: string
   render: (row: LibraryRow) => React.ReactNode
 }
 
+// A text cell: truncates with an ellipsis, and shows its full text on hover.
+const text = (value: string | null): React.ReactNode =>
+  value ? <span title={value}>{value}</span> : null
+
 const ALL_COLUMNS: Column[] = [
   {
+    key: 'favorite',
     sort: null,
     label: '',
+    width: '28px',
     render: (r) =>
       r.isMissing ? (
         <Text span c="red" aria-label="File missing" title="The file can't be found">
@@ -30,8 +39,11 @@ const ALL_COLUMNS: Column[] = [
       )
   },
   {
+    key: 'dance',
     sort: 'dance',
     label: 'Dance / Song',
+    width: 'minmax(220px, 3fr)',
+    compactWidth: 'minmax(160px, 3fr)',
     render: (r) => (
       <Group gap={6} wrap="nowrap">
         <span className={classes.cell}>{r.label}</span>
@@ -43,22 +55,68 @@ const ALL_COLUMNS: Column[] = [
       </Group>
     )
   },
-  { sort: 'country', label: 'Country', render: (r) => r.country },
-  { sort: 'teacher', label: 'Teacher', render: (r) => r.teacher },
-  { sort: 'choreographer', label: 'Choreographer', render: (r) => r.choreographer },
-  { sort: 'danceType', label: 'Type', render: (r) => r.danceType },
   {
+    key: 'artist',
+    sort: 'artist',
+    label: 'Artist',
+    width: 'minmax(90px, 1fr)',
+    compactWidth: 'minmax(60px, 1fr)',
+    render: (r) => text(r.artist)
+  },
+  {
+    key: 'country',
+    sort: 'country',
+    label: 'Country',
+    width: 'minmax(90px, 1fr)',
+    compactWidth: 'minmax(70px, 1fr)',
+    render: (r) => text(r.country)
+  },
+  {
+    key: 'teacher',
+    sort: 'teacher',
+    label: 'Teacher',
+    width: 'minmax(90px, 1fr)',
+    compactWidth: 'minmax(70px, 1fr)',
+    render: (r) => text(r.teacher)
+  },
+  {
+    key: 'choreographer',
+    sort: 'choreographer',
+    label: 'Choreographer',
+    width: 'minmax(90px, 1fr)',
+    compactWidth: 'minmax(60px, 1fr)',
+    render: (r) => text(r.choreographer)
+  },
+  {
+    key: 'danceType',
+    sort: 'danceType',
+    label: 'Type',
+    width: 'minmax(90px, 1fr)',
+    render: (r) => text(r.danceType)
+  },
+  {
+    key: 'difficulty',
     sort: 'difficulty',
     label: 'Difficulty',
+    width: '80px',
     render: (r) => (r.difficulty ? '●'.repeat(r.difficulty) : '')
   },
-  { sort: 'duration', label: 'Time', render: (r) => formatTime(r.durationMs) }
+  {
+    key: 'time',
+    sort: 'duration',
+    label: 'Time',
+    width: '56px',
+    compactWidth: '48px',
+    render: (r) => formatTime(r.durationMs)
+  }
 ]
 
 // In a playlist: each song's number in the playlist's own order.
 const NUMBER_COLUMN: Column = {
+  key: 'number',
   sort: null,
   label: '#',
+  width: '32px',
   render: (r) => (
     <Text span size="xs" c="dimmed">
       {r.playlistNumber}
@@ -68,8 +126,10 @@ const NUMBER_COLUMN: Column = {
 
 // In the review list: whether the song's file is still on disk (sync spec §6.2).
 const FILE_COLUMN: Column = {
+  key: 'file',
   sort: null,
   label: 'File',
+  width: 'minmax(120px, 1fr)',
   render: (r) => (
     <Text span size="xs" c="dimmed">
       {r.isMissing ? 'File gone' : 'File still on disk'}
@@ -79,8 +139,10 @@ const FILE_COLUMN: Column = {
 
 // Last in every row: its "⋯" menu (Edit details, favorites), shown on hover.
 const MENU_COLUMN: Column = {
+  key: 'menu',
   sort: null,
   label: '',
+  width: '28px',
   render: (r) => (
     <SongMenu
       songId={r.songId}
@@ -92,9 +154,11 @@ const MENU_COLUMN: Column = {
   )
 }
 
-// The Program page's library list (spec §6.2): the song and its dance, country and teacher.
-const COMPACT = new Set(['', 'Dance / Song', 'Country', 'Teacher', 'Time'])
-const COMPACT_COLUMNS = ALL_COLUMNS.filter((c) => COMPACT.has(c.label))
+// The Program page's library list (spec §6.2): the dance and song, then country, teacher, artist,
+// choreographer and time. As it narrows, the CSS drops columns completely in this order: Artist,
+// Teacher, Choreographer, Country, Time (0.3.0 spec §3.3); the first column never goes.
+const COMPACT_KEYS = ['favorite', 'dance', 'country', 'teacher', 'artist', 'choreographer', 'time']
+const COMPACT_COLUMNS = COMPACT_KEYS.map((k) => ALL_COLUMNS.find((c) => c.key === k)!)
 
 // Spec §6.3: browse, sort, search and select songs; drag them onto playlists or the program.
 // Virtualized, so large libraries stay fast. In a playlist (in its own order), dropping songs on a
@@ -123,6 +187,10 @@ export default function LibraryTable({
     ...(filter.kind === 'review' ? [FILE_COLUMN] : []),
     MENU_COLUMN
   ]
+  // Each column's own width, as the rows' grid; the CSS can set `--w-<key>` to 0 to collapse one.
+  const template = COLUMNS.map(
+    (c) => `var(--w-${c.key}, ${compact ? (c.compactWidth ?? c.width) : c.width})`
+  ).join(' ')
   const scroll = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -182,11 +250,12 @@ export default function LibraryTable({
         }
       }}
     >
-      <div className={classes.header} role="row">
+      <div className={classes.header} role="row" style={{ gridTemplateColumns: template }}>
         {COLUMNS.map((c, i) => (
           <div
             key={i}
             role="columnheader"
+            data-column={c.key}
             aria-sort={
               c.sort && sort.column === c.sort
                 ? sort.direction === 'asc'
@@ -218,7 +287,7 @@ export default function LibraryTable({
                 className={`${classes.item} ${r.isMissing ? classes.missing : ''} ${
                   dropTarget === r.songId ? classes.dropBefore : ''
                 }`}
-                style={{ transform: `translateY(${v.start}px)` }}
+                style={{ transform: `translateY(${v.start}px)`, gridTemplateColumns: template }}
                 onDoubleClick={() => void api.invoke('player:preview', r.fileId)}
                 onContextMenu={openRowMenu}
                 onClick={(e) =>
@@ -250,7 +319,7 @@ export default function LibraryTable({
                 }}
               >
                 {COLUMNS.map((c, i) => (
-                  <div key={i} role="cell" className={classes.cell}>
+                  <div key={i} role="cell" className={classes.cell} data-column={c.key}>
                     {c.render(r)}
                   </div>
                 ))}

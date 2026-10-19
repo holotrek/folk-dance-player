@@ -11,6 +11,7 @@ export type LibraryFilter =
 export type SortColumn =
   | 'title'
   | 'dance'
+  | 'artist'
   | 'country'
   | 'teacher'
   | 'choreographer'

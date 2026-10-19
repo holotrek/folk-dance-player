@@ -35,6 +35,7 @@ const rows = [
   row(1, {
     title: 'Pusteno Ludo',
     label: 'Pravo Rhodopsko Oro ♪ Pusteno Ludo',
+    artist: 'Alma Quartet',
     country: 'Bulgaria',
     teacher: 'Sonia Dion',
     danceCount: 2
@@ -75,6 +76,7 @@ describe('Music page library table', () => {
     setup()
     expect(await screen.findByText('Pravo Rhodopsko Oro ♪ Pusteno Ludo')).toBeInTheDocument()
     const pusteno = rowFor('Pravo Rhodopsko Oro ♪ Pusteno Ludo')
+    expect(within(pusteno).getByText('Alma Quartet')).toBeInTheDocument()
     expect(within(pusteno).getByText('Bulgaria')).toBeInTheDocument()
     expect(within(pusteno).getByText('Sonia Dion')).toBeInTheDocument()
     expect(within(pusteno).getByText('+1')).toBeInTheDocument()
@@ -93,6 +95,29 @@ describe('Music page library table', () => {
     await userEvent.click(within(header).getByRole('button'))
     await waitFor(() =>
       expect(lastQuery(fake).sort).toEqual({ column: 'country', direction: 'desc' })
+    )
+  })
+
+  test('has an Artist column right after Dance / Song, which sorts', async () => {
+    const fake = setup()
+    const header = await screen.findByRole('columnheader', { name: /Artist/ })
+    expect(
+      screen.getAllByRole('columnheader').map((h) => h.textContent?.replace(/ [▲▼]$/, ''))
+    ).toEqual([
+      '',
+      'Dance / Song',
+      'Artist',
+      'Country',
+      'Teacher',
+      'Choreographer',
+      'Type',
+      'Difficulty',
+      'Time',
+      ''
+    ])
+    await userEvent.click(within(header).getByRole('button'))
+    await waitFor(() =>
+      expect(lastQuery(fake).sort).toEqual({ column: 'artist', direction: 'asc' })
     )
   })
 

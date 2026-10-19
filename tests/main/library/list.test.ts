@@ -177,6 +177,14 @@ describe('listLibrary', () => {
     ])
   })
 
+  test('sorts by artist, keeping songs with none last', () => {
+    addLibrarySong(db, { title: 'A', artist: 'Zoran' })
+    addLibrarySong(db, { title: 'B', artist: 'alma' })
+    addLibrarySong(db, { title: 'C' })
+    expect(titles({ sort: { column: 'artist', direction: 'asc' } })).toEqual(['B', 'A', 'C'])
+    expect(titles({ sort: { column: 'artist', direction: 'desc' } })).toEqual(['A', 'B', 'C'])
+  })
+
   test('sorts by duration numerically', () => {
     addLibrarySong(db, { title: 'Long', durationMs: 300_000 })
     addLibrarySong(db, { title: 'Short', durationMs: 90_000 })

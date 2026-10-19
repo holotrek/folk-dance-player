@@ -20,6 +20,7 @@ const SORT_SQL: Record<SortColumn, string> = {
   title: 's.title COLLATE NOCASE',
   // A song with no dance is shown (and so sorted) under its own title.
   dance: "COALESCE(NULLIF(trim(d.name), ''), s.title) COLLATE NOCASE",
+  artist: 's.artist COLLATE NOCASE',
   country: 'd.country COLLATE NOCASE',
   teacher: 'dsp.teacher COLLATE NOCASE',
   choreographer: 'd.choreographer COLLATE NOCASE',

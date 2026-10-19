@@ -15,6 +15,8 @@ const row = {
   label: 'Sârba',
   country: 'Romania',
   teacher: 'Sonia Dion',
+  artist: 'Alma Quartet',
+  choreographer: 'Yves Moreau',
   danceCount: 1,
   durationMs: 120_000
 } as LibraryRow
@@ -50,8 +52,18 @@ describe('Program page', () => {
       within(library)
         .getAllByRole('columnheader')
         .map((h) => h.textContent)
-    ).toEqual(['', 'Dance / Song ▲', 'Country', 'Teacher', 'Time', '']) // the last: each row's ⋯ menu
+    ).toEqual(['', 'Dance / Song ▲', 'Country', 'Teacher', 'Artist', 'Choreographer', 'Time', '']) // the last: each row's ⋯ menu
     expect(within(library).getByText('Sonia Dion')).toBeInTheDocument()
+  })
+
+  test('its Artist, Teacher, Choreographer, Country and Time columns can be hidden by CSS and show full text on hover', async () => {
+    setup('program')
+    const library = screen.getByRole('region', { name: 'Library' })
+    await within(library).findByText('Sârba')
+    for (const key of ['artist', 'teacher', 'choreographer', 'country', 'time']) {
+      expect(library.querySelectorAll(`[data-column="${key}"]`)).toHaveLength(2) // header + row
+    }
+    expect(within(library).getByText('Alma Quartet')).toHaveAttribute('title', 'Alma Quartet')
   })
 
   test('double-clicking a library song previews it', async () => {
