@@ -102,6 +102,7 @@ export default function DanceSlideField(props: {
         danceId={props.danceId}
         danceName={props.danceName}
         initialDeckId={slide?.deckId ?? null}
+        initialPageId={slide?.pageId ?? null}
         onClose={() => setLinking(false)}
       />
     </Stack>

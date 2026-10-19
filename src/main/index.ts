@@ -61,7 +61,7 @@ import { createProjectorFeed } from './projector/projector-feed'
 import { followProjectorWindow, LiveSlide } from './projector/live-slide'
 import { registerMediaKeys } from './remote/media-keys'
 import { checkProgramFiles } from './programs/file-check'
-import { getProgram } from './programs/programs'
+import { getProgram, upcomingDanceIds } from './programs/programs'
 import { trackPath } from './programs/tracks'
 import { PlayerSession } from './session/player-session'
 import { createSessionPorts } from './session/session-ports'
@@ -393,7 +393,11 @@ function startApp(): void {
     fetcher: canvaFetcher,
     queue: captures,
     online: () => net.isOnline(),
-    onChange: libraryChanged
+    onChange: libraryChanged,
+    upcomingDances: () => {
+      const programId = settings.get('currentProgramId')
+      return programId === null ? [] : upcomingDanceIds(db, programId)
+    }
   })
 
   const mediaKeys = registerMediaKeys(globalShortcut, player)
@@ -411,6 +415,8 @@ function startApp(): void {
   // Sync triggers (sync spec §3.3): once the window is shown, and whenever it gains focus.
   mainWindow.once('show', () => appleSync.started())
   mainWindow.on('focus', () => appleSync.focused())
+  // Back from editing a deck in Canva: re-read the decks so slide numbers and titles follow.
+  mainWindow.on('focus', () => void canva.focused())
   app.setAboutPanelOptions({
     applicationName: 'Folk Dance Player',
     applicationVersion: app.getVersion(),

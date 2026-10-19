@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   Alert,
   Button,
@@ -19,12 +19,15 @@ const FROM_DECK = 'From a deck'
 const PASTE = 'Paste a slide link'
 
 // Spec §6.3: pick a dance's slide by its number in a deck (adding the deck by its view link the
-// first time), or paste a link to the slide from Canva's share menu.
+// first time), or paste a link to the slide from Canva's share menu. Opening the dialog re-reads the
+// decks from Canva (the saved slide lists go stale when a deck is edited there); until that
+// finishes, or when Canva can't be reached, it shows the last saved list.
 export default function SlideLinkDialog(props: {
   opened: boolean
   danceId: number
   danceName: string
   initialDeckId: number | null
+  initialPageId: string | null // the dance's slide, if it has one: the number starts on it
   onClose: () => void
 }): React.JSX.Element {
   const api = useLibraryApi()
@@ -38,6 +41,10 @@ export default function SlideLinkDialog(props: {
   const [pageLink, setPageLink] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [checking, setChecking] = useState(false) // re-reading the decks from Canva
+  const [unreached, setUnreached] = useState(false) // Canva couldn't be reached: the list is saved
+  const [reread, setReread] = useState(0) // counts re-reads, so the slide list is fetched again
+  const typed = useRef(false) // the number was typed: the dance's slide no longer sets it
 
   useEffect(() => {
     if (!props.opened) return
@@ -46,6 +53,7 @@ export default function SlideLinkDialog(props: {
     setDeckLink('')
     setPageLink('')
     setPosition(1)
+    typed.current = false
     void api.invoke('canva:decks').then((list) => {
       setDecks(list)
       setAdding(list.length === 0)
@@ -54,10 +62,45 @@ export default function SlideLinkDialog(props: {
     })
   }, [api, props.opened, props.initialDeckId])
 
+  // Best effort: if the check fails, the saved list stays and the dialog still works.
   useEffect(() => {
+    if (!props.opened) return
+    let live = true
+    setChecking(true)
+    setUnreached(false)
+    void api
+      .invoke('canva:refreshDecks')
+      .then(async (summary) => {
+        const list = await api.invoke('canva:decks')
+        if (!live) return
+        setDecks(list)
+        setUnreached(summary.unreachable > 0)
+        setReread((n) => n + 1)
+      })
+      .catch(() => undefined)
+      .finally(() => live && setChecking(false))
+    return () => {
+      live = false
+    }
+  }, [api, props.opened])
+
+  useEffect(() => {
+    if (!props.opened) return
+    let live = true
     if (deckId === null) setPages([])
-    else void api.invoke('canva:deckPages', deckId).then(setPages)
-  }, [api, deckId])
+    else void api.invoke('canva:deckPages', deckId).then((list) => live && setPages(list))
+    return () => {
+      live = false
+    }
+  }, [api, props.opened, deckId, reread])
+
+  // Changing a dance's slide starts on the number it has in its deck now (not slide 1), and follows
+  // it when the deck is re-read, until a number is typed. A slide gone from its deck leaves the 1.
+  useEffect(() => {
+    if (typed.current || props.initialPageId === null || deckId !== props.initialDeckId) return
+    const index = pages.findIndex((p) => p.id === props.initialPageId)
+    if (index >= 0) setPosition(index + 1)
+  }, [pages, deckId, props.initialDeckId, props.initialPageId])
 
   const act = async (action: () => Promise<unknown>, close: boolean): Promise<void> => {
     setBusy(true)
@@ -117,6 +160,13 @@ export default function SlideLinkDialog(props: {
                 )}
               </Group>
             )}
+            {decks && decks.length > 0 && (checking || unreached) && (
+              <Text size="xs" c="dimmed">
+                {checking
+                  ? 'Checking Canva for changes…'
+                  : "Couldn't reach Canva; showing the last saved slide list."}
+              </Text>
+            )}
             {adding && (
               <Group align="flex-end" wrap="nowrap">
                 <TextInput
@@ -141,7 +191,10 @@ export default function SlideLinkDialog(props: {
                   max={pages.length || undefined}
                   allowDecimal={false}
                   value={position}
-                  onChange={setPosition}
+                  onChange={(value) => {
+                    typed.current = true
+                    setPosition(value)
+                  }}
                   w={140}
                 />
                 {page ? (

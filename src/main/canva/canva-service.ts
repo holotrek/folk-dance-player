@@ -12,17 +12,27 @@ import {
   saveDeck,
   setDanceSlide,
   setDanceSlideByPage,
+  slidesOfDances,
   type CaptureTarget
 } from './decks'
+
+// Focusing the window re-reads the decks at most this often.
+const FOCUS_INTERVAL_MS = 60_000
+
+const slideKey = (s: { deckId: number; pageId: string }): string => `${s.deckId}/${s.pageId}`
 
 const UNREACHED =
   "Couldn't reach Canva to save the slide image. It's tried again when you're back online, or with Refresh slides."
 
 // What the control window asks of Canva (spec §6.3, §8.3): add decks, link slides, refresh.
 // Linking a slide captures its image (offline, once the connection is back: `catchUp`); a refresh
-// re-reads every deck and re-captures linked slides.
+// re-reads every deck and re-captures linked slides. Decks and images of the current program's
+// upcoming dances come first, so they are right before the rest, and survive a slow or lost
+// connection.
 export class CanvaService {
   private waiting = false // a capture was skipped offline and waits for `catchUp`
+  private lastFocusRead = -Infinity
+  private reading = false // a focus read is under way
 
   constructor(
     private readonly deps: {
@@ -31,6 +41,8 @@ export class CanvaService {
       queue: { enqueue(targets: CaptureTarget[]): void }
       online(): boolean
       onChange(): void // decks or a dance's slide changed
+      clock?(): number // milliseconds; Date.now unless a test says otherwise
+      upcomingDances?(): number[] // the current program's dances still to come: read and saved first
     }
   ) {}
 
@@ -72,6 +84,22 @@ export class CanvaService {
     return (await this.refreshAll()).summary
   }
 
+  // The window gained focus, often after editing a deck in Canva: re-read the decks so slide numbers,
+  // titles and the projector's slides follow the edit. Once a minute at most, never offline, and
+  // without capturing images (Refresh slides does that).
+  async focused(): Promise<void> {
+    if (!this.deps.online() || this.reading) return
+    const now = (this.deps.clock ?? Date.now)()
+    if (now - this.lastFocusRead < FOCUS_INTERVAL_MS) return
+    this.lastFocusRead = now
+    this.reading = true
+    try {
+      await this.refreshAll()
+    } finally {
+      this.reading = false
+    }
+  }
+
   // "Refresh slides": re-read every deck, then re-capture every linked slide.
   async refreshSlides(): Promise<RefreshSummary> {
     const { summary, read } = await this.refreshAll()
@@ -101,7 +129,10 @@ export class CanvaService {
   // Canva's sign-in page, which must never replace a good saved image.
   private captureFrom(read: Set<number>, which: 'all' | 'missing'): void {
     const all = captureTargets(this.deps.db, which)
-    const targets = all.filter((t) => read.has(t.deckId))
+    const { slides } = this.upcoming()
+    const targets = all
+      .filter((t) => read.has(t.deckId))
+      .sort((a, b) => +slides.has(slideKey(b)) - +slides.has(slideKey(a)))
     if (targets.length) this.deps.queue.enqueue(targets)
     // A slide with no image yet, in a deck that couldn't be read, says why instead of waiting: the
     // dance editor would otherwise show "Generating preview…" forever.
@@ -113,7 +144,9 @@ export class CanvaService {
   private async refreshAll(): Promise<{ summary: RefreshSummary; read: Set<number> }> {
     const summary = { decks: 0, formatChanged: 0, unreachable: 0 }
     const read = new Set<number>()
-    for (const deck of listDecks(this.deps.db)) {
+    const { decks } = this.upcoming()
+    const ordered = listDecks(this.deps.db).sort((a, b) => +decks.has(b.id) - +decks.has(a.id))
+    for (const deck of ordered) {
       const result = await this.refreshDeck(deck.id, deck.viewUrl)
       summary.decks++
       if (result === 'ok') read.add(deck.id)
@@ -133,6 +166,15 @@ export class CanvaService {
       return applyRefresh(this.deps.db, deckId, {
         error: err instanceof Error ? err.message : String(err)
       })
+    }
+  }
+
+  // The decks and slides of the current program's dances still to come.
+  private upcoming(): { decks: Set<number>; slides: Set<string> } {
+    const linked = slidesOfDances(this.deps.db, this.deps.upcomingDances?.() ?? [])
+    return {
+      decks: new Set(linked.map((s) => s.deckId)),
+      slides: new Set(linked.map(slideKey))
     }
   }
 

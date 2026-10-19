@@ -6,7 +6,10 @@ import type { HandlerDeps } from './handlers'
 
 // What the handlers need from Canva (main/index.ts joins the service and the capture queue).
 export interface CanvaDeps {
-  service: Pick<CanvaService, 'addDeck' | 'linkSlide' | 'linkPageLink' | 'refreshSlides'>
+  service: Pick<
+    CanvaService,
+    'addDeck' | 'linkSlide' | 'linkPageLink' | 'refreshDecks' | 'refreshSlides'
+  >
   captureStatus(): CaptureStatus
 }
 
@@ -14,7 +17,8 @@ const unavailable = (): never => {
   throw new CanvaError("Canva slides aren't available")
 }
 
-// Spec §6.3, §8.3: the deck list, a dance's slide, and "Refresh slides".
+// Spec §6.3, §8.3: the deck list, a dance's slide, and "Refresh slides". `refreshDecks` re-reads
+// the slide lists only (the link dialog does it when it opens); `refreshSlides` also saves images.
 export function canvaHandlers(
   deps: HandlerDeps
 ): Pick<InvokeHandlers, Extract<keyof InvokeHandlers, `canva:${string}`>> {
@@ -40,6 +44,10 @@ export function canvaHandlers(
     'canva:clearSlide': (danceId) => {
       clearDanceSlide(deps.db, danceId)
       deps.onLibraryChanged()
+    },
+    'canva:refreshDecks': async () => {
+      if (!canva) return unavailable()
+      return canva.service.refreshDecks()
     },
     'canva:refreshSlides': () => (canva ? canva.service.refreshSlides() : unavailable()),
     'canva:captureStatus': () => canva?.captureStatus() ?? CAPTURES_IDLE

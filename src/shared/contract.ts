@@ -164,6 +164,7 @@ export interface InvokeContract {
   }
   'canva:linkPageLink': { args: [danceId: number, link: string]; result: DanceSlide | null }
   'canva:clearSlide': { args: [danceId: number]; result: void }
+  'canva:refreshDecks': { args: []; result: RefreshSummary }
   'canva:refreshSlides': { args: []; result: RefreshSummary }
   'canva:captureStatus': { args: []; result: CaptureStatus }
   // Sync with Apple Music (sync spec §3.3, §6).
@@ -268,6 +269,7 @@ export const INVOKE_CHANNELS = [
   'canva:linkSlide',
   'canva:linkPageLink',
   'canva:clearSlide',
+  'canva:refreshDecks',
   'canva:refreshSlides',
   'canva:captureStatus',
   'appleSync:status',

@@ -65,6 +65,104 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
+  test('opening the dialog re-reads the decks, so the slide numbers follow an edit made in Canva', async () => {
+    let refreshed = false
+    const fake = setup(null, {
+      'canva:refreshDecks': () => {
+        refreshed = true
+        return { decks: 1, formatChanged: 0, unreachable: 0 }
+      },
+      'canva:deckPages': () =>
+        refreshed ? [{ id: 'PNEW', title: 'Added in Canva' }, ...pages] : pages
+    })
+    const dialog = await open()
+    expect(await dialog.findByText('Added in Canva')).toBeInTheDocument()
+    expect(fake.callsTo('canva:refreshDecks')).toHaveLength(1)
+    expect(dialog.getByText('1 to 4')).toBeInTheDocument()
+  })
+
+  test('Change… starts on the slide’s current number in its deck', async () => {
+    setup(linked)
+    const dialog = await open('Change…')
+    expect(await dialog.findByLabelText('Slide number')).toHaveValue('3')
+    expect(await dialog.findByText('Ali Paşa')).toBeInTheDocument()
+  })
+
+  test('Change… follows the slide to its new number when the deck was edited in Canva', async () => {
+    let refreshed = false
+    setup(linked, {
+      'canva:refreshDecks': () => {
+        refreshed = true
+        return { decks: 1, formatChanged: 0, unreachable: 0 }
+      },
+      'canva:deckPages': () =>
+        refreshed ? [{ id: 'PNEW', title: 'Added in Canva' }, ...pages] : pages
+    })
+    const dialog = await open('Change…')
+    await waitFor(() => expect(dialog.getByLabelText('Slide number')).toHaveValue('4'))
+    expect(dialog.getByText('Ali Paşa')).toBeInTheDocument()
+  })
+
+  test('a number typed before the check finishes is kept', async () => {
+    let done = false
+    let finish!: () => void
+    setup(linked, {
+      'canva:refreshDecks': () =>
+        new Promise((resolve) => {
+          finish = () => {
+            done = true
+            resolve({ decks: 1, formatChanged: 0, unreachable: 0 })
+          }
+        }),
+      'canva:deckPages': () => (done ? [{ id: 'PNEW', title: 'Added' }, ...pages] : pages)
+    })
+    const dialog = await open('Change…')
+    const number = await dialog.findByLabelText('Slide number')
+    await waitFor(() => expect(number).toHaveValue('3'))
+    await userEvent.clear(number)
+    await userEvent.type(number, '2')
+    await act(async () => finish())
+    await dialog.findByText('1 to 4')
+    expect(number).toHaveValue('2')
+  })
+
+  test('a slide that is no longer in its deck leaves the number at 1', async () => {
+    setup({ ...linked, pageId: 'GONE', position: null, status: 'missing', title: null })
+    const dialog = await open('Change…')
+    expect(await dialog.findByLabelText('Slide number')).toHaveValue('1')
+    expect(await dialog.findByText('Ajde Jano')).toBeInTheDocument()
+  })
+
+  test('says so while it checks Canva, and when it could not reach Canva', async () => {
+    let finish!: () => void
+    setup(null, {
+      'canva:refreshDecks': () =>
+        new Promise((resolve) => {
+          finish = () => resolve({ decks: 1, formatChanged: 0, unreachable: 1 })
+        })
+    })
+    const dialog = await open()
+    expect(await dialog.findByText('Checking Canva for changes…')).toBeInTheDocument()
+    await act(async () => finish())
+    expect(
+      await dialog.findByText(/Couldn't reach Canva.*showing the last saved slide list/)
+    ).toBeInTheDocument()
+    expect(dialog.queryByText('Checking Canva for changes…')).toBeNull()
+    expect(await dialog.findByText('Ajde Jano')).toBeInTheDocument()
+  })
+
+  test('still works from the saved list when the check fails', async () => {
+    setup(null, {
+      'canva:refreshDecks': () => {
+        throw new Error("Canva slides aren't available")
+      }
+    })
+    const dialog = await open()
+    expect(await dialog.findByText('Ajde Jano')).toBeInTheDocument()
+    expect(dialog.queryByRole('alert')).toBeNull()
+    expect(dialog.queryByText('Checking Canva for changes…')).toBeNull()
+  })
+
   test("adds a deck by pasting its smart embed link (Canva's Share → Embed), then picks from it", async () => {
     const fake = setup(null, { 'canva:decks': [] })
     const dialog = await open()

@@ -53,6 +53,7 @@ export function createFakeApi(
         if (channel === 'projector:reportProgress') return undefined
         // No Canva decks, and no slide images being saved.
         if (channel === 'canva:decks') return []
+        if (channel === 'canva:refreshDecks') return { decks: 0, formatChanged: 0, unreachable: 0 }
         if (channel === 'canva:captureStatus') return CAPTURES_IDLE
         // Sync with Apple Music is unavailable unless a test says otherwise.
         if (channel === 'appleSync:status') return APPLE_SYNC_OFF

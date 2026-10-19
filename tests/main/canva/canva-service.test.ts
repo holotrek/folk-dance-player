@@ -3,7 +3,12 @@ import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import type { Fetcher } from '../../../src/main/canva/canva-client'
 import { CanvaService } from '../../../src/main/canva/canva-service'
-import { getDanceSlide, listDecks, type CaptureTarget } from '../../../src/main/canva/decks'
+import {
+  deckPages,
+  getDanceSlide,
+  listDecks,
+  type CaptureTarget
+} from '../../../src/main/canva/decks'
 import { addDance } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 
@@ -18,7 +23,13 @@ function setup(pages = fixture) {
   const db = createTestDb()
   let body = pages
   let online = true
-  const fetcher: Fetcher = async () => {
+  let now = 0
+  let fetches = 0
+  let upcoming: number[] = []
+  const urls: string[] = []
+  const fetcher: Fetcher = async (url) => {
+    fetches++
+    urls.push(url)
     if (!online) throw new Error('offline')
     return { status: 200, text: async () => body, headers: { get: () => null } }
   }
@@ -29,13 +40,19 @@ function setup(pages = fixture) {
     fetcher,
     queue: { enqueue: (t) => void queued.push(t) },
     online: () => online,
-    onChange: () => void changes++
+    onChange: () => void changes++,
+    clock: () => now,
+    upcomingDances: () => upcoming
   })
   return {
     db,
     service,
     queued,
     changes: () => changes,
+    fetches: () => fetches,
+    urls,
+    setUpcoming: (ids: number[]) => (upcoming = ids),
+    advance: (ms: number) => (now += ms),
     setBody: (b: string) => (body = b),
     setOnline: (o: boolean) => (online = o)
   }
@@ -146,5 +163,100 @@ describe('Canva service', () => {
     setBody('<html><title>x</title></html>')
     expect(await service.refreshDecks()).toEqual({ decks: 1, formatChanged: 1, unreachable: 0 })
     expect(listDecks(db)[0].pageCount).toBe(4)
+  })
+
+  describe('when the app window gains focus', () => {
+    // A deck page in the format Canva's view page uses, with the slides given as [id, title].
+    const deckHtml = (slides: [string, string][]) =>
+      '<html><head><meta property="og:title" content="Edited deck"></head><body>' +
+      slides.map(([id, name]) => `{"A?":"i","Z":{},"a":"${id}","B":"${name}"}`).join('') +
+      '</body></html>'
+
+    test('the decks are re-read, so slide numbers follow an edit made in Canva', async () => {
+      const { db, service, setBody } = setup(deckHtml([['PAAAAAAAA', 'Old first']]))
+      const deckId = await service.addDeck(VIEW)
+      setBody(
+        deckHtml([
+          ['PNEWSLIDE', 'New first'],
+          ['PAAAAAAAA', 'Old first']
+        ])
+      )
+      await service.focused()
+      expect(deckPages(db, deckId).map((p) => p.title)).toEqual(['New first', 'Old first'])
+    })
+
+    test('it waits a minute before reading again', async () => {
+      const { service, advance, fetches } = setup()
+      await service.addDeck(VIEW)
+      const afterAdd = fetches()
+      await service.focused()
+      expect(fetches()).toBe(afterAdd + 1)
+      advance(30_000)
+      await service.focused()
+      expect(fetches()).toBe(afterAdd + 1)
+      advance(30_000)
+      await service.focused()
+      expect(fetches()).toBe(afterAdd + 2)
+    })
+
+    test('it does nothing offline, and tries again once back online', async () => {
+      const { service, setOnline, fetches } = setup()
+      await service.addDeck(VIEW)
+      const afterAdd = fetches()
+      setOnline(false)
+      await service.focused()
+      expect(fetches()).toBe(afterAdd)
+      setOnline(true)
+      await service.focused()
+      expect(fetches()).toBe(afterAdd + 1)
+    })
+
+    test('it never captures slide images (only Refresh slides does)', async () => {
+      const { db, service, queued } = setup()
+      const deckId = await service.addDeck(VIEW)
+      service.linkSlide(addDance(db, { name: 'Ali Paşa' }), deckId, 3)
+      queued.length = 0
+      await service.focused()
+      expect(queued).toEqual([])
+    })
+  })
+
+  describe("the current program's dances come first", () => {
+    const OTHER = 'https://www.canva.com/design/DAOTHER0000/TOK2abcdefgh/view'
+
+    test('the decks holding their slides are re-read before the others', async () => {
+      const { db, service, urls, setUpcoming } = setup()
+      await service.addDeck(VIEW)
+      const second = await service.addDeck(OTHER)
+      const tonight = addDance(db, { name: 'Tonight' })
+      service.linkSlide(tonight, second, 2)
+      setUpcoming([tonight])
+      urls.length = 0
+      await service.refreshDecks()
+      expect(urls).toEqual([OTHER, VIEW])
+    })
+
+    test('with no program, decks are read in the order they were added', async () => {
+      const { service, urls } = setup()
+      await service.addDeck(VIEW)
+      await service.addDeck(OTHER)
+      urls.length = 0
+      await service.refreshDecks()
+      expect(urls).toEqual([VIEW, OTHER])
+    })
+
+    test('Refresh slides saves their images first', async () => {
+      const { db, service, queued, setUpcoming } = setup()
+      const first = await service.addDeck(VIEW)
+      const second = await service.addDeck(OTHER)
+      const older = addDance(db, { name: 'Not tonight' })
+      const tonight = addDance(db, { name: 'Tonight' })
+      service.linkSlide(older, first, 1)
+      service.linkSlide(tonight, second, 2)
+      setUpcoming([tonight])
+      queued.length = 0
+      await service.refreshSlides()
+      expect(queued.flat().map((t) => t.deckId)).toEqual([second, first])
+    })
   })
 })
