@@ -107,6 +107,35 @@ test('a program is saved, and loads again, also after a restart', async () => {
   await expect(programItems()).toHaveText([/Hora/, /Kolo/])
 })
 
+test('a column dragged to a new place stays there after a restart', async () => {
+  const header = (name: RegExp) =>
+    running.page.getByRole('table', { name: 'Songs' }).getByRole('columnheader', { name })
+  const headerNames = () =>
+    running.page
+      .getByRole('table', { name: 'Songs' })
+      .getByRole('columnheader')
+      .allTextContents()
+      .then((names) => names.map((n) => n.replace(/ [▲▼]$/, '')).filter(Boolean))
+  const DEFAULT = ['Dance / Song', 'Country', 'Choreographer', 'Teacher', 'Artist', 'Type']
+
+  await running.page.getByRole('tab', { name: 'Music' }).click()
+  await expect(running.page.getByText('3 songs in your library')).toBeVisible()
+  expect((await headerNames()).slice(0, 6)).toEqual(DEFAULT)
+
+  await drag(running.page, header(/^Artist/), header(/^Country/))
+  await expect
+    .poll(async () => (await headerNames()).slice(0, 3))
+    .toEqual(['Dance / Song', 'Artist', 'Country'])
+
+  // Restart: the Music page opens with the column where it was put.
+  await running.app.close()
+  running = await launch(space.userData)
+  await running.page.getByRole('tab', { name: 'Music' }).click()
+  await expect
+    .poll(async () => (await headerNames()).slice(0, 3))
+    .toEqual(['Dance / Song', 'Artist', 'Country'])
+})
+
 test('Settings… in the app menu opens the Settings page', async () => {
   await running.app.evaluate(({ Menu }) => {
     const app = Menu.getApplicationMenu()!.items[0].submenu!

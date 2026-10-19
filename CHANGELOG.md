@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Drag a column header to reorder the columns of the Music page and of the Program page's library list (Alt+←/→ with a header focused also works). Each list keeps its own order, and right-clicking a header offers **Reset columns**.
+
 ### Changed
 
 - Dances are named before their song everywhere, as `Dance ♪ Song`.
