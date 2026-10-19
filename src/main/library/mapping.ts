@@ -39,7 +39,12 @@ export function reapplyMapping(
   songIds: number[],
   mapping: ImportMapping
 ): ReapplyResult {
-  const targets = new Set([mapping.artistTagTarget, mapping.albumArtistTagTarget])
+  // A field is overwritten only when the mapping gives it a source.
+  const has = {
+    artist: mapping.artistFrom !== 'ignore',
+    teacher: mapping.teacherFrom !== 'ignore',
+    choreographer: mapping.choreographerFrom !== 'ignore'
+  }
   const read = db.prepare(
     `SELECT s.id AS songId, f.path, f.tag_title AS title, f.tag_artist AS artist,
        f.tag_album_artist AS albumArtist, f.tag_genre AS genre, p.id AS pairingId, p.dance_id AS danceId,
@@ -55,11 +60,11 @@ export function reapplyMapping(
       if (!row) continue
       const mapped = mapTags(row, row.path, mapping)
       result.songs += 1
-      if (targets.has('artist')) {
+      if (has.artist) {
         db.prepare('UPDATE songs SET artist = ? WHERE id = ?').run(mapped.song.artist, songId)
       }
       if (row.pairingId === null || row.danceId === null) continue
-      if (targets.has('teacher')) {
+      if (has.teacher) {
         db.prepare('INSERT OR IGNORE INTO dance_song_prefs (dance_song_id) VALUES (?)').run(
           row.pairingId
         )
@@ -69,7 +74,7 @@ export function reapplyMapping(
         )
       }
       const danceFields: Record<string, string | null> = {}
-      if (targets.has('choreographer')) danceFields.choreographer = mapped.dance.choreographer
+      if (has.choreographer) danceFields.choreographer = mapped.dance.choreographer
       if (mapping.genreIsCountry) danceFields.country = mapped.dance.country
       if (Object.keys(danceFields).length === 0) continue
       if (row.danceSongs > 1) {

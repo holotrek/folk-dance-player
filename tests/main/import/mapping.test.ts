@@ -2,15 +2,16 @@ import { describe, expect, test } from 'vitest'
 import { mapTags, type ImportMapping } from '../../../src/main/import/mapping'
 
 const mapping: ImportMapping = {
-  artistTagTarget: 'artist',
-  albumArtistTagTarget: 'ignore',
+  artistFrom: 'artistTag',
+  teacherFrom: 'ignore',
+  choreographerFrom: 'ignore',
   genreIsCountry: true
 }
 
 const tags = { title: 'Hora Mare', artist: 'Taraf', albumArtist: 'Sonia Dion', genre: 'Romania' }
 
 describe('mapTags', () => {
-  test('maps to the song, an automatic dance of the same name, and the pairing', () => {
+  test('the Artist tag feeds Artist by default, with an automatic dance of the same name', () => {
     expect(mapTags(tags, '/m/hora.mp3', mapping)).toEqual({
       song: { title: 'Hora Mare', artist: 'Taraf' },
       dance: { name: 'Hora Mare', country: 'Romania', choreographer: null },
@@ -18,29 +19,40 @@ describe('mapTags', () => {
     })
   })
 
-  test('routes album artist to the pairing’s teacher when configured', () => {
-    const mapped = mapTags(tags, '/m/hora.mp3', { ...mapping, albumArtistTagTarget: 'teacher' })
+  test('the Album Artist tag can feed the pairing’s teacher', () => {
+    const mapped = mapTags(tags, '/m/hora.mp3', { ...mapping, teacherFrom: 'albumArtistTag' })
     expect(mapped.teacher).toBe('Sonia Dion')
     expect(mapped.song.artist).toBe('Taraf')
   })
 
-  test('routes artist to the dance’s choreographer when configured', () => {
-    const mapped = mapTags(tags, '/m/hora.mp3', { ...mapping, artistTagTarget: 'choreographer' })
+  test('the Artist tag can feed the dance’s choreographer instead of the artist', () => {
+    const mapped = mapTags(tags, '/m/hora.mp3', {
+      ...mapping,
+      artistFrom: 'ignore',
+      choreographerFrom: 'artistTag'
+    })
     expect(mapped.dance.choreographer).toBe('Taraf')
     expect(mapped.song.artist).toBeNull()
   })
 
-  test('the artist tag wins when both tags target the same field', () => {
-    const mapped = mapTags(tags, '/m/hora.mp3', { ...mapping, albumArtistTagTarget: 'artist' })
+  test('one tag can feed two destinations', () => {
+    const mapped = mapTags(tags, '/m/hora.mp3', { ...mapping, choreographerFrom: 'artistTag' })
     expect(mapped.song.artist).toBe('Taraf')
+    expect(mapped.dance.choreographer).toBe('Taraf')
   })
 
-  test('album artist fills a shared target when the artist tag is empty', () => {
-    const mapped = mapTags({ ...tags, artist: null }, '/m/hora.mp3', {
+  test('an empty tag leaves its destination empty, never the other tag’s value', () => {
+    const mapped = mapTags({ ...tags, albumArtist: null }, '/m/hora.mp3', {
       ...mapping,
-      albumArtistTagTarget: 'artist'
+      teacherFrom: 'albumArtistTag'
     })
-    expect(mapped.song.artist).toBe('Sonia Dion')
+    expect(mapped.teacher).toBeNull()
+  })
+
+  test('Ignore leaves a destination empty', () => {
+    expect(
+      mapTags(tags, '/m/hora.mp3', { ...mapping, artistFrom: 'ignore' }).song.artist
+    ).toBeNull()
   })
 
   test('leaves the dance’s country empty when genre is not country', () => {

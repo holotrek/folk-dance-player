@@ -15,8 +15,9 @@ import { createTestDb } from '../helpers/test-db'
 import { pid } from './fixtures'
 
 const mapping: ImportMapping = {
-  artistTagTarget: 'artist',
-  albumArtistTagTarget: 'ignore',
+  artistFrom: 'artistTag',
+  teacherFrom: 'ignore',
+  choreographerFrom: 'ignore',
   genreIsCountry: true
 }
 

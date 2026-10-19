@@ -11,8 +11,9 @@ import { createTestDb } from '../helpers/test-db'
 
 // Add Music… while Apple Music sync is on (sync spec §5.7), and removed songs added again (§7.3).
 const mapping: ImportMapping = {
-  artistTagTarget: 'artist',
-  albumArtistTagTarget: 'ignore',
+  artistFrom: 'artistTag',
+  teacherFrom: 'ignore',
+  choreographerFrom: 'ignore',
   genreIsCountry: true
 }
 const ctx: SaveContext = { source: 'files', applePersistentId: null, mapping }

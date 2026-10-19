@@ -63,7 +63,7 @@ describe('ImportService: files and folders', () => {
   })
 
   test('maps tags using the current import settings', async () => {
-    new SettingsStore(db).set('import.albumArtistTagTarget', 'teacher')
+    new SettingsStore(db).set('import.teacherFrom', 'albumArtistTag')
     await service.run({ kind: 'paths', paths: [dir.path] })
     expect(songView(db, fileIdOf('Ajde Jano'))).toMatchObject({
       title: 'Ajde Jano',

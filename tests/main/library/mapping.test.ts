@@ -14,8 +14,9 @@ const tag = (fileId: number, tags: { artist?: string; albumArtist?: string; genr
     .run(tags.artist ?? null, tags.albumArtist ?? null, tags.genre ?? null, fileId)
 
 const mapping: ImportMapping = {
-  artistTagTarget: 'artist',
-  albumArtistTagTarget: 'teacher',
+  artistFrom: 'artistTag',
+  teacherFrom: 'albumArtistTag',
+  choreographerFrom: 'ignore',
   genreIsCountry: true
 }
 
@@ -82,7 +83,11 @@ describe('reapplyMapping', () => {
   test('routes tags to the choreographer when configured', () => {
     const s = addLibrarySong(db, { title: 'Pravo', dance: { name: 'Pravo' } })
     tag(s.fileId, { artist: 'Yves Moreau' })
-    reapplyMapping(db, [s.songId], { ...mapping, artistTagTarget: 'choreographer' })
+    reapplyMapping(db, [s.songId], {
+      ...mapping,
+      artistFrom: 'ignore',
+      choreographerFrom: 'artistTag'
+    })
     expect(getSongDetail(db, s.songId)!.dances[0].choreographer).toBe('Yves Moreau')
   })
 })
@@ -104,5 +109,16 @@ describe('getSuggestions', () => {
       countries: ['bulgaria', 'Serbia'],
       danceTypes: ['Couple', 'Hora line', 'Line']
     })
+  })
+})
+
+describe('reapplyMapping: sources', () => {
+  test('overwrites only destinations that have a source', () => {
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora', teacher: 'Old Teacher' } })
+    tag(s.fileId, { artist: 'Band', albumArtist: 'New Teacher' })
+    reapplyMapping(db, [s.songId], { ...mapping, teacherFrom: 'ignore' })
+    expect(getSongDetail(db, s.songId)!.dances[0].teacher).toBe('Old Teacher')
+    reapplyMapping(db, [s.songId], { ...mapping, teacherFrom: 'albumArtistTag' })
+    expect(getSongDetail(db, s.songId)!.dances[0].teacher).toBe('New Teacher')
   })
 })

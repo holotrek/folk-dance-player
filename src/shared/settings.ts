@@ -1,6 +1,7 @@
 import { isSyncSummary, type SyncSummary } from './apple-sync'
 
-export type TagTarget = 'artist' | 'teacher' | 'choreographer' | 'ignore'
+// Which of a song's tags fills a field on import (0.3.0 spec §3.4).
+export type TagSource = 'artistTag' | 'albumArtistTag' | 'ignore'
 
 // The control window's colors: the Mac's light/dark choice, or always light or dark.
 export type Appearance = 'system' | 'light' | 'dark'
@@ -14,8 +15,9 @@ export interface WindowBounds {
 
 // Spec §4 "Settings keys".
 export interface Settings {
-  'import.artistTagTarget': TagTarget
-  'import.albumArtistTagTarget': TagTarget
+  'import.artistFrom': TagSource
+  'import.teacherFrom': TagSource
+  'import.choreographerFrom': TagSource
   'import.genreIsCountry': boolean
   danceTypeSuggestions: string[]
   'autoContinue.enabled': boolean
@@ -43,8 +45,9 @@ export interface Settings {
 export type SettingKey = keyof Settings
 
 export const DEFAULT_SETTINGS: Settings = {
-  'import.artistTagTarget': 'artist',
-  'import.albumArtistTagTarget': 'ignore',
+  'import.artistFrom': 'artistTag',
+  'import.teacherFrom': 'ignore',
+  'import.choreographerFrom': 'ignore',
   'import.genreIsCountry': true,
   danceTypeSuggestions: [
     'Open Circle',
@@ -77,7 +80,7 @@ export const DEFAULT_SETTINGS: Settings = {
 
 export const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS) as readonly SettingKey[]
 
-const TAG_TARGETS: readonly unknown[] = ['artist', 'teacher', 'choreographer', 'ignore']
+const TAG_SOURCES: readonly unknown[] = ['artistTag', 'albumArtistTag', 'ignore']
 
 const isBool = (v: unknown): boolean => typeof v === 'boolean'
 const isPersistentId = (v: unknown): boolean => typeof v === 'string' && /^[0-9A-F]{16}$/.test(v)
@@ -85,7 +88,7 @@ const isIntIn =
   (min: number, max: number) =>
   (v: unknown): boolean =>
     Number.isInteger(v) && (v as number) >= min && (v as number) <= max
-const isTagTarget = (v: unknown): boolean => TAG_TARGETS.includes(v)
+const isTagSource = (v: unknown): boolean => TAG_SOURCES.includes(v)
 const isIdOrNull = (v: unknown): boolean => v === null || (Number.isInteger(v) && (v as number) > 0)
 const isDisplayIdOrNull = (v: unknown): boolean => v === null || Number.isInteger(v)
 const isBoundsOrNull = (v: unknown): boolean => {
@@ -109,8 +112,9 @@ const isColumnOrder = (v: unknown): boolean =>
   v.every((k) => typeof k === 'string' && k.length > 0 && k.length <= 40)
 
 const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
-  'import.artistTagTarget': isTagTarget,
-  'import.albumArtistTagTarget': isTagTarget,
+  'import.artistFrom': isTagSource,
+  'import.teacherFrom': isTagSource,
+  'import.choreographerFrom': isTagSource,
   'import.genreIsCountry': isBool,
   danceTypeSuggestions: isSuggestionList,
   'autoContinue.enabled': isBool,
