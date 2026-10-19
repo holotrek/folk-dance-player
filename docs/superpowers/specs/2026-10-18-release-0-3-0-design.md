@@ -67,6 +67,7 @@ built on its own.
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Planned |
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Planned |
 | 3.11 | End Program, then Start New Program | Program list, sidebar | Planned |
+| 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned |
 
 ## 3. Details
 
@@ -444,12 +445,99 @@ default name, accepts an edited name, creates, loads and clears the empty state;
 and this button share one code path; an end-to-end run that ends a program mid-way, starts a new
 one and reloads the first from the sidebar.
 
+### 3.12 Holding works like a Program on the side
+
+**Decided.** Holding should act like the Program, but on the side:
+
+- Dragging an item **from the Program into Holding** removes it from the Program and adds it to
+  Holding.
+- Dragging a song **from Holding into the Program** removes it from Holding.
+- Holding **keeps the chosen dance** of a song, so a song moved either way keeps the dance it had.
+- Dragging a song **from the library into Holding** lets the organizer **choose a dance**, as
+  adding to a program does.
+- **No duplicates in Holding, judged by song and dance together.** The same song with the same
+  dance is never held twice. This is already true today, because Holding holds each file once; it
+  is stated here because the rule must now be about the **pair**: a song with two different dances
+  can be in Holding once for each dance. Dragging from the Program into Holding, when that
+  song-and-dance pair is already held, **just removes the item from the Program**.
+
+**How (today).** Holding is a per-file flag, `file_prefs.in_holding` with `holding_position`
+(migration 003), so it holds a song, not a dance. `HoldingPanel.tsx` accepts only songs
+(`FILES_MIME`) and calls `library:setHolding(fileIds, true, before)`. Dropping a held song on the
+Program adds a copy with `programs:addTracks` (as its default dance) and leaves it in Holding.
+Program items drag as item IDs (`ITEMS_MIME`), accepted only by `ProgramList.tsx`. After a drop
+from the library, the Program asks "Which dance?" (`DanceChoiceDialog`) for songs with more than
+one dance and applies the answer with `programs:setItemDance`.
+
+**Design.**
+
+- **Holding holds song-and-dance pairs.** Holding moves out of `file_prefs` into its own table,
+  `holding_items` (`id`, `file_id`, `dance_id`, `position`), in migration `007` (§4). `file_id`
+  cascades on delete; `dance_id` is `ON DELETE CASCADE` too, because a held pair whose dance is
+  gone no longer means anything (**my call**; the alternative, falling back to the song's default,
+  could create a duplicate). A **unique index on the pair** is what enforces "no duplicates".
+  Songs held before the migration move over in their saved order, each as its default dance;
+  `file_prefs.in_holding` and `holding_position` are then dropped (SQLite 3.53 supports `DROP
+  COLUMN`). Code that reads them changes: `setHolding` (`playlists.ts`) and the
+  Holding panel's list. That list is today the library query with an internal
+  `{ kind: 'holding' }` filter (`list.ts`, `HoldingPanel.tsx`); it is not a sidebar filter. Holding
+  rows are now pairs, so **my call:** the panel gets its own list call (for example
+  `library:holding`, returning rows with the held dance) and the `holding` filter kind is removed
+  from `LibraryFilter`.
+- **Which dance a pair has.** The dance is always resolved to a real dance when it is held: the
+  one chosen, else the song's default, else none for a song with no dance at all (stored as
+  `NULL`, and the unique index treats `NULL` as one value, for example by indexing
+  `COALESCE(dance_id, 0)`). Resolving up front is what makes "the same song and dance" comparable
+  between a program item (whose `dance_id` may be `NULL` for "default") and a held pair.
+- **Holding rows** show the held dance in their label, exactly as a program item shows its dance,
+  and the dance can be changed from the row's menu with `library:setHoldingDance(holdingId,
+  danceId)`. A change to a pair that is already held is refused with a message (no duplicate).
+  The panel, its drag payload and its remove button work on **holding rows**, not files, so two
+  rows of one song are independent.
+- **Library to Holding: choose the dance.** As for the Program: the song is held as its default
+  dance, then a song with several dances opens the same "Which dance?" dialog, and the answer is
+  applied with `library:setHoldingDance`. Share the dialog and the "ask when `danceCount > 1`"
+  logic with `ProgramList.tsx` instead of copying them.
+- **Program to Holding: a move.** Holding's drag-over and drop also accept `ITEMS_MIME`, and the
+  drop spot works as for songs (before the row dropped on, or at the end). To avoid a failure
+  leaving a song in both places or neither, one main operation does both in one transaction and
+  sends one change notice: `programs:moveToHolding(programId, itemIds, before)`. It holds each
+  item's song **with the item's dance** (skipping a pair already held) and removes the items.
+- **Holding to Program: a move.** The same, the other way: `programs:moveFromHolding(programId,
+  fileIds, before)` adds each held song to the Program **as its held dance** (the default if none)
+  before the item dropped on, or at the end, and takes it out of Holding. Dragging from Holding
+  therefore no longer leaves a copy there.
+- **Other ways into the Program leave Holding alone.** Dragging a song from the library, a
+  playlist or Previously played, and **Add selected**, still add to the Program and do not touch
+  Holding. Only a drag **from Holding** is a move.
+- **STOP markers** cannot be held. **My call:** a STOP in the dragged set stays in the Program, and
+  a drag of only STOP markers is not accepted by Holding (no drop cursor).
+- **A pair already in Holding** that is dropped there again (from the library or from the Program)
+  is not added a second time: from the library it **moves to the new spot**; from the Program the
+  item is **just removed from the Program** and the held pair stays where it is. A different dance
+  of the same song **is** added, as a second row.
+- **Missing or removed songs** can be moved like any song. Played items are not in the list, so
+  they cannot be dragged; the playing song is unaffected.
+- **With several items selected** (§3.8), dragging a selected item moves the whole selection, in
+  the order they had, so §3.12 lands after §3.8 or with it. Without §3.8 it handles the one item.
+
+**Tests.** The migration (existing held songs move over in order as their default dance; a song
+with no dance; deleting a dance removes its held pairs); the unique pair (the same song with two
+dances is held twice, the same pair never, from the library and from the Program, the Program
+drop removing the item only); the
+main operations (program to Holding and back: dance kept, items and holding changed in one
+transaction, one notice, STOP markers left alone, an already-held song repositioned, an unknown
+id ignored); setting a held dance; `HoldingPanel` accepting a program-item drag and a library
+drag with the dance dialog; the Program accepting a Holding drag and the song leaving Holding; the
+other add paths leaving Holding unchanged; the end-to-end `drag()` helper in each direction.
+
 ## 4. Data changes
 
 | Migration | Change |
 |-----------|--------|
 | `005-dance-attachments` | `dance_prefs`: `notes_pdf_name`, `notes_pdf_path`, `slide_image_name`, `slide_image_path`, `slide_source` (§3.6, §3.7) |
 | `006-import-mapping` | Rewrites the saved import settings from two keys to three (§3.4) |
+| `007-holding-items` | New `holding_items` table (song, dance, position; unique per pair) replacing `file_prefs.in_holding`/`holding_position`; copies existing held songs (§3.12) |
 
 No migration for §3.5 under the recommended design. §3.1 to §3.3 and §3.8 to §3.11 change no tables.
 Migrations 001 to 004 are untouched. The next number is 005; if another change lands first, these
@@ -473,6 +561,8 @@ Each item is its own pull request, small enough to review on its own.
    header is arranged once.
 6. **§3.10, §3.11**: small and independent; §3.10 is a good first change if a quick win is wanted.
    §3.11 adds a header button, so land it with or before §3.9 so the header is arranged once.
+7. **§3.12**: after §3.8 (the drag then carries a selection). It has a migration (`007`), three
+   channels, and changes the Holding panel and the Program list, so give it its own pull request.
 
 Dependencies: §3.2 before §3.5 (it changes the labels the editor shows); §3.6 and §3.7 share the
 migration and the "copy a file into the app's data folder" helper.
@@ -480,7 +570,7 @@ migration and the "copy a file into the app's data folder" helper.
 ## 6. Documentation to update as each lands
 
 - **Main spec:** §4 Labels (§3.2), §5.2 Import mapping (§3.4), §6 Library and Program pages
-  (§3.3, §3.5, §3.8 to §3.11), §8 Projector (§3.2, §3.7, §3.9, §3.10), §8.3 Canva (§3.1, §3.7).
+  (§3.3, §3.5, §3.8 to §3.12), §8 Projector (§3.2, §3.7, §3.9, §3.10), §8.3 Canva (§3.1, §3.7).
 - **AGENTS.md:** a decision for each of §3.2, §3.4, §3.6/§3.7 (copies in the app data folder,
   served by ID) and §3.9 (what counts toward the total).
 - **CHANGELOG.md:** a line under Unreleased in the same commit as each user-facing change.
@@ -488,7 +578,9 @@ migration and the "copy a file into the app's data folder" helper.
 - **Hardware checklist** (`docs/manual-testing/pre-release-hardware.md`): the §3.1 steps above;
   multi-select drag with real mouse and trackpad; the projector with an image slide and with the
   end time; the import with the new mapping; Previously played staying at the bottom, and the
-  projector's list ending just above Now Playing, with a long history; End Program mid-song.
+  projector's list ending just above Now Playing, with a long history; End Program mid-song;
+  dragging between the Program, Holding and the library, in both directions, with a real mouse,
+  and choosing a dance on the way into Holding.
 - **CONTRIBUTING.md:** where backups are described, note that attachments are outside them.
 
 ## 7. Open questions for the maintainer
