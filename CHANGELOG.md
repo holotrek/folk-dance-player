@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- The import mapping now asks, for Artist, Teacher and Choreographer, which tag fills each (the Artist tag, the Album Artist tag, or neither). Your saved choices are converted automatically.
 - Dances are named before their song everywhere, as `Dance ♪ Song`.
 - The Music page has an **Artist** column, and the Program page's library list shows **Artist** and **Choreographer**. As that list gets narrower, columns disappear in this order: Artist, Teacher, Choreographer, Country, Time.
 

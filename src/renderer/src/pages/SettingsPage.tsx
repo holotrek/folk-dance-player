@@ -14,7 +14,7 @@ import {
   useMantineColorScheme
 } from '@mantine/core'
 import type { AppInfo, RendererApi } from '@shared/contract'
-import type { ImportMapping } from '@shared/import'
+import { mappingFromSettings, mappingSettings, type ImportMapping } from '@shared/import'
 import type { Appearance, SettingKey, Settings } from '@shared/settings'
 import { colorSchemeFor } from '../appearance'
 import Logo from '../components/Logo'
@@ -52,19 +52,13 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
 
   if (!settings) return <Loader m="md" />
 
-  const mapping: ImportMapping = {
-    artistTagTarget: settings['import.artistTagTarget'],
-    albumArtistTagTarget: settings['import.albumArtistTagTarget'],
-    genreIsCountry: settings['import.genreIsCountry']
-  }
+  const mapping: ImportMapping = mappingFromSettings(settings)
   // Saves whichever mapping setting changed.
   const saveMapping = (next: ImportMapping): void => {
-    if (next.artistTagTarget !== mapping.artistTagTarget)
-      void save('import.artistTagTarget', next.artistTagTarget)
-    if (next.albumArtistTagTarget !== mapping.albumArtistTagTarget)
-      void save('import.albumArtistTagTarget', next.albumArtistTagTarget)
-    if (next.genreIsCountry !== mapping.genreIsCountry)
-      void save('import.genreIsCountry', next.genreIsCountry)
+    const current = mappingSettings(mapping)
+    for (const [key, value] of Object.entries(mappingSettings(next))) {
+      if (value !== current[key as keyof typeof current]) void save(key as SettingKey, value)
+    }
   }
 
   const toggle = (key: BooleanKey, label: string): React.JSX.Element => (

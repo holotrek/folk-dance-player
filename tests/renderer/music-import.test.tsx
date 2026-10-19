@@ -80,12 +80,14 @@ describe('Music page import', () => {
     const dialog = await screen.findByRole('dialog', { name: 'Import music' })
 
     await userEvent.click(within(dialog).getByLabelText('Genre is Country'))
-    await userEvent.click(within(dialog).getByRole('radio', { name: 'Album Artist → Teacher' }))
+    await userEvent.click(
+      within(dialog).getByRole('radio', { name: 'Teacher from Album Artist tag' })
+    )
     await userEvent.click(within(dialog).getByRole('button', { name: 'Import' }))
 
     await waitFor(() => expect(fake.callsTo('import:start')).toHaveLength(1))
     expect(fake.settings['import.genreIsCountry']).toBe(false)
-    expect(fake.settings['import.albumArtistTagTarget']).toBe('teacher')
+    expect(fake.settings['import.teacherFrom']).toBe('albumArtistTag')
   })
 
   test('does nothing when the picker is cancelled', async () => {

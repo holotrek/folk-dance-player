@@ -10,6 +10,8 @@ import type {
   ImportSummary,
   PlaylistDecision
 } from '@shared/import'
+import { mappingFromSettings, mappingSettings } from '@shared/import'
+import type { SettingKey } from '@shared/settings'
 import { errorMessage } from '../ipc-error'
 
 export type ImportFlowState =
@@ -55,19 +57,15 @@ export function useImportFlow(api: RendererApi, onFinished: () => void) {
 
   const loadMapping = useCallback(async () => {
     const s = await api.invoke('settings:getAll')
-    setMapping({
-      artistTagTarget: s['import.artistTagTarget'],
-      albumArtistTagTarget: s['import.albumArtistTagTarget'],
-      genreIsCountry: s['import.genreIsCountry']
-    })
+    setMapping(mappingFromSettings(s))
   }, [api])
 
   // The mapping is remembered for next time (spec §5.2).
   const saveMapping = async (): Promise<void> => {
     if (!mapping) return
-    await api.invoke('settings:set', 'import.artistTagTarget', mapping.artistTagTarget)
-    await api.invoke('settings:set', 'import.albumArtistTagTarget', mapping.albumArtistTagTarget)
-    await api.invoke('settings:set', 'import.genreIsCountry', mapping.genreIsCountry)
+    for (const [key, value] of Object.entries(mappingSettings(mapping))) {
+      await api.invoke('settings:set', key as SettingKey, value)
+    }
   }
 
   const openPaths = async (live: () => boolean, paths: string[]): Promise<void> => {
