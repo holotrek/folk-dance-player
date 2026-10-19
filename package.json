@@ -1,7 +1,7 @@
 {
   "name": "folk-dance-player",
   "productName": "Folk Dance Player",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A music player for folk dance organizers",
   "author": "Evan Kaiser",
   "main": "./out/main/index.js",

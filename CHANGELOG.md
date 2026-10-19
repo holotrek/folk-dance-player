@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-10-17
+
 ### Added
 
 - **Sync with Apple Music** (a switch on the Music page, on a Mac): reads your Music library directly, with no Library.xml export, and keeps songs and playlists in step when the app starts, when you switch back to it, and with Sync now (File → Sync with Apple Music, ⌘⇧S). Tags follow Music unless you edited the field here, and a message says what each sync changed.
