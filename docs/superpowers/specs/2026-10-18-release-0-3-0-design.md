@@ -1,7 +1,7 @@
 # Release 0.3.0 — Design
 
 - **Date:** 2026-10-18
-- **Status:** Draft, for the maintainer's review. Nothing in §3 except §3.1 is built.
+- **Status:** Draft, for the maintainer's review. §3.1 (PR #28) is built and ready to merge; §3.2 and §3.3 are built (PR #30). Nothing else in §3 is built.
 - **Extends:** `2026-10-13-folk-dance-player-electron-design.md` (the main spec): §4 Labels, §5.2
   Import mapping, §6 Library and Program pages, §7 Playback, §8 Projector and Canva slides
 - **Ships:** 0.3.0, after 0.2.0 (the first published release) is out
@@ -56,7 +56,7 @@ built on its own.
 
 | # | Change | Where it lives | State |
 |---|--------|----------------|-------|
-| 3.1 | Slide numbers stay right when a Canva deck is edited | Canva service, slide dialog | **Built** in draft PR #28 |
+| 3.1 | Slide numbers stay right when a Canva deck is edited | Canva service, slide dialog | **Built** in PR #28 (ready to merge) |
 | 3.2 | One label order: `Dance ♪ Song` | `shared/labels.ts`, lists, Now Playing | Built (Plan 11) |
 | 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
 | 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Planned |
@@ -79,8 +79,8 @@ when linking by page link, and on **Refresh slides**. After a deck was edited in
 showed old numbers and titles, a number could link the wrong slide, and the projector's live view
 (which loads `viewUrl#<saved position>`) could show the wrong slide.
 
-**What PR #28 does** (draft; it was held back from 0.2.0 and needs a rebase onto main after the
-0.2.0 release, so its CHANGELOG line lands under the new Unreleased section):
+**What PR #28 does** (it was held back from 0.2.0 and has been brought up to date with main after
+the 0.2.0 release; its CHANGELOG lines belong under Unreleased → Fixed, not under 0.2.0):
 
 - The **slide dialog** re-reads the decks when it opens. It shows the saved list first with
   "Checking Canva for changes…", then updates; if Canva can't be reached it says so and keeps the
@@ -591,7 +591,7 @@ file; a startup check can list orphans (optional).
 
 Each item is its own pull request, small enough to review on its own.
 
-1. **§3.1** (draft PR #28): rebase after 0.2.0, then merge.
+1. **§3.1** (PR #28): merge, with its CHANGELOG lines under Unreleased.
 2. **§3.2 and §3.3**: labels and columns touch the same lists and many tests; do them together or
    back to back.
    **§3.13** follows straight after, in the same area: it needs the column keys that §3.3 adds, and
