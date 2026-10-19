@@ -9,7 +9,7 @@ const SETTING = {
 
 // The movable columns of one list in the organizer's order (0.3.0 spec §3.13). It shows the default
 // order until the saved one arrives, applies a change at once and saves it afterwards; a failed
-// save leaves the order as it is for this session.
+// save leaves the order as it is until the page is left.
 export function useColumnOrder(
   api: RendererApi,
   list: ColumnList

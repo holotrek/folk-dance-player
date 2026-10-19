@@ -136,6 +136,22 @@ test('a column dragged to a new place stays there after a restart', async () => 
     .toEqual(['Dance / Song', 'Artist', 'Country'])
 })
 
+test('Alt+→ moves a column and the focus stays on its header', async () => {
+  const table = running.page.getByRole('table', { name: 'Songs' })
+  await running.page.getByRole('tab', { name: 'Music' }).click()
+  const button = table.getByRole('columnheader', { name: /^Choreographer/ }).getByRole('button')
+  await button.focus()
+  await running.page.keyboard.press('Alt+ArrowRight')
+  await expect(table.getByRole('columnheader')).toContainText(
+    ['', 'Dance / Song', 'Country', 'Teacher', 'Choreographer', 'Artist'],
+    { useInnerText: true }
+  )
+  await expect(button).toBeFocused()
+  await running.page.keyboard.press('Alt+ArrowRight') // and it can be pressed again
+  await expect(table.getByRole('columnheader').nth(4)).toContainText('Artist')
+  await expect(table.getByRole('columnheader').nth(5)).toContainText('Choreographer')
+})
+
 test('Settings… in the app menu opens the Settings page', async () => {
   await running.app.evaluate(({ Menu }) => {
     const app = Menu.getApplicationMenu()!.items[0].submenu!

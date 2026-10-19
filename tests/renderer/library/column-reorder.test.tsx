@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { createEvent, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import type { PlaylistSummary } from '@shared/library'
@@ -337,5 +337,67 @@ describe('moving columns with the keyboard, and Reset columns', () => {
     await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
     fireEvent.contextMenu(header('Country'), { clientX: 20, clientY: 20 })
     expect(await screen.findByRole('menuitem', { name: 'Reset columns' })).toBeDisabled()
+  })
+})
+
+// jsdom has no DragEvent, so a pointer position has to be put on the event by hand.
+function dragAt(type: 'dragOver' | 'drop', target: HTMLElement, dt: object, clientX: number): void {
+  const event = createEvent[type](target, { dataTransfer: dt })
+  Object.defineProperty(event, 'clientX', { value: clientX })
+  fireEvent(target, event)
+}
+
+describe('review fixes', () => {
+  test('dropping on the right half of the next column moves the column one place right', async () => {
+    const fake = setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    const dt = dataTransfer()
+    fireEvent.dragStart(header('Country'), { dataTransfer: dt })
+    // The stubbed header is 1000px wide: 900 is its right half.
+    dragAt('dragOver', header('Choreographer'), dt, 900)
+    dragAt('drop', header('Choreographer'), dt, 900)
+    await waitFor(() =>
+      expect(headers().slice(2, 5)).toEqual(['Choreographer', 'Country', 'Teacher'])
+    )
+    expect(savedOrder(fake, 'library.columns.music')?.slice(0, 3)).toEqual([
+      'choreographer',
+      'country',
+      'teacher'
+    ])
+  })
+
+  test('the right half of the last data column drops at the end', async () => {
+    setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    const dt = dataTransfer()
+    fireEvent.dragStart(header('Country'), { dataTransfer: dt })
+    dragAt('dragOver', header('Time'), dt, 900)
+    dragAt('drop', header('Time'), dt, 900)
+    await waitFor(() => expect(headers().slice(-3)).toEqual(['Time', 'Country', '']))
+  })
+
+  test('Alt+ArrowRight keeps the keyboard focus even when the browser blurs a moved header', async () => {
+    setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    // Chromium blurs a focused element when an ancestor is moved with insertBefore (jsdom keeps the
+    // focus), so the move blurs it here too.
+    const real = Node.prototype.insertBefore
+    Node.prototype.insertBefore = function <T extends Node>(this: Node, node: T, ref: Node | null) {
+      const active = document.activeElement as HTMLElement | null
+      const holdsFocus = !!active && node.contains(active)
+      const result = real.call(this, node, ref) as T
+      if (holdsFocus) active.blur()
+      return result
+    }
+    try {
+      within(header('Choreographer')).getByRole('button').focus()
+      await userEvent.keyboard('{Alt>}{ArrowRight}{/Alt}')
+      await waitFor(() =>
+        expect(headers().slice(2, 5)).toEqual(['Country', 'Teacher', 'Choreographer'])
+      )
+      expect(document.activeElement).toBe(within(header('Choreographer')).getByRole('button'))
+    } finally {
+      Node.prototype.insertBefore = real
+    }
   })
 })

@@ -240,8 +240,16 @@ export default function LibraryTable({
 
   // A header dropped on: a movable column lands before it; the star, Dance / Song and # mean the
   // first data column; the File and ⋯ headers mean the end.
-  const landingFor = (key: string): string | 'end' =>
-    order.includes(key) ? key : FIXED_FIRST.includes(key) || key === 'number' ? order[0] : 'end'
+  // Over a movable header's right half, it lands before the next movable column (or at the end).
+  const landingFor = (key: string, rightHalf = false): string | 'end' => {
+    const i = order.indexOf(key)
+    if (i >= 0) return rightHalf ? (order[i + 1] ?? 'end') : key
+    return FIXED_FIRST.includes(key) || key === 'number' ? order[0] : 'end'
+  }
+  const inRightHalf = (e: React.DragEvent<HTMLElement>): boolean => {
+    const box = e.currentTarget.getBoundingClientRect()
+    return e.clientX > box.left + box.width / 2
+  }
 
   // Moves the dropped songs before `target`, or to the end when it is null.
   const dropOn = (target: LibraryRow | null, fileIds: number[]): void => {
@@ -317,7 +325,7 @@ export default function LibraryTable({
             onDragOver={(e) => {
               if (!carriesColumn(e.dataTransfer)) return
               e.preventDefault()
-              setLanding(landingFor(c.key))
+              setLanding(landingFor(c.key, inRightHalf(e)))
             }}
             onDragLeave={() => setLanding(null)}
             onDragEnd={() => setLanding(null)}
@@ -326,7 +334,7 @@ export default function LibraryTable({
               setLanding(null)
               if (!dragged) return
               e.preventDefault()
-              const target = landingFor(c.key)
+              const target = landingFor(c.key, inRightHalf(e))
               const next = moveColumn(order, dragged, target === 'end' ? null : target)
               if (next.join() !== order.join()) save(next)
             }}
