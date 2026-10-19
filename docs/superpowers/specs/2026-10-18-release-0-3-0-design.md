@@ -65,6 +65,8 @@ built on its own.
 | 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Planned |
 | 3.8 | Select several program items and move them together | Program list | Planned |
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Planned |
+| 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Planned |
+| 3.11 | End Program, then Start New Program | Program list, sidebar | Planned |
 
 ## 3. Details
 
@@ -350,6 +352,98 @@ items disappear); component tests with modifier keys; the end-to-end drag helper
 the header layout and the sidebar line; the end time with a fake clock, while playing and paused;
 the snapshot field and the projector line.
 
+### 3.10 Previously played reads oldest to newest and stays at the bottom
+
+**Decided.** "Previously played" changes from newest first to **oldest first (ascending)**.
+Looked at alone, newest first makes sense. Looked at together with Now Playing and Upcoming it
+does not: the three should read as one rolling window going down the screen, previous, now, then
+upcoming. This was clearest when testing in projector mode.
+
+- **Control window:** the Previously played list **stays scrolled to the bottom**, so the most
+  recent song is always visible, just above where the program continues.
+- **Projector:** the list **sticks to the bottom** of its area, so the most recently played song
+  appears **just above Now Playing**. When there are more songs than fit, the oldest fall off the
+  top.
+
+**How (today).** `listPlayed` (`main/programs/history.ts`) sorts `ORDER BY l.played_at DESC, l.id
+DESC`, and `PlayedList.tsx` and `ProjectorView.tsx` render the array as it comes.
+`ProjectorSnapshot.played` is documented "newest first" (`shared/projector.ts`), and
+`snapshot.ts` filters the playing song out of it without reordering.
+
+**Design.**
+
+- **Order.** Flip `listPlayed` to `ASC` (tie-break on `l.id ASC`) and update the comments on
+  `listPlayed` and `ProjectorSnapshot.played` to "oldest first". The order is decided once, in
+  main, so both windows stay consistent; neither renderer reverses it. Anything else that reads
+  `programs:played` or `played` and assumes the first entry is the newest must be checked (search
+  for `played[0]`).
+- **Control window follows the bottom.** The list scrolls to its end when it mounts, when a
+  program loads, and when an entry is added. **My call:** it follows only while the organizer is
+  at (or within a row or two of) the bottom, so scrolling up to look at an earlier song is not
+  undone by the next song starting. Scrolling back down resumes following.
+- **Projector sticks to the bottom.** The list is anchored to its bottom edge (for example a
+  bottom-aligned flex column with the overflow hidden at the top), not scrolled with script,
+  because the projector is read-only and has no one to scroll it. With a Canva slide the played
+  list is the narrow column beside the slide (`titleOnly`); it keeps the same bottom anchoring.
+- **Drag and replay are unchanged.** Double-click to replay and dragging an entry back into the
+  program work on the entry, not its position.
+
+**Tests.** `listPlayed` returns oldest first (including two entries with the same time); the
+snapshot keeps that order and still leaves out the playing song; `PlayedList` scrolls to the end
+on a new entry and does not when the organizer has scrolled up; the projector markup puts the
+newest entry last, immediately before Now Playing, with a fake long history.
+
+### 3.11 End Program, then Start New Program
+
+**Decided.**
+
+- An **End Program** button clears the current program list **and Previously played**. (The
+  maintainer first wanted Previously played kept, then changed their mind: a new program starts
+  with a clean screen.)
+- When nothing is loaded, a **Start New Program** button appears in place of the list. It opens
+  the same **New program** dialog as the sidebar's **+**, so the organizer can edit the name
+  before starting.
+
+**How (today).** The order is stored: a program's items are rows in `program_items` with a
+`position`, and a played item keeps its row with `played_at` set, so the program and what was
+danced are saved (spec §4). The sidebar's **+** opens `NamePrompt` ("New program", default name
+from `defaultProgramName()`), creates the program with `programs:create` and loads it with
+`programs:setCurrent` (`ProgramsSection.tsx`). `ProgramList.tsx` already shows "No program
+loaded…" when `programId` is null, and `setCurrent` already accepts `null`. Previously played is
+the loaded program's play log (`play_log`), so it empties whenever no program is loaded.
+
+**Design.**
+
+- **End Program unloads the program; it does not delete anything.** It calls
+  `programs:setCurrent(null)`. The list and Previously played both go empty because no program is
+  loaded. The program, its unplayed order and its play log all stay saved and can be loaded again
+  from the sidebar. This is deliberate: the order of songs is already stored, so clearing the
+  screen needs no data change, **needs no confirmation**, and nothing can be lost by a mistaken
+  click. (The alternative, deleting the unplayed rows with `programs:removeItems`, would lose the
+  planned order for good and would need a confirmation; it is rejected for that reason.)
+- **Where.** With the program panel's header buttons, beside **+ STOP** and **Add selected**,
+  enabled while a program is loaded.
+- **A song that is playing** keeps playing to its end; nothing follows it, because no program is
+  loaded. The projector and Previously played follow the player as they do today when no program
+  is loaded. **Open (§7):** whether to ask first while a song is playing.
+- **Start New Program.** When no program is loaded, the list area shows **Start New Program**
+  instead of the "No program loaded…" text. It opens the shared `NamePrompt`, titled "New
+  program", with the default name and the submit label "Create", and creates and loads the
+  program exactly as the sidebar does. To avoid two copies, move that create-and-load step and
+  the prompt's wording into one shared function or hook used by both the sidebar and the
+  program list.
+- **Dropping songs on the empty list still works** (`ensureProgram` creates and loads a program
+  with the default name), so the button is an option, not a gate.
+- **A loaded program whose songs have all played** is not "ended": it still shows "Nothing left
+  to play", its Previously played, and **End Program**. The organizer can add songs or end it.
+
+**Tests.** End Program unloads the program, empties the list and Previously played, and leaves the
+program, its items and its log in the database and the sidebar; a playing song is not
+interrupted; with nothing loaded the list shows **Start New Program**; the dialog opens with the
+default name, accepts an edited name, creates, loads and clears the empty state; the sidebar **+**
+and this button share one code path; an end-to-end run that ends a program mid-way, starts a new
+one and reloads the first from the sidebar.
+
 ## 4. Data changes
 
 | Migration | Change |
@@ -357,7 +451,7 @@ the snapshot field and the projector line.
 | `005-dance-attachments` | `dance_prefs`: `notes_pdf_name`, `notes_pdf_path`, `slide_image_name`, `slide_image_path`, `slide_source` (§3.6, §3.7) |
 | `006-import-mapping` | Rewrites the saved import settings from two keys to three (§3.4) |
 
-No migration for §3.5 under the recommended design. §3.1 to §3.3, §3.8 and §3.9 change no tables.
+No migration for §3.5 under the recommended design. §3.1 to §3.3 and §3.8 to §3.11 change no tables.
 Migrations 001 to 004 are untouched. The next number is 005; if another change lands first, these
 take the next free numbers.
 
@@ -377,6 +471,8 @@ Each item is its own pull request, small enough to review on its own.
    the two attachments sharing one migration (`005`).
 5. **§3.8, §3.9**: both in the Program page; §3.9's header line should land after §3.8 so the
    header is arranged once.
+6. **§3.10, §3.11**: small and independent; §3.10 is a good first change if a quick win is wanted.
+   §3.11 adds a header button, so land it with or before §3.9 so the header is arranged once.
 
 Dependencies: §3.2 before §3.5 (it changes the labels the editor shows); §3.6 and §3.7 share the
 migration and the "copy a file into the app's data folder" helper.
@@ -384,14 +480,15 @@ migration and the "copy a file into the app's data folder" helper.
 ## 6. Documentation to update as each lands
 
 - **Main spec:** §4 Labels (§3.2), §5.2 Import mapping (§3.4), §6 Library and Program pages
-  (§3.3, §3.5, §3.8, §3.9), §8 Projector (§3.2, §3.7, §3.9), §8.3 Canva (§3.1, §3.7).
+  (§3.3, §3.5, §3.8 to §3.11), §8 Projector (§3.2, §3.7, §3.9, §3.10), §8.3 Canva (§3.1, §3.7).
 - **AGENTS.md:** a decision for each of §3.2, §3.4, §3.6/§3.7 (copies in the app data folder,
   served by ID) and §3.9 (what counts toward the total).
 - **CHANGELOG.md:** a line under Unreleased in the same commit as each user-facing change.
 - **README.md:** the features list when the release is prepared.
 - **Hardware checklist** (`docs/manual-testing/pre-release-hardware.md`): the §3.1 steps above;
   multi-select drag with real mouse and trackpad; the projector with an image slide and with the
-  end time; the import with the new mapping.
+  end time; the import with the new mapping; Previously played staying at the bottom, and the
+  projector's list ending just above Now Playing, with a long history; End Program mid-song.
 - **CONTRIBUTING.md:** where backups are described, note that attachments are outside them.
 
 ## 7. Open questions for the maintainer
@@ -411,3 +508,7 @@ migration and the "copy a file into the app's data folder" helper.
 6. **§3.4, old settings.** When an old mapping sent both tags to one field, is "Artist tag wins"
    the right way to convert it? (It only affects someone who set it up that way.)
 7. **§3.2, the choreographer.** Is `Dance (Choreographer) ♪ Song` the right place for it?
+8. **§3.10, following the bottom.** Is it right that the control window's list follows new songs
+   only while the organizer is at the bottom, or should it always jump to the newest?
+9. **§3.11, a playing song.** End Program lets the song that is playing finish and nothing
+   follows. Is that right, or should it ask first (or stop the music) when a song is playing?

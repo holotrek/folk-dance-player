@@ -12,3 +12,6 @@ docs/spikes/remote-spike/remote-log.txt
 # Playwright
 test-results/
 playwright-report/
+
+# CodeGraph index
+.codegraph/
