@@ -30,8 +30,8 @@ export function labelParts(input: LabelInput): LabelParts {
   }
 }
 
-// The one-line form used in the control window: "Song | Dance (Choreographer)".
+// The one-line form used in lists: "Dance (Choreographer) ♪ Song".
 export function formatLabel(parts: LabelParts): string {
-  const main = parts.song ? `${parts.song} | ${parts.dance}` : parts.dance
-  return parts.choreographer ? `${main} (${parts.choreographer})` : main
+  const dance = parts.choreographer ? `${parts.dance} (${parts.choreographer})` : parts.dance
+  return parts.song ? `${dance} ♪ ${parts.song}` : dance
 }

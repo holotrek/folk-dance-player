@@ -45,7 +45,7 @@ describe('listLibrary', () => {
         danceType: null,
         difficulty: null,
         danceCount: 1,
-        label: 'Hora de la Munte | Hora Mare',
+        label: 'Hora Mare ♪ Hora de la Munte',
         playlistItemId: null,
         playlistNumber: null
       }

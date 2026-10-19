@@ -22,7 +22,7 @@ describe('play log', () => {
     logPlay(db, { fileId: hora.fileId, danceId: other, programId: p, kind: 'preview' })
     logPlay(db, { fileId: hora.fileId, danceId: null, programId: elsewhere, kind: 'program' })
     expect(listPlayed(db, p).map((e) => [e.kind, e.track?.label])).toEqual([
-      ['preview', 'Hora | Hora Mare'],
+      ['preview', 'Hora Mare ♪ Hora'],
       ['program', 'Hora']
     ])
   })

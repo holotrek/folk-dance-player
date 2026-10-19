@@ -69,7 +69,7 @@ function setup(
     'library:song': {
       dances: [
         { danceId: 2102, label: 'Kolo' },
-        { danceId: 77, label: 'Kolo | Užičko Kolo' }
+        { danceId: 77, label: 'Užičko Kolo ♪ Kolo' }
       ]
     } as unknown as SongDetail
   })
@@ -189,7 +189,7 @@ describe('program list', () => {
     await screen.findByText('Kolo')
     await userEvent.click(screen.getByRole('button', { name: 'Options for Kolo' }))
     await userEvent.click(
-      await within(await menu('Kolo')).findByRole('menuitem', { name: 'Kolo | Užičko Kolo' })
+      await within(await menu('Kolo')).findByRole('menuitem', { name: 'Užičko Kolo ♪ Kolo' })
     )
     expect(fake.callsTo('library:song')).toEqual([[1102]])
     expect(fake.callsTo('programs:setItemDance')).toEqual([[3, 77]])
@@ -272,7 +272,7 @@ describe('program list', () => {
     fireEvent.drop(screen.getByRole('region', { name: 'Program' }), files([201]))
     const dialog = within(await screen.findByRole('dialog', { name: 'Which dance?' }))
     expect(dialog.getByRole('radio', { name: 'Kolo' })).toBeChecked() // the default
-    await userEvent.click(dialog.getByRole('radio', { name: 'Kolo | Užičko Kolo' }))
+    await userEvent.click(dialog.getByRole('radio', { name: 'Užičko Kolo ♪ Kolo' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Done' }))
     expect(fake.callsTo('programs:setItemDance')).toEqual([[9, 77]])
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())

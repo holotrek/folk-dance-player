@@ -44,7 +44,7 @@ describe('library handlers', () => {
   test('list and detail read the library', async () => {
     const { db, h } = setup()
     const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora Mare' } })
-    expect((await h['library:list'](query)).map((r) => r.label)).toEqual(['Hora | Hora Mare'])
+    expect((await h['library:list'](query)).map((r) => r.label)).toEqual(['Hora Mare ♪ Hora'])
     expect((await h['library:song'](s.songId))?.dances[0].name).toBe('Hora Mare')
   })
 

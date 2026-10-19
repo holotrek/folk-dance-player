@@ -442,7 +442,7 @@ describe('what the projector shows', () => {
     session.play()
     db.prepare("UPDATE dances SET name = 'Hora Mare' WHERE id = ?").run(songs.a.danceId)
     session.refresh()
-    expect(state().current?.track.label).toBe('A | Hora Mare')
+    expect(state().current?.track.label).toBe('Hora Mare ♪ A')
     expect(state().status).toBe('playing')
   })
 })

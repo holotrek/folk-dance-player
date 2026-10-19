@@ -4,14 +4,14 @@ import { formatLabel, labelParts } from '@shared/labels'
 // Spec §4 "Labels".
 describe('labelParts / formatLabel', () => {
   test.each([
-    ['Hora de la Munte', 'Hora Mare', null, 0, 'Hora de la Munte | Hora Mare'],
+    ['Hora de la Munte', 'Hora Mare', null, 0, 'Hora Mare ♪ Hora de la Munte'],
     ['Svornato', 'Svornato', 'Jaap Leegwater', 2, 'Svornato (Jaap Leegwater)'],
     [
       'Pusteno Ludo',
       'Pravo Rhodopsko Oro',
       'Yves Moreau',
       2,
-      'Pusteno Ludo | Pravo Rhodopsko Oro (Yves Moreau)'
+      'Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo'
     ],
     ['Hora Fetelor', 'Hora Fetelor', 'Someone', 1, 'Hora Fetelor']
   ])('%s / %s / %s (%i choreographers) → %s', (song, dance, choreographer, count, label) => {
@@ -25,6 +25,19 @@ describe('labelParts / formatLabel', () => {
         })
       )
     ).toBe(label)
+  })
+
+  test('a song with no dance is just its title', () => {
+    expect(
+      formatLabel(
+        labelParts({
+          songTitle: 'Solo Song',
+          danceName: null,
+          choreographer: null,
+          choreographerCount: 0
+        })
+      )
+    ).toBe('Solo Song')
   })
 
   test('treats song and dance names that differ only in case or spacing as the same', () => {

@@ -29,6 +29,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - Folk Dance Player is now signed and notarized by Apple, so a downloaded copy opens normally, without the "unidentified developer" warning or Open Anyway in System Settings.
+- Dances are named before their song everywhere, as `Dance ♪ Song`.
 
 ### Fixed
 

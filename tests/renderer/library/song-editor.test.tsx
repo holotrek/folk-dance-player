@@ -28,7 +28,7 @@ const detail = (overrides: Partial<SongDetail> = {}): SongDetail => ({
       teacher: 'Sonia Dion',
       songCount: 3,
       isDefault: true,
-      label: 'Pusteno Ludo | Pravo Rhodopsko Oro (Yves Moreau)',
+      label: 'Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo',
       slide: null
     },
     {
@@ -43,7 +43,7 @@ const detail = (overrides: Partial<SongDetail> = {}): SongDetail => ({
       teacher: null,
       songCount: 1,
       isDefault: false,
-      label: 'Pusteno Ludo | Lesnoto (Someone)',
+      label: 'Lesnoto (Someone) ♪ Pusteno Ludo',
       slide: null
     }
   ],
@@ -92,11 +92,11 @@ describe('SongEditor', () => {
     setup()
     expect(await screen.findByDisplayValue('Pusteno Ludo')).toBeInTheDocument()
     expect(screen.getAllByRole('group').map((g) => g.getAttribute('aria-label'))).toEqual([
-      'Pusteno Ludo | Pravo Rhodopsko Oro (Yves Moreau)',
-      'Pusteno Ludo | Lesnoto (Someone)'
+      'Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo',
+      'Lesnoto (Someone) ♪ Pusteno Ludo'
     ])
     expect(
-      within(danceCard('Pusteno Ludo | Pravo Rhodopsko Oro (Yves Moreau)')).getByText(/Default/)
+      within(danceCard('Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo')).getByText(/Default/)
     ).toBeInTheDocument()
     expect(
       screen.getByText('Also used by 2 other songs: changes apply to all of them.')
@@ -116,7 +116,7 @@ describe('SongEditor', () => {
   test('saves dance fields and the pairing’s teacher', async () => {
     const fake = setup()
     await screen.findByDisplayValue('Pusteno Ludo')
-    const card = within(danceCard('Pusteno Ludo | Pravo Rhodopsko Oro (Yves Moreau)'))
+    const card = within(danceCard('Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo'))
     await edit(card.getByLabelText('Country'), 'Bulgaria (Rhodopes)')
     await edit(card.getByLabelText('Teacher'), '')
     await waitFor(() =>
@@ -130,14 +130,14 @@ describe('SongEditor', () => {
   test('each dance has its Canva slide field', async () => {
     setup()
     await screen.findByDisplayValue('Pusteno Ludo')
-    const card = within(danceCard('Pusteno Ludo | Lesnoto (Someone)'))
+    const card = within(danceCard('Lesnoto (Someone) ♪ Pusteno Ludo'))
     expect(card.getByRole('button', { name: 'Link a slide…' })).toBeInTheDocument()
   })
 
   test('sets the difficulty', async () => {
     const fake = setup()
     await screen.findByDisplayValue('Pusteno Ludo')
-    const card = within(danceCard('Pusteno Ludo | Lesnoto (Someone)'))
+    const card = within(danceCard('Lesnoto (Someone) ♪ Pusteno Ludo'))
     // Mantine's Rating takes the click on each star's label.
     const four = card.getByRole('radio', { name: '4' }) as HTMLInputElement
     await userEvent.click(four.labels![0])
@@ -147,7 +147,7 @@ describe('SongEditor', () => {
   test('makes another dance the default, and unlinks one', async () => {
     const fake = setup()
     await screen.findByDisplayValue('Pusteno Ludo')
-    const lesnoto = within(danceCard('Pusteno Ludo | Lesnoto (Someone)'))
+    const lesnoto = within(danceCard('Lesnoto (Someone) ♪ Pusteno Ludo'))
     await userEvent.click(lesnoto.getByRole('button', { name: 'Make default' }))
     expect(fake.callsTo('library:setDefaultDance')).toEqual([[1, 12]])
     await userEvent.click(lesnoto.getByRole('button', { name: 'Dance options' }))
@@ -183,7 +183,7 @@ describe('SongEditor', () => {
   test('merges a dance into another after confirming', async () => {
     const fake = setup()
     await screen.findByDisplayValue('Pusteno Ludo')
-    const lesnoto = within(danceCard('Pusteno Ludo | Lesnoto (Someone)'))
+    const lesnoto = within(danceCard('Lesnoto (Someone) ♪ Pusteno Ludo'))
     await userEvent.click(lesnoto.getByRole('button', { name: 'Dance options' }))
     await userEvent.click(
       await screen.findByRole('menuitem', { name: 'Merge into another dance…' })
