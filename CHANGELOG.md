@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Change…** on a dance's slide opens on the slide's current number in its deck, instead of slide 1, and follows it if the deck was edited in Canva.
+- After you edit a Canva deck, the slide numbers and titles in the slide dialog, and the slides shown on the projector, follow the change. The app now re-reads your decks when you open the dialog and when you come back to it. Decks used by the current program are read first. **Refresh slides** is still how to save new images of slides whose content changed, and it saves the current program's first.
+
 ## [0.2.0] - 2026-10-17
 
 ### Added
@@ -27,8 +32,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **Change…** on a dance's slide opens on the slide's current number in its deck, instead of slide 1, and follows it if the deck was edited in Canva.
-- After you edit a Canva deck, the slide numbers and titles in the slide dialog, and the slides shown on the projector, follow the change. The app now re-reads your decks when you open the dialog and when you come back to it. Decks used by the current program are read first. **Refresh slides** is still how to save new images of slides whose content changed, and it saves the current program's first.
 - Esc closes the projector view over the laptop the first time it's pressed, even right after turning the view on.
 - Canva's buttons no longer show over the live slide on the projector, and changing to another slide of the same deck no longer flashes the previous slide.
 - A long dance name no longer hides the countdown in the player bar: the name is shortened instead ("Next: A long dance na… in 3…").
