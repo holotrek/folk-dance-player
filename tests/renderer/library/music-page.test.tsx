@@ -34,7 +34,8 @@ const row = (songId: number, extra: Partial<LibraryRow> = {}): LibraryRow => ({
 const rows = [
   row(1, {
     title: 'Pusteno Ludo',
-    label: 'Pusteno Ludo | Pravo Rhodopsko Oro',
+    label: 'Pravo Rhodopsko Oro ♪ Pusteno Ludo',
+    artist: 'Alma Quartet',
     country: 'Bulgaria',
     teacher: 'Sonia Dion',
     danceCount: 2
@@ -73,8 +74,9 @@ const rowFor = (name: string) => screen.getByText(name).closest('[role="row"]') 
 describe('Music page library table', () => {
   test('shows each song’s label, country and teacher, flagging missing files and extra dances', async () => {
     setup()
-    expect(await screen.findByText('Pusteno Ludo | Pravo Rhodopsko Oro')).toBeInTheDocument()
-    const pusteno = rowFor('Pusteno Ludo | Pravo Rhodopsko Oro')
+    expect(await screen.findByText('Pravo Rhodopsko Oro ♪ Pusteno Ludo')).toBeInTheDocument()
+    const pusteno = rowFor('Pravo Rhodopsko Oro ♪ Pusteno Ludo')
+    expect(within(pusteno).getByText('Alma Quartet')).toBeInTheDocument()
     expect(within(pusteno).getByText('Bulgaria')).toBeInTheDocument()
     expect(within(pusteno).getByText('Sonia Dion')).toBeInTheDocument()
     expect(within(pusteno).getByText('+1')).toBeInTheDocument()
@@ -93,6 +95,29 @@ describe('Music page library table', () => {
     await userEvent.click(within(header).getByRole('button'))
     await waitFor(() =>
       expect(lastQuery(fake).sort).toEqual({ column: 'country', direction: 'desc' })
+    )
+  })
+
+  test('orders its columns Country, Choreographer, Teacher, Artist, with Time last, and Artist sorts', async () => {
+    const fake = setup()
+    const header = await screen.findByRole('columnheader', { name: /Artist/ })
+    expect(
+      screen.getAllByRole('columnheader').map((h) => h.textContent?.replace(/ [▲▼]$/, ''))
+    ).toEqual([
+      '',
+      'Dance / Song',
+      'Country',
+      'Choreographer',
+      'Teacher',
+      'Artist',
+      'Type',
+      'Difficulty',
+      'Time',
+      ''
+    ])
+    await userEvent.click(within(header).getByRole('button'))
+    await waitFor(() =>
+      expect(lastQuery(fake).sort).toEqual({ column: 'artist', direction: 'asc' })
     )
   })
 
@@ -117,7 +142,7 @@ describe('Music page library table', () => {
   test('selects with click, ⌘-click and shift-click', async () => {
     setup()
     await screen.findByText('Gone')
-    await userEvent.click(rowFor('Pusteno Ludo | Pravo Rhodopsko Oro'))
+    await userEvent.click(rowFor('Pravo Rhodopsko Oro ♪ Pusteno Ludo'))
     fireEvent.click(rowFor('Gone'), { shiftKey: true })
     expect(screen.getAllByRole('row', { selected: true })).toHaveLength(3)
     fireEvent.click(rowFor('Hora Fetelor'), { metaKey: true })
@@ -145,7 +170,7 @@ describe('Music page library table', () => {
   test('dragging rows carries the selected recordings', async () => {
     setup()
     await screen.findByText('Gone')
-    fireEvent.click(rowFor('Pusteno Ludo | Pravo Rhodopsko Oro'))
+    fireEvent.click(rowFor('Pravo Rhodopsko Oro ♪ Pusteno Ludo'))
     fireEvent.click(rowFor('Hora Fetelor'), { metaKey: true })
     const data: Record<string, string> = {}
     fireEvent.dragStart(rowFor('Hora Fetelor'), {
@@ -181,7 +206,7 @@ describe('Music page library table', () => {
     const fake = setup()
     await screen.findByText('Gone')
     await userEvent.click(
-      screen.getByRole('button', { name: 'Add Pusteno Ludo | Pravo Rhodopsko Oro to favorites' })
+      screen.getByRole('button', { name: 'Add Pravo Rhodopsko Oro ♪ Pusteno Ludo to favorites' })
     )
     await userEvent.click(
       screen.getByRole('button', { name: 'Remove Hora Fetelor from favorites' })
@@ -207,7 +232,7 @@ describe('Music page library table', () => {
   test('marks the selection as favorites', async () => {
     const fake = setup()
     await screen.findByText('Gone')
-    fireEvent.click(rowFor('Pusteno Ludo | Pravo Rhodopsko Oro'))
+    fireEvent.click(rowFor('Pravo Rhodopsko Oro ♪ Pusteno Ludo'))
     await userEvent.click(screen.getByRole('button', { name: 'Favorite' }))
     expect(fake.callsTo('library:setFavorite')).toEqual([[[101], true]])
   })
@@ -232,7 +257,7 @@ describe('Music page library table', () => {
       ]
     })
     await screen.findByText('Gone')
-    fireEvent.click(rowFor('Pusteno Ludo | Pravo Rhodopsko Oro'))
+    fireEvent.click(rowFor('Pravo Rhodopsko Oro ♪ Pusteno Ludo'))
     fireEvent.click(rowFor('Hora Fetelor'), { metaKey: true })
     await userEvent.click(screen.getByRole('button', { name: 'Re-apply mapping…' }))
     const dialog = await screen.findByRole('dialog', { name: 'Re-apply mapping?' })

@@ -46,8 +46,8 @@ describe('getSongDetail', () => {
     const d = detail(songId)
     expect(d).toMatchObject({ songId, title: 'Pusteno Ludo', isFavorite: false, suggestions: [] })
     expect(d.dances.map((x) => [x.danceId, x.isDefault, x.teacher, x.label])).toEqual([
-      [danceId, true, 'Sonia', 'Pusteno Ludo | Pravo Rhodopsko Oro (Yves Moreau)'],
-      [lesnoto, false, null, 'Pusteno Ludo | Lesnoto (Someone)']
+      [danceId, true, 'Sonia', 'Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo'],
+      [lesnoto, false, null, 'Lesnoto (Someone) ♪ Pusteno Ludo']
     ])
   })
 

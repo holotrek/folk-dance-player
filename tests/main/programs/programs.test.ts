@@ -90,8 +90,8 @@ describe('programs', () => {
     markPlayed(db, first)
     const copy = duplicateProgram(db, p)
     expect(listPrograms(db).find((x) => x.id === copy)?.name).toBe('Set A copy')
-    expect(labels(copy)).toEqual(['Hora', 'Kolo | Žikino Kolo', 'STOP'])
-    expect(labels(p)).toEqual(['Kolo | Žikino Kolo', 'STOP'])
+    expect(labels(copy)).toEqual(['Hora', 'Žikino Kolo ♪ Kolo', 'STOP'])
+    expect(labels(p)).toEqual(['Žikino Kolo ♪ Kolo', 'STOP'])
   })
 })
 
@@ -128,7 +128,7 @@ describe('program items', () => {
     addTracks(db, p, [kolo.fileId])
     addTracks(db, p, [tune.fileId], h)
     addStop(db, p, h)
-    expect(labels(p)).toEqual(['Pusteno | Pravo', 'STOP', 'Hora', 'Kolo | Žikino Kolo'])
+    expect(labels(p)).toEqual(['Pravo ♪ Pusteno', 'STOP', 'Hora', 'Žikino Kolo ♪ Kolo'])
   })
 
   test('the same song can be added twice; unknown files are skipped', () => {
@@ -179,7 +179,7 @@ describe('program items', () => {
     const p = createProgram(db, 'Set')
     const [h] = addTracks(db, p, [hora.fileId])
     setItemDance(db, h, other)
-    expect(labels(p)).toEqual(['Hora | Hora Mare'])
+    expect(labels(p)).toEqual(['Hora Mare ♪ Hora'])
     const unlinked = addDance(db, { name: 'Sârba' })
     expect(() => setItemDance(db, h, unlinked)).toThrow("isn't linked")
   })

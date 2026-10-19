@@ -8,6 +8,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Dances are named before their song everywhere, as `Dance ♪ Song`.
+- The Music page has an **Artist** column, and the Program page's library list shows **Artist** and **Choreographer**. As that list gets narrower, columns disappear in this order: Artist, Teacher, Choreographer, Country, Time.
+
 ### Fixed
 
 - **Change…** on a dance's slide opens on the slide's current number in its deck, instead of slide 1, and follows it if the deck was edited in Canva.

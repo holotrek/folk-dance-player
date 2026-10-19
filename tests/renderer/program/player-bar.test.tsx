@@ -165,6 +165,36 @@ describe('player bar', () => {
     expect(screen.getByTestId('player-title-name')).toHaveTextContent(/^Hora$/)
   })
 
+  test('playing: the dance is the title and ♪ song is a smaller line under it', async () => {
+    const t = track(102, 'Pusteno Ludo', {
+      label: 'Pravo Rhodopsko Oro ♪ Pusteno Ludo',
+      parts: { song: 'Pusteno Ludo', dance: 'Pravo Rhodopsko Oro', choreographer: null }
+    })
+    setup(playing(t))
+    await waitFor(() =>
+      expect(screen.getByTestId('player-title-name')).toHaveTextContent(/^Pravo Rhodopsko Oro$/)
+    )
+    expect(screen.getByTestId('player-song')).toHaveTextContent('♪ Pusteno Ludo')
+  })
+
+  test('playing: no ♪ line when song and dance match', async () => {
+    setup(playing(hora))
+    await waitFor(() => expect(title()).toHaveTextContent('Hora'))
+    expect(screen.queryByTestId('player-song')).toBeNull()
+  })
+
+  test('playing: the choreographer stays with the dance', async () => {
+    const t = track(103, 'Pusteno Ludo', {
+      parts: { song: 'Pusteno Ludo', dance: 'Pravo Rhodopsko Oro', choreographer: 'Yves Moreau' }
+    })
+    setup(playing(t))
+    await waitFor(() =>
+      expect(screen.getByTestId('player-title-name')).toHaveTextContent(
+        /^Pravo Rhodopsko Oro \(Yves Moreau\)$/
+      )
+    )
+  })
+
   test('marks a preview, and keeps the speed and pitch on the audio element', async () => {
     const fake = setup(playing(hora, { speed: 0.75 }))
     await waitFor(() => expect(audio().playbackRate).toBe(0.75))

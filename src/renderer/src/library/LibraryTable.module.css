@@ -1,4 +1,5 @@
 .table {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -10,13 +11,18 @@
 
 .row {
   display: grid;
-  grid-template-columns: 28px minmax(220px, 3fr) repeat(4, minmax(90px, 1fr)) 80px 56px 28px;
+  /* The columns come from the table (inline), so one can collapse; the space between them is
+     each cell's padding, so a collapsed column leaves no gap. */
   align-items: center;
-  column-gap: var(--mantine-spacing-xs);
-  padding: 0 var(--mantine-spacing-xs);
+  padding: 0 calc(var(--mantine-spacing-xs) / 2);
   height: 32px;
   font-size: var(--mantine-font-size-sm);
   user-select: none;
+}
+
+.row > * {
+  padding-inline: calc(var(--mantine-spacing-xs) / 2);
+  min-width: 0;
 }
 
 .header {
@@ -75,20 +81,67 @@
   box-shadow: inset 0 2px 0 var(--mantine-primary-color-filled);
 }
 
-.compact .header,
-.compact .item {
-  grid-template-columns: 28px minmax(160px, 3fr) minmax(70px, 1fr) minmax(70px, 1fr) 48px 28px;
+/* The Program page's list (compact) drops columns completely as it narrows, in this order:
+   Artist, Teacher, Choreographer, Country, Time. Each breakpoint is the width at which the
+   columns still shown, with the # column of a playlist, no longer fit their minimums. */
+@container (max-width: 706px) {
+  .compact .header,
+  .compact .item {
+    --w-artist: 0px;
+  }
+
+  .compact [data-column='artist'] {
+    visibility: hidden;
+    padding: 0;
+  }
 }
 
-/* In a playlist, a narrow number column comes first. */
-.numbered .header,
-.numbered .item {
-  grid-template-columns: 32px 28px minmax(220px, 3fr) repeat(4, minmax(90px, 1fr)) 80px 56px 28px;
+@container (max-width: 636px) {
+  .compact .header,
+  .compact .item {
+    --w-teacher: 0px;
+  }
+
+  .compact [data-column='teacher'] {
+    visibility: hidden;
+    padding: 0;
+  }
 }
 
-.numbered.compact .header,
-.numbered.compact .item {
-  grid-template-columns: 32px 28px minmax(160px, 3fr) minmax(70px, 1fr) minmax(70px, 1fr) 48px 28px;
+@container (max-width: 561px) {
+  .compact .header,
+  .compact .item {
+    --w-choreographer: 0px;
+  }
+
+  .compact [data-column='choreographer'] {
+    visibility: hidden;
+    padding: 0;
+  }
+}
+
+@container (max-width: 441px) {
+  .compact .header,
+  .compact .item {
+    --w-country: 0px;
+  }
+
+  .compact [data-column='country'] {
+    visibility: hidden;
+    padding: 0;
+  }
+}
+
+@container (max-width: 361px) {
+  .compact .header,
+  .compact .item {
+    --w-time: 0px;
+  }
+
+  .compact [data-column='time'] {
+    visibility: hidden;
+    padding: 0;
+  }
 }
 
 /* A row's "⋯" menu: shown on hover, on the selected row, and while open. */

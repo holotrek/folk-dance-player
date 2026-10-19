@@ -45,7 +45,7 @@ describe('listLibrary', () => {
         danceType: null,
         difficulty: null,
         danceCount: 1,
-        label: 'Hora de la Munte | Hora Mare',
+        label: 'Hora Mare ♪ Hora de la Munte',
         playlistItemId: null,
         playlistNumber: null
       }
@@ -159,6 +159,30 @@ describe('listLibrary', () => {
     addLibrarySong(db, { title: 'C', dance: { name: 'C' } })
     expect(titles({ sort: { column: 'country', direction: 'asc' } })).toEqual(['B', 'A', 'C'])
     expect(titles({ sort: { column: 'country', direction: 'desc' } })).toEqual(['A', 'B', 'C'])
+  })
+
+  test('sorts by dance name, then song title, a song with no dance under its own title', () => {
+    addLibrarySong(db, { title: 'Zeta', dance: { name: 'Alunelul' } })
+    addLibrarySong(db, { title: 'Alpha', dance: { name: 'Alunelul' } })
+    addLibrarySong(db, { title: 'Beta' })
+    expect(titles({ sort: { column: 'dance', direction: 'asc' } })).toEqual([
+      'Alpha',
+      'Zeta',
+      'Beta'
+    ])
+    expect(titles({ sort: { column: 'dance', direction: 'desc' } })).toEqual([
+      'Beta',
+      'Alpha',
+      'Zeta'
+    ])
+  })
+
+  test('sorts by artist, keeping songs with none last', () => {
+    addLibrarySong(db, { title: 'A', artist: 'Zoran' })
+    addLibrarySong(db, { title: 'B', artist: 'alma' })
+    addLibrarySong(db, { title: 'C' })
+    expect(titles({ sort: { column: 'artist', direction: 'asc' } })).toEqual(['B', 'A', 'C'])
+    expect(titles({ sort: { column: 'artist', direction: 'desc' } })).toEqual(['A', 'B', 'C'])
   })
 
   test('sorts by duration numerically', () => {

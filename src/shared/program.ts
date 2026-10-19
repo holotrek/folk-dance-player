@@ -15,7 +15,7 @@ export interface Track {
   songId: number
   danceId: number | null
   title: string
-  label: string // "Song | Dance (Choreographer)" (spec §4)
+  label: string // "Dance (Choreographer) ♪ Song" (spec §4)
   parts: LabelParts
   country: string | null
   teacher: string | null

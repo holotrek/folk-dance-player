@@ -18,7 +18,9 @@ export const choreographerCountSql = (songId: string): string => `(
 
 const SORT_SQL: Record<SortColumn, string> = {
   title: 's.title COLLATE NOCASE',
-  dance: 'd.name COLLATE NOCASE',
+  // A song with no dance is shown (and so sorted) under its own title.
+  dance: "COALESCE(NULLIF(trim(d.name), ''), s.title) COLLATE NOCASE",
+  artist: 's.artist COLLATE NOCASE',
   country: 'd.country COLLATE NOCASE',
   teacher: 'dsp.teacher COLLATE NOCASE',
   choreographer: 'd.choreographer COLLATE NOCASE',
@@ -71,13 +73,13 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
     ? 'JOIN playlist_items pi ON pi.file_id = f.id AND pi.playlist_id = ?'
     : ''
   if (playlistId !== null) params.unshift(playlistId)
-  // Sorting by playlist position outside a playlist falls back to title.
+  // Sorting by playlist position outside a playlist falls back to dance.
   // Holding keeps the order songs were placed in (spec §6.2), whatever sort is asked for.
   const holding = query.filter.kind === 'holding'
   const sortExpr = holding
     ? 'fp.holding_position'
     : query.sort.column === 'position' && !playlist
-      ? SORT_SQL.title
+      ? SORT_SQL.dance
       : SORT_SQL[query.sort.column]
   const direction = !holding && query.sort.direction === 'desc' ? 'DESC' : 'ASC'
 

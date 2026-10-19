@@ -79,3 +79,9 @@ Use a Mac whose Music library has local songs and playlists in a folder.
 - [ ] 20. In System Settings → Privacy & Security → Media & Apple Music, turn Folk Dance Player's access off, then choose File → Sync with Apple Music: the Music page says Folk Dance Player isn't allowed to read your Music library, and **Open Privacy Settings** opens that page. (The log shows the helper's error; a 4097 connection error to com.apple.amp.library.framework counts as not allowed.) Turn access back on.
 - [ ] 21. After installing this release over the previous one, does macOS ask for Music access again? If it does, say so in the release notes.
 - [ ] 22. With a song's file on an external drive, unplug the drive and switch back to the app: the song is marked missing (⚠) but is **not** in Removed from Apple Music. (If it is, the helper reports no location for a missing file; report it.)
+
+## I. 0.3.0 labels and columns
+
+- [ ] 23. For a dance whose song has a different name, every list reads `Dance ♪ Song`; Now Playing (control window and projector) shows the dance large with ♪ song smaller below.
+- [ ] 24. On the Program page, narrow the library list step by step: columns disappear completely in the order Artist, Teacher, Choreographer, Country, Time, with no gap left behind, and Dance / Song never does.
+- [ ] 25. On the Music page, the Artist column is next to Dance / Song, and its header sorts.

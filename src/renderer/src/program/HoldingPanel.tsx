@@ -10,7 +10,7 @@ import classes from './ProgramList.module.css'
 const HOLDING = {
   search: '',
   filter: { kind: 'holding' as const },
-  sort: { column: 'title' as const, direction: 'asc' as const } // holding keeps its own order
+  sort: { column: 'dance' as const, direction: 'asc' as const } // holding keeps its own order
 }
 
 // Spec §6.2 holding panel: songs set aside for this session, in the order they were placed.

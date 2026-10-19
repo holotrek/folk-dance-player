@@ -1,7 +1,7 @@
 # Release 0.3.0 — Design
 
 - **Date:** 2026-10-18
-- **Status:** Draft, for the maintainer's review. Nothing in §3 except §3.1 is built.
+- **Status:** Draft, for the maintainer's review. §3.1 (PR #28) is built and ready to merge; §3.2 and §3.3 are built (PR #30). Nothing else in §3 is built.
 - **Extends:** `2026-10-13-folk-dance-player-electron-design.md` (the main spec): §4 Labels, §5.2
   Import mapping, §6 Library and Program pages, §7 Playback, §8 Projector and Canva slides
 - **Ships:** 0.3.0, after 0.2.0 (the first published release) is out
@@ -56,9 +56,9 @@ built on its own.
 
 | # | Change | Where it lives | State |
 |---|--------|----------------|-------|
-| 3.1 | Slide numbers stay right when a Canva deck is edited | Canva service, slide dialog | **Built** in draft PR #28 |
-| 3.2 | One label order: `Dance ♪ Song` | `shared/labels.ts`, lists, Now Playing | Planned |
-| 3.3 | Artist and Choreographer columns | Music table, Program page library | Planned |
+| 3.1 | Slide numbers stay right when a Canva deck is edited | Canva service, slide dialog | **Built** in PR #28 (ready to merge) |
+| 3.2 | One label order: `Dance ♪ Song` | `shared/labels.ts`, lists, Now Playing | Built (Plan 11) |
+| 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
 | 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Planned |
 | 3.5 | "Same as song" for a dance's name | Song editor | Planned |
 | 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Planned |
@@ -68,6 +68,7 @@ built on its own.
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Planned |
 | 3.11 | End Program, then Start New Program | Program list, sidebar | Planned |
 | 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned |
+| 3.13 | Reorder columns in the Music and Program lists | `LibraryTable`, settings | Planned |
 
 ## 3. Details
 
@@ -78,8 +79,8 @@ when linking by page link, and on **Refresh slides**. After a deck was edited in
 showed old numbers and titles, a number could link the wrong slide, and the projector's live view
 (which loads `viewUrl#<saved position>`) could show the wrong slide.
 
-**What PR #28 does** (draft; it was held back from 0.2.0 and needs a rebase onto main after the
-0.2.0 release, so its CHANGELOG line lands under the new Unreleased section):
+**What PR #28 does** (it was held back from 0.2.0 and has been brought up to date with main after
+the 0.2.0 release; its CHANGELOG lines belong under Unreleased → Fixed, not under 0.2.0):
 
 - The **slide dialog** re-reads the decks when it opens. It shows the saved list first with
   "Checking Canva for changes…", then updates; if Canva can't be reached it says so and keeps the
@@ -147,12 +148,17 @@ list is `ALL_COLUMNS` in `library/LibraryTable.tsx`, and the Program page uses `
 the subset named in `COMPACT`. So this is display plus sorting: add `'artist'` to `SortColumn` and
 to the sort in `main/library/list.ts` (`choreographer` already sorts).
 
-**My calls.** Artist goes right after the first column on the Music page; on the Program page the
-list is narrow, so Artist and Choreographer sit after Country and Teacher and truncate with an
+**Decided (2026-10-19).** The Music page's columns are, after Dance / Song, Country, Choreographer,
+Teacher, Artist, Type, Difficulty and Time; the Program page's are Country, Choreographer, Teacher,
+Artist and Time. **My calls.** On the Program page the list is narrow, so its columns truncate with an
 ellipsis (the full text in a tooltip) before the first column ever does. Choreographer here is the
 shown dance's choreographer, as the Music page's column already is.
 
-**Open.** If the Program page list is too cramped at its minimum width, which column yields first?
+**Decided (2026-10-19).** As the Program page list narrows, columns disappear completely in this
+order: **Artist, Teacher, Choreographer, Country, Time**. Dance / Song never collapses. This is
+done in CSS (a container query on the table), so it needs no script; the Music page does not
+collapse columns. With §3.13, the order follows the column, not its position: Artist always
+goes first, wherever the organizer has put it.
 
 ### 3.4 Import mapping chosen per destination
 
@@ -531,6 +537,40 @@ id ignored); setting a held dance; `HoldingPanel` accepting a program-item drag 
 drag with the dance dialog; the Program accepting a Holding drag and the song leaving Holding; the
 other add paths leaving Holding unchanged; the end-to-end `drag()` helper in each direction.
 
+### 3.13 Reorder columns in both lists
+
+**Decided.** The organizer can reorder the columns of the Music page table and of the Program
+page's library list, **except Song / Dance** (named Dance / Song after §3.2), which stays fixed.
+
+**Design (my calls).**
+
+- **What moves.** Every data column: Artist, Country, Teacher, Choreographer, Type, Difficulty
+  and Time, as shown in each list. **What stays:** the favorite star (first), Dance / Song
+  (second), the playlist's `#` and the review list's File columns, and the "⋯" menu (last).
+  Movable columns can sit only between Dance / Song and the "⋯" menu.
+- **How.** Drag a column header to a new place; a line shows where it will land. This uses native
+  HTML5 drag with its own MIME type, like every other drag in the app (AGENTS.md), and
+  `moveBefore` (`library/reorder.ts`) to compute the new order. Clicking a header still sorts.
+  **A keyboard way** is needed for accessibility: with a header focused, Alt+← and Alt+→ move the
+  column (my call; the builder may choose another pair if it clashes).
+- **Each list has its own order,** because they show different columns. They are saved as the
+  settings `library.columns.music` and `library.columns.program`, each a list of column keys
+  (the `key`s added in §3.3). Settings are validated on write and read (AGENTS.md), so an unknown
+  key is dropped and a column missing from a saved list (a new one in a later release) is
+  added at its default place. No migration is needed.
+- **Reset.** A "Reset columns" item in a header's right-click menu restores the default order of
+  that list (my call; the cost is small and an organizer who dragged by mistake needs a way back).
+- **Collapsing (§3.3) follows the column,** not the position, so the Program page still drops
+  Artist first, then Teacher, Choreographer, Country, Time. Reordering never hides a column.
+- **Sort, selection and drag of rows are unaffected.** The sort is stored by column, as today.
+- The grid's column widths follow the column (each column keeps its own width), not the position.
+
+**Tests.** The order reducer (move before another column, to the end, an unknown key dropped, a
+missing key added, Dance / Song and the star unmovable); the settings round trip and its fallback
+on a corrupt value; the header drag with the `drag()` helper in the component tests and the
+end-to-end suite; Alt+arrow; Reset; that the two lists keep separate orders; that the saved order
+is applied at the next start.
+
 ## 4. Data changes
 
 | Migration | Change |
@@ -539,7 +579,7 @@ other add paths leaving Holding unchanged; the end-to-end `drag()` helper in eac
 | `006-import-mapping` | Rewrites the saved import settings from two keys to three (§3.4) |
 | `007-holding-items` | New `holding_items` table (song, dance, position; unique per pair) replacing `file_prefs.in_holding`/`holding_position`; copies existing held songs (§3.12) |
 
-No migration for §3.5 under the recommended design. §3.1 to §3.3 and §3.8 to §3.11 change no tables.
+No migration for §3.5 under the recommended design, or for §3.13 (two new settings keys). §3.1 to §3.3 and §3.8 to §3.11 change no tables.
 Migrations 001 to 004 are untouched. The next number is 005; if another change lands first, these
 take the next free numbers.
 
@@ -551,9 +591,11 @@ file; a startup check can list orphans (optional).
 
 Each item is its own pull request, small enough to review on its own.
 
-1. **§3.1** (draft PR #28): rebase after 0.2.0, then merge.
+1. **§3.1** (PR #28): merge, with its CHANGELOG lines under Unreleased.
 2. **§3.2 and §3.3**: labels and columns touch the same lists and many tests; do them together or
    back to back.
+   **§3.13** follows straight after, in the same area: it needs the column keys that §3.3 adds, and
+   it reuses the same CSS grid.
 3. **§3.4**: independent; a migration and a settings change, so give it its own release note.
 4. **§3.5, §3.6, §3.7**: all in the song editor's dance section; do §3.5 first (smallest), then
    the two attachments sharing one migration (`005`).
@@ -570,8 +612,8 @@ migration and the "copy a file into the app's data folder" helper.
 ## 6. Documentation to update as each lands
 
 - **Main spec:** §4 Labels (§3.2), §5.2 Import mapping (§3.4), §6 Library and Program pages
-  (§3.3, §3.5, §3.8 to §3.12), §8 Projector (§3.2, §3.7, §3.9, §3.10), §8.3 Canva (§3.1, §3.7).
-- **AGENTS.md:** a decision for each of §3.2, §3.4, §3.6/§3.7 (copies in the app data folder,
+  (§3.3, §3.5, §3.8 to §3.13), §8 Projector (§3.2, §3.7, §3.9, §3.10), §8.3 Canva (§3.1, §3.7).
+- **AGENTS.md:** a decision for each of §3.2, §3.13 (saved per list as settings, collapse follows the column), §3.4, §3.6/§3.7 (copies in the app data folder,
   served by ID) and §3.9 (what counts toward the total).
 - **CHANGELOG.md:** a line under Unreleased in the same commit as each user-facing change.
 - **README.md:** the features list when the release is prepared.
@@ -579,7 +621,7 @@ migration and the "copy a file into the app's data folder" helper.
   multi-select drag with real mouse and trackpad; the projector with an image slide and with the
   end time; the import with the new mapping; Previously played staying at the bottom, and the
   projector's list ending just above Now Playing, with a long history; End Program mid-song;
-  dragging between the Program, Holding and the library, in both directions, with a real mouse,
+  reordering columns by drag and by keyboard in both lists, and after a restart; dragging between the Program, Holding and the library, in both directions, with a real mouse,
   and choosing a dance on the way into Holding.
 - **CONTRIBUTING.md:** where backups are described, note that attachments are outside them.
 
@@ -599,7 +641,7 @@ migration and the "copy a file into the app's data folder" helper.
    app window? Is one PDF per dance enough?
 6. **§3.4, old settings.** When an old mapping sent both tags to one field, is "Artist tag wins"
    the right way to convert it? (It only affects someone who set it up that way.)
-7. **§3.2, the choreographer.** Is `Dance (Choreographer) ♪ Song` the right place for it?
+7. ~~**§3.2, the choreographer.**~~ Decided 2026-10-19: `Dance (Choreographer) ♪ Song`.
 8. **§3.10, following the bottom.** Is it right that the control window's list follows new songs
    only while the organizer is at the bottom, or should it always jump to the newest?
 9. **§3.11, a playing song.** End Program lets the song that is playing finish and nothing
