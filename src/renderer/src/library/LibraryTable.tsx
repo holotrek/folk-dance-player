@@ -153,10 +153,11 @@ const MENU_COLUMN: Column = {
   )
 }
 
-// The Program page's library list (spec §6.2): the dance and song, then country, teacher, artist,
-// choreographer and time. As it narrows, the CSS drops columns completely in this order: Artist,
-// Teacher, Choreographer, Country, Time (0.3.0 spec §3.3); the first column never goes.
-const COMPACT_KEYS = ['favorite', 'dance', 'country', 'teacher', 'artist', 'choreographer', 'time']
+// The Program page's library list (spec §6.2): the dance and song, then country,
+// choreographer, teacher, artist and time. As it narrows, the CSS drops columns completely in this
+// order: Artist, Teacher, Choreographer, Country, Time (0.3.0 spec §3.3); the first column never
+// goes.
+const COMPACT_KEYS = ['favorite', 'dance', 'country', 'choreographer', 'teacher', 'artist', 'time']
 const COMPACT_COLUMNS = COMPACT_KEYS.map((k) => ALL_COLUMNS.find((c) => c.key === k)!)
 
 // Spec §6.3: browse, sort, search and select songs; drag them onto playlists or the program.
