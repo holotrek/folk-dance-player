@@ -98,7 +98,7 @@ describe('Music page library table', () => {
     )
   })
 
-  test('has an Artist column right after Dance / Song, which sorts', async () => {
+  test('orders its columns Country, Choreographer, Teacher, Artist, with Time last, and Artist sorts', async () => {
     const fake = setup()
     const header = await screen.findByRole('columnheader', { name: /Artist/ })
     expect(
@@ -106,10 +106,10 @@ describe('Music page library table', () => {
     ).toEqual([
       '',
       'Dance / Song',
-      'Artist',
       'Country',
-      'Teacher',
       'Choreographer',
+      'Teacher',
+      'Artist',
       'Type',
       'Difficulty',
       'Time',

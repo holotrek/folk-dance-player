@@ -148,8 +148,9 @@ list is `ALL_COLUMNS` in `library/LibraryTable.tsx`, and the Program page uses `
 the subset named in `COMPACT`. So this is display plus sorting: add `'artist'` to `SortColumn` and
 to the sort in `main/library/list.ts` (`choreographer` already sorts).
 
-**My calls.** Artist goes right after the first column on the Music page; on the Program page the
-list is narrow, so its columns are, in order, Country, Choreographer, Teacher, Artist and Time (decided 2026-10-19), and they truncate with an
+**Decided (2026-10-19).** The Music page's columns are, after Dance / Song, Country, Choreographer,
+Teacher, Artist, Type, Difficulty and Time; the Program page's are Country, Choreographer, Teacher,
+Artist and Time. **My calls.** On the Program page the list is narrow, so its columns truncate with an
 ellipsis (the full text in a tooltip) before the first column ever does. Choreographer here is the
 shown dance's choreographer, as the Music page's column already is.
 

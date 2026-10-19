@@ -56,20 +56,19 @@ const ALL_COLUMNS: Column[] = [
     )
   },
   {
-    key: 'artist',
-    sort: 'artist',
-    label: 'Artist',
-    width: 'minmax(90px, 1fr)',
-    compactWidth: 'minmax(60px, 1fr)',
-    render: (r) => text(r.artist)
-  },
-  {
     key: 'country',
     sort: 'country',
     label: 'Country',
     width: 'minmax(90px, 1fr)',
     compactWidth: 'minmax(70px, 1fr)',
     render: (r) => text(r.country)
+  },
+  {
+    key: 'choreographer',
+    sort: 'choreographer',
+    label: 'Choreographer',
+    width: 'minmax(110px, 1fr)', // wide enough for its own header and sort arrow
+    render: (r) => text(r.choreographer)
   },
   {
     key: 'teacher',
@@ -80,11 +79,12 @@ const ALL_COLUMNS: Column[] = [
     render: (r) => text(r.teacher)
   },
   {
-    key: 'choreographer',
-    sort: 'choreographer',
-    label: 'Choreographer',
-    width: 'minmax(110px, 1fr)', // wide enough for its own header and sort arrow
-    render: (r) => text(r.choreographer)
+    key: 'artist',
+    sort: 'artist',
+    label: 'Artist',
+    width: 'minmax(90px, 1fr)',
+    compactWidth: 'minmax(60px, 1fr)',
+    render: (r) => text(r.artist)
   },
   {
     key: 'danceType',
