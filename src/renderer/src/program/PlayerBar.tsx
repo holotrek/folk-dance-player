@@ -37,11 +37,18 @@ interface Title {
   after?: string
 }
 
-// The line under the transport: what's playing, the countdown, or what's next (spec §6.2, §7.2).
-function status(player: PlayerState): { title: Title; detail: string | null } {
+// The lines under the transport: what's playing, the countdown, or what's next (spec §6.2, §7.2).
+function status(player: PlayerState): {
+  title: Title
+  song?: string | null
+  detail: string | null
+} {
   const next = nextLabel(player)
   if (player.current) {
-    return { title: { name: player.current.track.label }, detail: player.current.track.country }
+    // Now Playing is the one place a label takes two lines: the dance, then ♪ the song.
+    const { parts, country } = player.current.track
+    const dance = parts.choreographer ? `${parts.dance} (${parts.choreographer})` : parts.dance
+    return { title: { name: dance }, song: parts.song, detail: country }
   }
   if (player.countdown) {
     const n = player.countdown.secondsLeft
@@ -128,7 +135,7 @@ export default function PlayerBar(): React.JSX.Element {
   const autoShow = useAutoShow(api)
   const [seeking, setSeeking] = useState<number | null>(null)
 
-  const { title, detail } = status(player)
+  const { title, song, detail } = status(player)
   const playing = player.status === 'playing'
   const loaded = player.current !== null
   const canStart = player.status !== 'idle' || player.nextUp !== null
@@ -198,6 +205,11 @@ export default function PlayerBar(): React.JSX.Element {
               </Badge>
             )}
           </Group>
+          {song && (
+            <Text size="sm" c="dimmed" className={classes.label} data-testid="player-song">
+              ♪ {song}
+            </Text>
+          )}
           {detail && (
             <Text size="sm" c="dimmed" className={classes.label}>
               {detail}
