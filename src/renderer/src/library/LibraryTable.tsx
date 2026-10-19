@@ -4,7 +4,15 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
 import FavoriteToggle from './FavoriteToggle'
-import { carriesFiles, getDraggedFiles, setDraggedFiles } from './drag'
+import { moveColumn } from './column-order'
+import {
+  carriesColumn,
+  carriesFiles,
+  getDraggedColumn,
+  getDraggedFiles,
+  setDraggedColumn,
+  setDraggedFiles
+} from './drag'
 import { useColumnOrder } from './useColumnOrder'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
@@ -182,7 +190,9 @@ export default function LibraryTable({
   // The Program page's library list (spec §6.2) shows fewer columns than the Music page's table. As
   // it narrows, the CSS drops columns completely in this order, wherever they are: Artist, Teacher,
   // Choreographer, Country, Time (0.3.0 spec §3.3); the first column never goes.
-  const { order } = useColumnOrder(api, compact ? 'program' : 'music')
+  const { order, save } = useColumnOrder(api, compact ? 'program' : 'music')
+  // Where a dragged column would land: before this column key, or at the end.
+  const [landing, setLanding] = useState<string | 'end' | null>(null)
   const COLUMNS = [
     ...(inPlaylist ? [NUMBER_COLUMN] : []),
     ...[...FIXED_FIRST, ...order].map(columnByKey),
@@ -224,6 +234,11 @@ export default function LibraryTable({
     void setSort({ column, direction })
   }
 
+  // A header dropped on: a movable column lands before it; the star, Dance / Song and # mean the
+  // first data column; the File and ⋯ headers mean the end.
+  const landingFor = (key: string): string | 'end' =>
+    order.includes(key) ? key : FIXED_FIRST.includes(key) || key === 'number' ? order[0] : 'end'
+
   // Moves the dropped songs before `target`, or to the end when it is null.
   const dropOn = (target: LibraryRow | null, fileIds: number[]): void => {
     if (filter.kind !== 'playlist') return
@@ -254,6 +269,31 @@ export default function LibraryTable({
             key={c.key}
             role="columnheader"
             data-column={c.key}
+            className={
+              landing === c.key
+                ? classes.dropColumn
+                : landing === 'end' && c.key === order.at(-1)
+                  ? classes.dropColumnEnd
+                  : undefined
+            }
+            draggable={order.includes(c.key)}
+            onDragStart={(e) => order.includes(c.key) && setDraggedColumn(e.dataTransfer, c.key)}
+            onDragOver={(e) => {
+              if (!carriesColumn(e.dataTransfer)) return
+              e.preventDefault()
+              setLanding(landingFor(c.key))
+            }}
+            onDragLeave={() => setLanding(null)}
+            onDragEnd={() => setLanding(null)}
+            onDrop={(e) => {
+              const dragged = getDraggedColumn(e.dataTransfer)
+              setLanding(null)
+              if (!dragged) return
+              e.preventDefault()
+              const target = landingFor(c.key)
+              const next = moveColumn(order, dragged, target === 'end' ? null : target)
+              if (next.join() !== order.join()) save(next)
+            }}
             aria-sort={
               c.sort && sort.column === c.sort
                 ? sort.direction === 'asc'

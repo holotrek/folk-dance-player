@@ -1,8 +1,9 @@
-import { screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import type { PlaylistSummary } from '@shared/library'
 import type { Settings } from '@shared/settings'
+import { COLUMN_MIME, FILES_MIME } from '@renderer/library/drag'
 import Sidebar from '@renderer/components/Sidebar'
 import MusicPage from '@renderer/pages/MusicPage'
 import ProgramPage from '@renderer/pages/ProgramPage'
@@ -150,5 +151,132 @@ describe('saved column orders', () => {
     await userEvent.click(await screen.findByText('Couple dances'))
     await waitFor(() => expect(headers().slice(0, 3)).toEqual(['#', '', 'Dance / Song']))
     expect(headers().slice(3, 5)).toEqual(['Time', 'Artist'])
+  })
+})
+
+// A DataTransfer that remembers what a drag put in it.
+function dataTransfer(initial: Record<string, string> = {}) {
+  const data = new Map(Object.entries(initial))
+  return {
+    get types() {
+      return [...data.keys()]
+    },
+    setData: (type: string, value: string) => void data.set(type, value),
+    getData: (type: string) => data.get(type) ?? '',
+    effectAllowed: 'uninitialized'
+  }
+}
+
+const header = (name: string): HTMLElement =>
+  within(screen.getByRole('table', { name: 'Songs' })).getByRole('columnheader', {
+    name: new RegExp(`^${name}`)
+  })
+
+// Drags the column under `from`'s header onto `to`'s header.
+function dragColumn(from: string, to: string): void {
+  const dt = dataTransfer()
+  fireEvent.dragStart(header(from), { dataTransfer: dt })
+  fireEvent.dragOver(header(to), { dataTransfer: dt })
+  fireEvent.drop(header(to), { dataTransfer: dt })
+}
+
+const savedOrder = (fake: ReturnType<typeof setup>, key: string): unknown[] | undefined =>
+  fake.callsTo('settings:set').find((c) => c[0] === key)?.[1] as unknown[] | undefined
+
+describe('dragging a column header', () => {
+  test('Artist onto Country moves it before Country, and saves the order', async () => {
+    const fake = setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    dragColumn('Artist', 'Country')
+    await waitFor(() =>
+      expect(headers().slice(1, 5)).toEqual(['Dance / Song', 'Artist', 'Country', 'Choreographer'])
+    )
+    expect(savedOrder(fake, 'library.columns.music')).toEqual([
+      'artist',
+      'country',
+      'choreographer',
+      'teacher',
+      'danceType',
+      'difficulty',
+      'time'
+    ])
+  })
+
+  test('onto Dance / Song makes it the first data column', async () => {
+    setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    dragColumn('Time', 'Dance / Song')
+    await waitFor(() => expect(headers()[2]).toBe('Time'))
+  })
+
+  test('onto the ⋯ header moves it to the end', async () => {
+    setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    const dt = dataTransfer()
+    fireEvent.dragStart(header('Country'), { dataTransfer: dt })
+    const menu = within(screen.getByRole('table', { name: 'Songs' }))
+      .getAllByRole('columnheader')
+      .at(-1)!
+    fireEvent.dragOver(menu, { dataTransfer: dt })
+    fireEvent.drop(menu, { dataTransfer: dt })
+    await waitFor(() => expect(headers().slice(-3)).toEqual(['Time', 'Country', '']))
+  })
+
+  test('onto itself changes and saves nothing', async () => {
+    const fake = setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    dragColumn('Teacher', 'Teacher')
+    expect(headers()).toEqual(MUSIC_DEFAULT)
+    expect(fake.callsTo('settings:set')).toEqual([])
+  })
+
+  test('the Program page saves its own list', async () => {
+    const fake = setup('program')
+    await waitFor(() => expect(headers()).toContain('Artist'))
+    dragColumn('Time', 'Country')
+    await waitFor(() => expect(headers()[2]).toBe('Time'))
+    expect(savedOrder(fake, 'library.columns.program')).toEqual([
+      'time',
+      'country',
+      'choreographer',
+      'teacher',
+      'artist'
+    ])
+    expect(savedOrder(fake, 'library.columns.music')).toBeUndefined()
+  })
+
+  test('Dance / Song and the ⋯ header are not draggable', async () => {
+    setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    expect(header('Dance / Song')).not.toHaveAttribute('draggable', 'true')
+    const last = within(screen.getByRole('table', { name: 'Songs' }))
+      .getAllByRole('columnheader')
+      .at(-1)!
+    expect(last).not.toHaveAttribute('draggable', 'true')
+    expect(header('Artist')).toHaveAttribute('draggable', 'true')
+  })
+
+  test('a song dragged over a header is not accepted', async () => {
+    setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    const notPrevented = fireEvent.dragOver(header('Country'), {
+      dataTransfer: dataTransfer({ [FILES_MIME]: '[1]' })
+    })
+    expect(notPrevented).toBe(true) // fireEvent returns false when preventDefault was called
+    const prevented = fireEvent.dragOver(header('Country'), {
+      dataTransfer: dataTransfer({ [COLUMN_MIME]: 'artist' })
+    })
+    expect(prevented).toBe(false)
+  })
+
+  test('a click still sorts', async () => {
+    const fake = setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    await userEvent.click(within(header('Artist')).getByRole('button'))
+    await waitFor(() =>
+      expect(fake.callsTo('library:list').at(-1)![0]).toMatchObject({
+        sort: { column: 'artist', direction: 'asc' }
+      })
+    )
   })
 })

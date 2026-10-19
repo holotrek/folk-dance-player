@@ -81,6 +81,15 @@
   box-shadow: inset 0 2px 0 var(--mantine-primary-color-filled);
 }
 
+/* A column header being dragged onto: a line where the column would land. */
+.dropColumn {
+  box-shadow: inset 2px 0 0 var(--mantine-primary-color-filled);
+}
+
+.dropColumnEnd {
+  box-shadow: inset -2px 0 0 var(--mantine-primary-color-filled);
+}
+
 /* The Program page's list (compact) drops columns completely as it narrows, in this order:
    Artist, Teacher, Choreographer, Country, Time. Each breakpoint is the width at which the
    columns still shown, with the # column of a playlist, no longer fit their minimums. */
