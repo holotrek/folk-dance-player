@@ -233,11 +233,7 @@ export default function LibraryTable({
 
   return (
     <div
-      className={[
-        classes.table,
-        compact ? classes.compact : '',
-        inPlaylist ? classes.numbered : ''
-      ].join(' ')}
+      className={[classes.table, compact ? classes.compact : ''].join(' ')}
       role="table"
       aria-label="Songs"
       aria-rowcount={rows.length}
