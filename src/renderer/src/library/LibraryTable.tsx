@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Group, Text, UnstyledButton } from '@mantine/core'
+import { Badge, Group, Menu, Text, UnstyledButton } from '@mantine/core'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
 import FavoriteToggle from './FavoriteToggle'
-import { moveColumn } from './column-order'
+import { MOVABLE, moveColumn, nudgeColumn } from './column-order'
 import {
   carriesColumn,
   carriesFiles,
@@ -190,7 +190,11 @@ export default function LibraryTable({
   // The Program page's library list (spec §6.2) shows fewer columns than the Music page's table. As
   // it narrows, the CSS drops columns completely in this order, wherever they are: Artist, Teacher,
   // Choreographer, Country, Time (0.3.0 spec §3.3); the first column never goes.
-  const { order, save } = useColumnOrder(api, compact ? 'program' : 'music')
+  const list = compact ? 'program' : 'music'
+  const { order, save, reset } = useColumnOrder(api, list)
+  const isDefaultOrder = order.join() === MOVABLE[list].join()
+  // A right-click on a header opens "Reset columns" where it was clicked.
+  const [menuAt, setMenuAt] = useState<{ x: number; y: number } | null>(null)
   // Where a dragged column would land: before this column key, or at the end.
   const [landing, setLanding] = useState<string | 'end' | null>(null)
   const COLUMNS = [
@@ -263,7 +267,39 @@ export default function LibraryTable({
         }
       }}
     >
-      <div className={classes.header} role="row" style={{ gridTemplateColumns: template }}>
+      <Menu
+        opened={menuAt !== null}
+        onChange={(open) => !open && setMenuAt(null)}
+        position="bottom-start"
+        withinPortal
+      >
+        <Menu.Target>
+          <span
+            aria-hidden
+            style={{
+              position: 'fixed',
+              left: menuAt?.x ?? 0,
+              top: menuAt?.y ?? 0,
+              width: 0,
+              height: 0
+            }}
+          />
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Item disabled={isDefaultOrder} onClick={reset}>
+            Reset columns
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
+      <div
+        className={classes.header}
+        role="row"
+        style={{ gridTemplateColumns: template }}
+        onContextMenu={(e) => {
+          e.preventDefault()
+          setMenuAt({ x: e.clientX, y: e.clientY })
+        }}
+      >
         {COLUMNS.map((c) => (
           <div
             key={c.key}
@@ -303,7 +339,19 @@ export default function LibraryTable({
             }
           >
             {c.sort ? (
-              <UnstyledButton fz="sm" fw={600} onClick={() => onHeader(c.sort!)}>
+              <UnstyledButton
+                fz="sm"
+                fw={600}
+                onClick={() => onHeader(c.sort!)}
+                // Alt+←/→ moves the column (0.3.0 spec §3.13); the button keeps the focus.
+                onKeyDown={(e) => {
+                  if (!e.altKey || !order.includes(c.key)) return
+                  if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+                  e.preventDefault()
+                  const next = nudgeColumn(order, c.key, e.key === 'ArrowLeft' ? -1 : 1)
+                  if (next.join() !== order.join()) save(next)
+                }}
+              >
                 {c.label}
                 {sort.column === c.sort ? (sort.direction === 'asc' ? ' ▲' : ' ▼') : ''}
               </UnstyledButton>

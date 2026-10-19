@@ -280,3 +280,62 @@ describe('dragging a column header', () => {
     )
   })
 })
+
+describe('moving columns with the keyboard, and Reset columns', () => {
+  const focusHeader = (name: string): HTMLElement => {
+    const button = within(header(name)).getByRole('button')
+    button.focus()
+    return button
+  }
+
+  test('Alt+ArrowRight moves the focused column one place right, and focus stays on it', async () => {
+    const fake = setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    const button = focusHeader('Choreographer')
+    await userEvent.keyboard('{Alt>}{ArrowRight}{/Alt}')
+    await waitFor(() =>
+      expect(headers().slice(2, 5)).toEqual(['Country', 'Teacher', 'Choreographer'])
+    )
+    expect(within(header('Choreographer')).getByRole('button')).toBe(button)
+    expect(button).toHaveFocus()
+    expect(savedOrder(fake, 'library.columns.music')?.slice(0, 3)).toEqual([
+      'country',
+      'teacher',
+      'choreographer'
+    ])
+  })
+
+  test('Alt+ArrowLeft on the first data column changes nothing', async () => {
+    const fake = setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    focusHeader('Country')
+    await userEvent.keyboard('{Alt>}{ArrowLeft}{/Alt}')
+    expect(headers()).toEqual(MUSIC_DEFAULT)
+    expect(fake.callsTo('settings:set')).toEqual([])
+  })
+
+  test('plain arrow keys do not move columns', async () => {
+    const fake = setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    focusHeader('Teacher')
+    await userEvent.keyboard('{ArrowRight}')
+    expect(headers()).toEqual(MUSIC_DEFAULT)
+    expect(fake.callsTo('settings:set')).toEqual([])
+  })
+
+  test('right-click on a header offers Reset columns, which saves an empty order', async () => {
+    const fake = setup('music', { 'library.columns.music': TIME_ARTIST_FIRST })
+    await waitFor(() => expect(headers()[2]).toBe('Time'))
+    fireEvent.contextMenu(header('Artist'), { clientX: 20, clientY: 20 })
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Reset columns' }))
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    expect(savedOrder(fake, 'library.columns.music')).toEqual([])
+  })
+
+  test('Reset columns is disabled when the order is already the default', async () => {
+    setup('music')
+    await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
+    fireEvent.contextMenu(header('Country'), { clientX: 20, clientY: 20 })
+    expect(await screen.findByRole('menuitem', { name: 'Reset columns' })).toBeDisabled()
+  })
+})
