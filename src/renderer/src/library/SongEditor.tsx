@@ -291,7 +291,13 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
               onSave={(notes) => run(() => api.invoke('library:updateDance', d.danceId, { notes }))}
             />
             <NotesPdfField danceId={d.danceId} pdf={d.notesPdf} />
-            <DanceSlideField danceId={d.danceId} danceName={d.name} slide={d.slide} />
+            <DanceSlideField
+              danceId={d.danceId}
+              danceName={d.name}
+              slide={d.slide}
+              image={d.slideImage}
+              shows={d.slideShows}
+            />
           </Stack>
         </Paper>
       ))}

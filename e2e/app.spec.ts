@@ -194,6 +194,49 @@ test('a PDF can be attached to a dance and removed from the editor', async () =>
   }
 })
 
+test('a slide image is attached, and the projector snapshot carries it', async () => {
+  // A tiny PNG (its signature is what the app checks); the file dialog is replaced by the variable.
+  const folder = mkdtempSync(join(tmpdir(), 'fdp-image-'))
+  const png = join(folder, 'Hora slide.png')
+  writeFileSync(
+    png,
+    Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32)])
+  )
+  type Snapshot = { middle: { slide?: { kind: string; imageUrl: string } } | null }
+  try {
+    await running.app.close()
+    running = await launch(space.userData, { FDP_PICK_ATTACHMENT: png })
+    const { page, invoke } = running
+    await page.getByRole('tab', { name: 'Music' }).click()
+    await libraryRow('Hora').click()
+    await page.getByRole('button', { name: 'Upload image…' }).click()
+    await expect(page.getByText('Hora slide.png')).toBeVisible()
+    await expect(page.getByRole('img', { name: 'Image for Hora' })).toBeVisible()
+    expect(readdirSync(join(space.userData, 'slide-images'))).toHaveLength(1)
+    // With one source there is nothing to choose.
+    await expect(page.getByRole('radiogroup', { name: 'Show on the projector' })).toHaveCount(0)
+
+    await page.getByRole('tab', { name: 'Program' }).click()
+    await drag(page, libraryRow('Hora'), page.getByRole('region', { name: 'Program' }))
+    await expect
+      .poll(async () => (await invoke<Snapshot>('projector:getSnapshot')).middle?.slide)
+      .toMatchObject({
+        kind: 'image',
+        imageUrl: expect.stringContaining('fdp-media://dance-image/')
+      })
+
+    await page.getByRole('tab', { name: 'Music' }).click()
+    await libraryRow('Hora').click()
+    await page.getByRole('button', { name: 'Remove image' }).click()
+    await expect
+      .poll(async () => (await invoke<Snapshot>('projector:getSnapshot')).middle?.slide)
+      .toBeUndefined()
+    expect(readdirSync(join(space.userData, 'slide-images'))).toEqual([])
+  } finally {
+    rmSync(folder, { recursive: true, force: true })
+  }
+})
+
 test('Settings… in the app menu opens the Settings page', async () => {
   await running.app.evaluate(({ Menu }) => {
     const app = Menu.getApplicationMenu()!.items[0].submenu!

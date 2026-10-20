@@ -20,6 +20,8 @@ const dance = (over: Partial<SongDetail['dances'][number]> = {}): SongDetail['da
   isDefault: true,
   sameAsSong: false,
   notesPdf: null,
+  slideImage: null,
+  slideShows: null,
   label: 'Lesnoto ♪ Song',
   slide: null,
   ...over
