@@ -1,5 +1,6 @@
 import { basename, extname } from 'path'
 import type { ImportMapping } from '@shared/import'
+import type { TagSource } from '@shared/settings'
 
 export type { ImportMapping }
 
@@ -26,25 +27,19 @@ const clean = (value: string | null): string | null => {
 // Spec §5.2: applied once when a song and its dance are created (and by "Re-apply mapping").
 export function mapTags(tags: RawTags, path: string, mapping: ImportMapping): MappedTags {
   const title = clean(tags.title) ?? basename(path, extname(path))
-  const routed: Record<'artist' | 'teacher' | 'choreographer', string | null> = {
-    artist: null,
-    teacher: null,
-    choreographer: null
-  }
-  // The artist tag is applied first, so it wins when both tags target the same field.
-  for (const [value, target] of [
-    [clean(tags.artist), mapping.artistTagTarget],
-    [clean(tags.albumArtist), mapping.albumArtistTagTarget]
-  ] as const) {
-    if (value && target !== 'ignore' && routed[target] === null) routed[target] = value
-  }
+  const from = (source: TagSource): string | null =>
+    source === 'artistTag'
+      ? clean(tags.artist)
+      : source === 'albumArtistTag'
+        ? clean(tags.albumArtist)
+        : null
   return {
-    song: { title, artist: routed.artist },
+    song: { title, artist: from(mapping.artistFrom) },
     dance: {
       name: title,
       country: mapping.genreIsCountry ? clean(tags.genre) : null,
-      choreographer: routed.choreographer
+      choreographer: from(mapping.choreographerFrom)
     },
-    teacher: routed.teacher
+    teacher: from(mapping.teacherFrom)
   }
 }

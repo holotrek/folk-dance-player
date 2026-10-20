@@ -7,6 +7,8 @@ import type {
   ImportMapping,
   ImportProgress
 } from '@shared/import'
+import { mappingFromSettings, mappingSettings } from '@shared/import'
+import type { SettingKey } from '@shared/settings'
 import { errorMessage } from '../ipc-error'
 
 export type AppleSyncFlowState =
@@ -75,11 +77,7 @@ export function useAppleSyncFlow(api: RendererApi) {
         api.invoke('settings:getAll')
       ])
       if (!live()) return
-      setMapping({
-        artistTagTarget: settings['import.artistTagTarget'],
-        albumArtistTagTarget: settings['import.albumArtistTagTarget'],
-        genreIsCountry: settings['import.genreIsCountry']
-      })
+      setMapping(mappingFromSettings(settings))
       if (result.ok && result.otherLibrary)
         setState({ step: 'otherLibrary', preview: result.preview, conflicts: result.conflicts })
       else if (result.ok)
@@ -90,13 +88,9 @@ export function useAppleSyncFlow(api: RendererApi) {
     // The mapping is saved for every sync and import (main spec §5.2).
     confirmMapping: guarded(async (live, conflicts: ApplePlaylistConflict[]) => {
       if (mapping) {
-        await api.invoke('settings:set', 'import.artistTagTarget', mapping.artistTagTarget)
-        await api.invoke(
-          'settings:set',
-          'import.albumArtistTagTarget',
-          mapping.albumArtistTagTarget
-        )
-        await api.invoke('settings:set', 'import.genreIsCountry', mapping.genreIsCountry)
+        for (const [key, value] of Object.entries(mappingSettings(mapping))) {
+          await api.invoke('settings:set', key as SettingKey, value)
+        }
       }
       if (!live()) return
       if (conflicts.length > 0) setState({ step: 'decisions', conflicts })

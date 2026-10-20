@@ -61,7 +61,7 @@ describe("the Music page's Apple Music controls (sync spec §6.1)", () => {
     await user.click(within(dialog).getByRole('button', { name: 'Start sync' }))
     expect(await within(dialog).findByText('Added (1)')).toBeInTheDocument()
     expect(fake.callsTo('appleSync:enable')).toEqual([[{}]])
-    expect(fake.callsTo('settings:set').map((c) => c[0])).toContain('import.artistTagTarget')
+    expect(fake.callsTo('settings:set').map((c) => c[0])).toContain('import.artistFrom')
     await user.click(within(dialog).getByRole('button', { name: 'Done' }))
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   })

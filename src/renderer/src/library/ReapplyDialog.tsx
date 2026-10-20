@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Button, Group, Modal, Stack, Text } from '@mantine/core'
-import type { ImportMapping } from '@shared/import'
+import { mappingFromSettings, type ImportMapping } from '@shared/import'
 import type { SongTags } from '@shared/library'
 import ImportMappingFields from '../import/ImportMappingFields'
 import TagPreviewTable from '../import/TagPreviewTable'
@@ -29,11 +29,7 @@ export default function ReapplyDialog(props: {
     setTags([])
     void api.invoke('settings:getAll').then((settings) => {
       if (!current) return
-      setMapping({
-        artistTagTarget: settings['import.artistTagTarget'],
-        albumArtistTagTarget: settings['import.albumArtistTagTarget'],
-        genreIsCountry: settings['import.genreIsCountry']
-      })
+      setMapping(mappingFromSettings(settings))
     })
     void api.invoke('library:songTags', songIds.slice(0, SHOWN_TAGS)).then((t) => {
       if (current) setTags(t)

@@ -10,8 +10,9 @@ import { addDance, link, songView } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 
 const mapping: ImportMapping = {
-  artistTagTarget: 'artist',
-  albumArtistTagTarget: 'teacher',
+  artistFrom: 'artistTag',
+  teacherFrom: 'albumArtistTag',
+  choreographerFrom: 'ignore',
   genreIsCountry: true
 }
 const fromFiles: SaveContext = { source: 'files', applePersistentId: null, mapping }

@@ -103,8 +103,18 @@ describe('SettingsPage', () => {
   test('saves the import mapping defaults', async () => {
     const { api, calls } = fakeApi()
     renderWithMantine(<SettingsPage api={api} />)
-    await userEvent.click(await screen.findByRole('radio', { name: 'Album Artist → Teacher' }))
-    expect(calls).toContainEqual(['settings:set', 'import.albumArtistTagTarget', 'teacher'])
+    await userEvent.click(
+      await screen.findByRole('radio', { name: 'Teacher from Album Artist tag' })
+    )
+    expect(calls).toContainEqual(['settings:set', 'import.teacherFrom', 'albumArtistTag'])
+  })
+
+  test('shows each destination with one source and the defaults', async () => {
+    const { api } = fakeApi()
+    renderWithMantine(<SettingsPage api={api} />)
+    expect(await screen.findByRole('radio', { name: 'Artist from Artist tag' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Teacher from Ignore' })).toBeChecked()
+    expect(screen.getByRole('radio', { name: 'Choreographer from Ignore' })).toBeChecked()
   })
 
   test('edits the dance-type suggestions', async () => {

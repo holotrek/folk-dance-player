@@ -59,7 +59,7 @@ built on its own.
 | 3.1 | Slide numbers stay right when a Canva deck is edited | Canva service, slide dialog | **Built** in PR #28 (ready to merge) |
 | 3.2 | One label order: `Dance ♪ Song` | `shared/labels.ts`, lists, Now Playing | Built (Plan 11) |
 | 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
-| 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Planned |
+| 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Built (Plan 13) |
 | 3.5 | "Same as song" for a dance's name | Song editor | Planned |
 | 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Planned |
 | 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Planned |
@@ -69,6 +69,7 @@ built on its own.
 | 3.11 | End Program, then Start New Program | Program list, sidebar | Planned |
 | 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned |
 | 3.13 | Reorder columns in the Music and Program lists | `LibraryTable`, settings | Built (Plan 12) |
+| 3.14 | Quick-set a field from the song's own tags | Song editor | **To investigate** |
 
 ## 3. Details
 
@@ -571,16 +572,56 @@ on a corrupt value; the header drag with the `drag()` helper in the component te
 end-to-end suite; Alt+arrow; Reset; that the two lists keep separate orders; that the saved order
 is applied at the next start.
 
+### 3.14 Quick-set a field from the song's own tags (to investigate)
+
+**Idea (the maintainer's).** Because the mapping is not stored per song, an organizer who picked
+the wrong mapping at import, or never saw the choice, has to retype a value that is already in the
+file. In the song editor, a field that has **not been changed by hand** could offer a small
+dropdown of the values the song's tags hold (the Artist tag, the Album Artist tag, and for Country
+the Genre tag) so one click fills Artist, Teacher or Choreographer.
+
+**What is stored today (so the question can be answered).** No mapping is kept per song (main spec
+§5.2: "Mapping is applied once ... not stored per song"; this stays decided). What *is* kept is the
+raw material: the song's file row holds its raw tags (`files.tag_title`, `tag_artist`,
+`tag_album_artist`, `tag_genre`, written by every import and every Apple Music sync), which
+Re-apply mapping and the sync's tag rule already read. For a synced song, `files.sync_baseline`
+also holds the values the last sync wrote. So the quick-set needs no new data, only a way to
+show it.
+
+**To investigate before deciding.**
+
+- **"Not changed yet".** How to tell. Candidates: the field is empty; or it equals what the
+  saved mapping would produce from the raw tags now; or (for a synced song) it equals the sync
+  baseline. A field the organizer typed must never be offered for overwrite without them asking;
+  the offer is a convenience for untouched fields only.
+- **Which fields and where.** Artist (the Song section), and Teacher (on the dance-song pairing)
+  and Choreographer (on the dance) in each dance card. A dance shared with other songs applies
+  an edit to all of them, so the offer likely stays off for a shared dance's choreographer, as
+  Re-apply already skips it.
+- **Interaction with Apple Music sync.** A value set here is an edit, so the sync's baseline rule
+  already protects it from being overwritten later; check that choosing a tag value never writes
+  the baseline.
+- **Interaction with Re-apply mapping.** Re-apply stays the bulk tool (many songs, a mapping
+  for the run); this is the one-song shortcut. Check they do not offer contradictory things.
+- **Surface.** A small dropdown beside the field listing the distinct non-empty tag values with
+  their tag names ("Album Artist: Sonia Dion"), or a "Use tag…" menu; and whether it should be
+  hidden once the field has a value that matches none of them.
+- **Cost.** Probably small (display and a normal edit through the existing patch channels);
+  confirm before planning.
+
+**Outcome wanted.** A recommendation (build it, or not, and the exact rule for "not changed")
+for the maintainer to decide, before any plan is written.
+
 ## 4. Data changes
 
 | Migration | Change |
 |-----------|--------|
-| `005-dance-attachments` | `dance_prefs`: `notes_pdf_name`, `notes_pdf_path`, `slide_image_name`, `slide_image_path`, `slide_source` (§3.6, §3.7) |
-| `006-import-mapping` | Rewrites the saved import settings from two keys to three (§3.4) |
+| `005-import-mapping` | Rewrites the saved import settings from two keys to three (§3.4); built |
+| `006-dance-attachments` | `dance_prefs`: `notes_pdf_name`, `notes_pdf_path`, `slide_image_name`, `slide_image_path`, `slide_source` (§3.6, §3.7) |
 | `007-holding-items` | New `holding_items` table (song, dance, position; unique per pair) replacing `file_prefs.in_holding`/`holding_position`; copies existing held songs (§3.12) |
 
 No migration for §3.5 under the recommended design, or for §3.13 (two new settings keys). §3.1 to §3.3 and §3.8 to §3.11 change no tables.
-Migrations 001 to 004 are untouched. The next number is 005; if another change lands first, these
+Migrations 001 to 005 are untouched (005 is the import mapping). The next number is 006; if another change lands first, these
 take the next free numbers.
 
 Files the app now writes outside the database: `dance-notes/` and `slide-images/` in the app data
@@ -598,12 +639,14 @@ Each item is its own pull request, small enough to review on its own.
    it reuses the same CSS grid.
 3. **§3.4**: independent; a migration and a settings change, so give it its own release note.
 4. **§3.5, §3.6, §3.7**: all in the song editor's dance section; do §3.5 first (smallest), then
-   the two attachments sharing one migration (`005`).
+   the two attachments sharing one migration (`006`).
 5. **§3.8, §3.9**: both in the Program page; §3.9's header line should land after §3.8 so the
    header is arranged once.
 6. **§3.10, §3.11**: small and independent; §3.10 is a good first change if a quick win is wanted.
    §3.11 adds a header button, so land it with or before §3.9 so the header is arranged once.
-7. **§3.12**: after §3.8 (the drag then carries a selection). It has a migration (`007`), three
+7. **§3.14** (after the investigation, if it goes ahead): after §3.4 and §3.5, in the same editor
+   section; it needs no migration.
+8. **§3.12**: after §3.8 (the drag then carries a selection). It has a migration (`007`), three
    channels, and changes the Holding panel and the Program list, so give it its own pull request.
 
 Dependencies: §3.2 before §3.5 (it changes the labels the editor shows); §3.6 and §3.7 share the
@@ -639,10 +682,11 @@ migration and the "copy a file into the app's data folder" helper.
    right default until the toggle is used?
 5. **§3.6, the PDF.** Is opening it in the system's PDF viewer acceptable, or should it open in an
    app window? Is one PDF per dance enough?
-6. **§3.4, old settings.** When an old mapping sent both tags to one field, is "Artist tag wins"
-   the right way to convert it? (It only affects someone who set it up that way.)
+6. ~~**§3.4, old settings.**~~ Decided 2026-10-19: where an old mapping sent both tags to one field, the Artist tag keeps it.
 7. ~~**§3.2, the choreographer.**~~ Decided 2026-10-19: `Dance (Choreographer) ♪ Song`.
 8. **§3.10, following the bottom.** Is it right that the control window's list follows new songs
    only while the organizer is at the bottom, or should it always jump to the newest?
 9. **§3.11, a playing song.** End Program lets the song that is playing finish and nothing
    follows. Is that right, or should it ask first (or stop the music) when a song is playing?
+10. **§3.14, the quick-set.** Worth building? What counts as "not changed yet" (empty, equal to
+    the current mapping's value, or equal to the sync baseline)? See the investigation list in §3.14.

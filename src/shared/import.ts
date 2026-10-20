@@ -1,12 +1,34 @@
 // Types shared by the import pipeline (main + renderer). Spec §5.
-import type { TagTarget } from './settings'
+import type { Settings, TagSource } from './settings'
 
-// The import mapping settings (spec §5.2), shown and editable before every import.
+// The import mapping settings (spec §5.2), shown and editable before every import: for each
+// destination, which tag fills it. A tag may feed several fields; a field has one source.
 export interface ImportMapping {
-  artistTagTarget: TagTarget
-  albumArtistTagTarget: TagTarget
+  artistFrom: TagSource
+  teacherFrom: TagSource
+  choreographerFrom: TagSource
   genreIsCountry: boolean
 }
+
+export const mappingFromSettings = (s: Settings): ImportMapping => ({
+  artistFrom: s['import.artistFrom'],
+  teacherFrom: s['import.teacherFrom'],
+  choreographerFrom: s['import.choreographerFrom'],
+  genreIsCountry: s['import.genreIsCountry']
+})
+
+// The settings a mapping is saved as.
+export const mappingSettings = (
+  m: ImportMapping
+): Pick<
+  Settings,
+  'import.artistFrom' | 'import.teacherFrom' | 'import.choreographerFrom' | 'import.genreIsCountry'
+> => ({
+  'import.artistFrom': m.artistFrom,
+  'import.teacherFrom': m.teacherFrom,
+  'import.choreographerFrom': m.choreographerFrom,
+  'import.genreIsCountry': m.genreIsCountry
+})
 
 export type AppleSelection = { mode: 'all' } | { mode: 'playlists'; persistentIds: string[] }
 

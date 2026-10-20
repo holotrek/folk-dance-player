@@ -1,32 +1,31 @@
 import { Group, Radio, Stack, Switch } from '@mantine/core'
 import type { ImportMapping } from '@shared/import'
-import type { TagTarget } from '@shared/settings'
+import type { TagSource } from '@shared/settings'
 
-const TARGETS: { value: TagTarget; label: string }[] = [
-  { value: 'artist', label: 'Artist' },
-  { value: 'teacher', label: 'Teacher' },
-  { value: 'choreographer', label: 'Choreographer' },
+const SOURCES: { value: TagSource; label: string }[] = [
+  { value: 'artistTag', label: 'Artist tag' },
+  { value: 'albumArtistTag', label: 'Album Artist tag' },
   { value: 'ignore', label: 'Ignore' }
 ]
 
-function TargetChoice(props: {
-  tag: string
-  value: TagTarget
-  onChange: (value: TagTarget) => void
+function SourceChoice(props: {
+  destination: string
+  value: TagSource
+  onChange: (value: TagSource) => void
 }): React.JSX.Element {
   return (
     <Radio.Group
-      label={`${props.tag} tag goes to`}
+      label={`Populate ${props.destination} from`}
       value={props.value}
-      onChange={(v) => props.onChange(v as TagTarget)}
+      onChange={(v) => props.onChange(v as TagSource)}
     >
       <Group mt={4}>
-        {TARGETS.map((t) => (
+        {SOURCES.map((s) => (
           <Radio
-            key={t.value}
-            value={t.value}
-            label={t.label}
-            aria-label={`${props.tag} → ${t.label}`}
+            key={s.value}
+            value={s.value}
+            label={s.label}
+            aria-label={`${props.destination} from ${s.label}`}
           />
         ))}
       </Group>
@@ -34,7 +33,8 @@ function TargetChoice(props: {
   )
 }
 
-// Spec §5.2: shown before every import; the choices are remembered for next time.
+// Spec §5.2: shown before every import; the choices are remembered for next time. Each field has
+// one source, so two tags can't feed one field; one tag may feed several.
 export default function ImportMappingFields({
   value,
   onChange
@@ -44,15 +44,20 @@ export default function ImportMappingFields({
 }): React.JSX.Element {
   return (
     <Stack gap="sm">
-      <TargetChoice
-        tag="Artist"
-        value={value.artistTagTarget}
-        onChange={(artistTagTarget) => onChange({ ...value, artistTagTarget })}
+      <SourceChoice
+        destination="Artist"
+        value={value.artistFrom}
+        onChange={(artistFrom) => onChange({ ...value, artistFrom })}
       />
-      <TargetChoice
-        tag="Album Artist"
-        value={value.albumArtistTagTarget}
-        onChange={(albumArtistTagTarget) => onChange({ ...value, albumArtistTagTarget })}
+      <SourceChoice
+        destination="Teacher"
+        value={value.teacherFrom}
+        onChange={(teacherFrom) => onChange({ ...value, teacherFrom })}
+      />
+      <SourceChoice
+        destination="Choreographer"
+        value={value.choreographerFrom}
+        onChange={(choreographerFrom) => onChange({ ...value, choreographerFrom })}
       />
       <Switch
         label="Genre is Country"

@@ -56,7 +56,8 @@ describe('SettingsStore', () => {
     ['autoContinue.seconds', -1],
     ['autoContinue.seconds', 2.5],
     ['autoContinue.seconds', '5'],
-    ['import.artistTagTarget', 'composer'],
+    ['import.teacherFrom', 'composer'],
+    ['import.artistTagTarget', 'artist'], // an old key is no longer a setting
     ['import.genreIsCountry', 'yes'],
     ['danceTypeSuggestions', ['Line', '']],
     ['window.bounds', { x: 0, y: 0, width: 0, height: 10 }],
@@ -77,6 +78,12 @@ describe('SettingsStore', () => {
     ).run()
     expect(store.get('autoContinue.enabled')).toBe(true)
     expect(() => store.getAll()).not.toThrow()
+  })
+
+  test('the import mapping defaults to the Artist tag feeding Artist only', () => {
+    expect(store.get('import.artistFrom')).toBe('artistTag')
+    expect(store.get('import.teacherFrom')).toBe('ignore')
+    expect(store.get('import.choreographerFrom')).toBe('ignore')
   })
 
   test('the column orders default to empty (the default order)', () => {

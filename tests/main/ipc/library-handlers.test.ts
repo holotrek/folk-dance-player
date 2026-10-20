@@ -69,8 +69,9 @@ describe('library handlers', () => {
     db.prepare("UPDATE files SET tag_artist = 'Yves Moreau' WHERE id = ?").run(s.fileId)
     expect((await h['library:songTags']([s.songId]))[0].artist).toBe('Yves Moreau')
     const mapping = {
-      artistTagTarget: 'choreographer' as const,
-      albumArtistTagTarget: 'ignore' as const,
+      artistFrom: 'ignore' as const,
+      teacherFrom: 'ignore' as const,
+      choreographerFrom: 'artistTag' as const,
       genreIsCountry: false
     }
     expect(await h['library:reapplyMapping']([s.songId], mapping)).toEqual({

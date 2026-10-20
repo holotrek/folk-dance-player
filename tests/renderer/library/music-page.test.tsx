@@ -267,15 +267,18 @@ describe('Music page library table', () => {
     expect(await within(tags).findByText('Yves Moreau')).toBeInTheDocument()
     expect(within(tags).getByText('Sonia Dion')).toBeInTheDocument()
     // Starts from the saved import mapping; changing it here applies to this run only.
-    expect(within(dialog).getByRole('radio', { name: 'Artist → Artist' })).toBeChecked()
-    await userEvent.click(within(dialog).getByRole('radio', { name: 'Artist → Choreographer' }))
+    expect(within(dialog).getByRole('radio', { name: 'Artist from Artist tag' })).toBeChecked()
+    await userEvent.click(
+      within(dialog).getByRole('radio', { name: 'Choreographer from Artist tag' })
+    )
     await userEvent.click(within(dialog).getByRole('button', { name: 'Re-apply' }))
     expect(fake.callsTo('library:reapplyMapping')).toEqual([
       [
         [1, 2],
         {
-          artistTagTarget: 'choreographer',
-          albumArtistTagTarget: fake.settings['import.albumArtistTagTarget'],
+          artistFrom: 'artistTag',
+          teacherFrom: 'ignore',
+          choreographerFrom: 'artistTag',
           genreIsCountry: fake.settings['import.genreIsCountry']
         }
       ]

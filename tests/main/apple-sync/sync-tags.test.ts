@@ -7,8 +7,9 @@ import { addLibrarySong, link, songView } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 
 const mapping: ImportMapping = {
-  artistTagTarget: 'artist',
-  albumArtistTagTarget: 'choreographer',
+  artistFrom: 'artistTag',
+  teacherFrom: 'ignore',
+  choreographerFrom: 'albumArtistTag',
   genreIsCountry: true
 }
 type Tags = Record<'title' | 'artist' | 'albumArtist' | 'genre', string | null>
@@ -99,7 +100,11 @@ describe('applyMusicTags (sync spec §5.4)', () => {
   })
 
   test('the teacher on the pairing follows its tag', () => {
-    const teach: ImportMapping = { ...mapping, albumArtistTagTarget: 'teacher' }
+    const teach: ImportMapping = {
+      ...mapping,
+      teacherFrom: 'albumArtistTag',
+      choreographerFrom: 'ignore'
+    }
     applyMusicTags(db, kolo.fileId, tags({}), teach)
     applyMusicTags(db, kolo.fileId, tags({ albumArtist: 'Yves' }), teach)
     expect(songView(db, kolo.fileId).teacher).toBe('Yves')

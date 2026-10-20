@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import {
   emptySummary,
+  mappingFromSettings,
   type ApplePlaylistConflict,
   type ApplePreview,
   type ImportProgress,
@@ -23,11 +24,7 @@ import type {
 
 // The mapping saved in Settings (main spec §5.2): imports and every sync use it.
 export function savedMapping(settings: SettingsStore): ImportMapping {
-  return {
-    artistTagTarget: settings.get('import.artistTagTarget'),
-    albumArtistTagTarget: settings.get('import.albumArtistTagTarget'),
-    genreIsCountry: settings.get('import.genreIsCountry')
-  }
+  return mappingFromSettings(settings.getAll())
 }
 
 export class ImportBusyError extends Error {
