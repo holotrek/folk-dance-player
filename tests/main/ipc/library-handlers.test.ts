@@ -264,6 +264,19 @@ describe('PDF handlers', () => {
     expect((await h['library:song'](s.songId))?.dances[0].slideShows).toBe('image')
   })
 
+  test('after a merge the unreferenced slide image is deleted, and the adopted one is kept', async () => {
+    const { db, h, attachments } = build('IMAGE')
+    const a = addLibrarySong(db, { title: 'A', dance: { name: 'Lesnoto' } })
+    const b = addLibrarySong(db, { title: 'B', dance: { name: 'Lesnoto' } })
+    await h['library:attachSlideImage'](a.danceId!)
+    const aPath = attachments.imagePath(a.danceId!)!
+    await h['library:attachSlideImage'](b.danceId!)
+    const bPath = attachments.imagePath(b.danceId!)!
+    await h['library:mergeDances'](a.danceId!, b.danceId!)
+    expect(existsSync(aPath)).toBe(true)
+    expect(existsSync(bPath)).toBe(false)
+  })
+
   test('without attachments the PDF channels refuse', async () => {
     const { db, h } = setup()
     const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })

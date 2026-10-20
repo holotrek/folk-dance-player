@@ -524,3 +524,94 @@ describe('getSongDetail: slide images', () => {
     })
   })
 })
+
+describe('mergeDances: slide images and the slide choice', () => {
+  const prefs = (danceId: number, cols: Record<string, string | number | null>) => {
+    db.prepare('INSERT OR IGNORE INTO dance_prefs (dance_id) VALUES (?)').run(danceId)
+    for (const [k, v] of Object.entries(cols)) {
+      db.prepare(`UPDATE dance_prefs SET ${k} = ? WHERE dance_id = ?`).run(v, danceId)
+    }
+  }
+  const read = (danceId: number) =>
+    db
+      .prepare(
+        `SELECT slide_image_name AS name, slide_image_path AS path, slide_source AS source,
+           canva_deck_id AS deck FROM dance_prefs WHERE dance_id = ?`
+      )
+      .get(danceId) as {
+      name: string | null
+      path: string | null
+      source: string | null
+      deck: number | null
+    }
+  const two = () => ({
+    a: addLibrarySong(db, { title: 'A', dance: { name: 'Lesnoto' } }),
+    b: addLibrarySong(db, { title: 'B', dance: { name: 'Lesnoto' } })
+  })
+  const deck = () =>
+    Number(
+      db
+        .prepare("INSERT INTO canva_decks (view_url, design_id, pages) VALUES (?, 'D', '[]')")
+        .run(`https://x/${Math.random()}/view`).lastInsertRowid
+    )
+  const canva = (danceId: number, deckId: number) =>
+    prefs(danceId, { canva_deck_id: deckId, canva_page_id: 'P1', canva_page_index: 1 })
+
+  test('the kept dance keeps its image; the removed dance’s file is reported unreferenced', () => {
+    const { a, b } = two()
+    prefs(a.danceId!, { slide_image_name: 'keep.png', slide_image_path: '1-aa.png' })
+    prefs(b.danceId!, { slide_image_name: 'gone.png', slide_image_path: '2-bb.png' })
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual(['slide-images/2-bb.png'])
+    expect(read(a.danceId!)).toMatchObject({ name: 'keep.png', path: '1-aa.png' })
+  })
+
+  test('the kept dance takes the removed dance’s image when it has none', () => {
+    const { a, b } = two()
+    prefs(b.danceId!, { slide_image_name: 'gone.png', slide_image_path: '2-bb.png' })
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual([])
+    expect(read(a.danceId!)).toMatchObject({ name: 'gone.png', path: '2-bb.png' })
+  })
+
+  test('the kept dance’s own choice wins when it has both sources', () => {
+    const { a, b } = two()
+    const d = deck()
+    canva(a.danceId!, d)
+    prefs(a.danceId!, {
+      slide_image_name: 'a.png',
+      slide_image_path: '1-aa.png',
+      slide_source: 'canva'
+    })
+    prefs(b.danceId!, {
+      slide_image_name: 'b.png',
+      slide_image_path: '2-bb.png',
+      slide_source: 'image'
+    })
+    canva(b.danceId!, d)
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(read(a.danceId!).source).toBe('canva')
+  })
+
+  test('the removed dance’s choice is adopted when the kept dance had none and both sources now exist', () => {
+    const { a, b } = two()
+    canva(a.danceId!, deck())
+    prefs(b.danceId!, {
+      slide_image_name: 'b.png',
+      slide_image_path: '2-bb.png',
+      slide_source: 'image'
+    })
+    canva(b.danceId!, deck())
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(read(a.danceId!)).toMatchObject({ path: '2-bb.png', source: 'image' })
+  })
+
+  test('the choice is cleared when the merged dance does not have both', () => {
+    const { a, b } = two()
+    prefs(b.danceId!, {
+      slide_image_name: 'b.png',
+      slide_image_path: '2-bb.png',
+      slide_source: 'image'
+    })
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(read(a.danceId!)).toMatchObject({ path: '2-bb.png', source: null })
+  })
+})

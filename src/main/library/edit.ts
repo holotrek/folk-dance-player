@@ -399,21 +399,47 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
   })
 }
 
-// A dance's PDF stays with the kept dance; a kept dance without one takes the removed dance's
-// (its shown name and stored file together). The removed dance's file is reported when not taken.
+// A dance's PDF and slide image stay with the kept dance; a kept dance without one takes the removed
+// dance's (its shown name and stored file together). The removed dance's file is reported when not
+// taken. The projector's choice between the Canva slide and the image: the kept dance's own wins,
+// else the removed dance's, and it is cleared unless the merged dance has both sources.
 function mergeAttachments(db: DatabaseSync, keepId: number, removeId: number): string[] {
-  const read = db.prepare(
-    'SELECT notes_pdf_name AS name, notes_pdf_path AS path FROM dance_prefs WHERE dance_id = ?'
-  )
-  const kept = read.get(keepId) as { name: string | null; path: string | null } | undefined
-  const gone = read.get(removeId) as { name: string | null; path: string | null } | undefined
-  if (!gone?.path) return []
-  if (kept?.path) return [`dance-notes/${gone.path}`]
-  update(db, 'dance_prefs', 'dance_id', keepId, {
-    notes_pdf_name: gone.name,
-    notes_pdf_path: gone.path
-  })
-  return []
+  type Row = {
+    pdfName: string | null
+    pdfPath: string | null
+    imageName: string | null
+    imagePath: string | null
+    source: 'canva' | 'image' | null
+  }
+  const read = (id: number): Row | undefined =>
+    db
+      .prepare(
+        `SELECT notes_pdf_name AS pdfName, notes_pdf_path AS pdfPath, slide_image_name AS imageName,
+           slide_image_path AS imagePath, slide_source AS source
+         FROM dance_prefs WHERE dance_id = ?`
+      )
+      .get(id) as Row | undefined
+  const kept = read(keepId)
+  const gone = read(removeId)
+  const orphans: string[] = []
+  const take: Record<string, string | null> = {}
+  if (gone?.pdfPath) {
+    if (kept?.pdfPath) orphans.push(`dance-notes/${gone.pdfPath}`)
+    else Object.assign(take, { notes_pdf_name: gone.pdfName, notes_pdf_path: gone.pdfPath })
+  }
+  if (gone?.imagePath) {
+    if (kept?.imagePath) orphans.push(`slide-images/${gone.imagePath}`)
+    else Object.assign(take, { slide_image_name: gone.imageName, slide_image_path: gone.imagePath })
+  }
+  const hasImage = !!(kept?.imagePath ?? take.slide_image_path)
+  const hasCanva = !!db
+    .prepare(
+      'SELECT 1 FROM dance_prefs WHERE dance_id = ? AND canva_deck_id IS NOT NULL AND canva_page_id IS NOT NULL'
+    )
+    .get(keepId)
+  take.slide_source = hasImage && hasCanva ? (kept?.source ?? gone?.source ?? null) : null
+  update(db, 'dance_prefs', 'dance_id', keepId, take)
+  return orphans
 }
 
 function fillEmptyFrom(
