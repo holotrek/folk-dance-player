@@ -80,6 +80,23 @@ describe('linking a slide to a dance', () => {
   })
 })
 
+describe('clearing a slide and the projector’s slide choice (0.3.0 spec §3.7)', () => {
+  test('clearing the Canva slide also clears the choice between Canva and an image', () => {
+    setDanceSlide(db, hora, deckId, 1)
+    db.prepare(
+      "UPDATE dance_prefs SET slide_image_name = 'a.png', slide_image_path = '1-aa.png', slide_source = 'image' WHERE dance_id = ?"
+    ).run(hora)
+    clearDanceSlide(db, hora)
+    expect(
+      db
+        .prepare(
+          'SELECT slide_source AS source, slide_image_path AS image FROM dance_prefs WHERE dance_id = ?'
+        )
+        .get(hora)
+    ).toEqual({ source: null, image: '1-aa.png' }) // the image stays
+  })
+})
+
 describe('refreshing a deck (spec §8.3)', () => {
   test('a slide inserted in Canva moves the others; links follow their page IDs', () => {
     setDanceSlide(db, hora, deckId, 3)

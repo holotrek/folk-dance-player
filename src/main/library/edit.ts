@@ -378,6 +378,8 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
     if (keptNotes && removedNotes && keptNotes !== removedNotes) {
       update(db, 'dance_prefs', 'dance_id', keepId, { notes: `${keptNotes}\n\n${removedNotes}` })
     }
+    // Before the removed dance's Canva slide can fill the kept dance's empty one.
+    const keptHadCanva = hasCanvaSlide(db, keepId)
     fillEmptyFrom(db, 'dance_prefs', 'dance_id', keepId, removeId, [
       'difficulty',
       'notes',
@@ -393,17 +395,29 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
          UNION SELECT dance_a FROM distinct_dances WHERE dance_b = ?)
        WHERE other <> ?`
     ).run(keepId, keepId, removeId, removeId, keepId)
-    const orphans = mergeAttachments(db, keepId, removeId)
+    const orphans = mergeAttachments(db, keepId, removeId, keptHadCanva)
     db.prepare('DELETE FROM dances WHERE id = ?').run(removeId)
     return orphans
   })
 }
 
+const hasCanvaSlide = (db: DatabaseSync, danceId: number): boolean =>
+  !!db
+    .prepare(
+      'SELECT 1 FROM dance_prefs WHERE dance_id = ? AND canva_deck_id IS NOT NULL AND canva_page_id IS NOT NULL'
+    )
+    .get(danceId)
+
 // A dance's PDF and slide image stay with the kept dance; a kept dance without one takes the removed
 // dance's (its shown name and stored file together). The removed dance's file is reported when not
 // taken. The projector's choice between the Canva slide and the image: the kept dance's own wins,
 // else the removed dance's, and it is cleared unless the merged dance has both sources.
-function mergeAttachments(db: DatabaseSync, keepId: number, removeId: number): string[] {
+function mergeAttachments(
+  db: DatabaseSync,
+  keepId: number,
+  removeId: number,
+  keptHadCanva: boolean
+): string[] {
   type Row = {
     pdfName: string | null
     pdfPath: string | null
@@ -432,12 +446,16 @@ function mergeAttachments(db: DatabaseSync, keepId: number, removeId: number): s
     else Object.assign(take, { slide_image_name: gone.imageName, slide_image_path: gone.imagePath })
   }
   const hasImage = !!(kept?.imagePath ?? take.slide_image_path)
-  const hasCanva = !!db
-    .prepare(
-      'SELECT 1 FROM dance_prefs WHERE dance_id = ? AND canva_deck_id IS NOT NULL AND canva_page_id IS NOT NULL'
-    )
-    .get(keepId)
-  take.slide_source = hasImage && hasCanva ? (kept?.source ?? gone?.source ?? null) : null
+  const hasCanva = hasCanvaSlide(db, keepId)
+  // A kept dance that already had both sources keeps its own choice (NULL is the default Canva);
+  // the removed dance's choice is adopted only when the merge gave the kept dance its second source.
+  const keptHadBoth = !!kept?.imagePath && keptHadCanva
+  take.slide_source =
+    hasImage && hasCanva
+      ? keptHadBoth
+        ? kept!.source
+        : (kept?.source ?? gone?.source ?? null)
+      : null
   update(db, 'dance_prefs', 'dance_id', keepId, take)
   return orphans
 }

@@ -57,7 +57,13 @@ export function createProjectorFeed(deps: {
           : null
       deps.live.show(live)
       shown = true
-      if (!slide || (!slide.imageUrl && !live)) return null
+      if (!slide || (!slide.imageUrl && !live)) {
+        // The Canva slide can't be drawn: the dance's own image is better than nothing.
+        if (danceId !== null && info && !info.missing) {
+          return { kind: 'image', imageUrl: danceImageUrl(danceId, info.version) }
+        }
+        return null
+      }
       return {
         kind: 'canva',
         deckId: slide.deckId,

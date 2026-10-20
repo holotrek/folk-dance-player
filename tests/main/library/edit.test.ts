@@ -591,6 +591,21 @@ describe('mergeDances: slide images and the slide choice', () => {
     expect(read(a.danceId!).source).toBe('canva')
   })
 
+  test('a kept dance that already had both sources keeps the default Canva choice', () => {
+    const { a, b } = two()
+    const d = deck()
+    canva(a.danceId!, d)
+    prefs(a.danceId!, { slide_image_name: 'a.png', slide_image_path: '1-aa.png' }) // choice never touched
+    canva(b.danceId!, d)
+    prefs(b.danceId!, {
+      slide_image_name: 'b.png',
+      slide_image_path: '2-bb.png',
+      slide_source: 'image'
+    })
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(read(a.danceId!)).toMatchObject({ path: '1-aa.png', source: null })
+  })
+
   test('the removed dance’s choice is adopted when the kept dance had none and both sources now exist', () => {
     const { a, b } = two()
     canva(a.danceId!, deck())

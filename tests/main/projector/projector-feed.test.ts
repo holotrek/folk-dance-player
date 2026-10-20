@@ -236,6 +236,16 @@ describe('projector feed: a dance’s slide image (0.3.0 spec §3.7)', () => {
     expect(b.feed.snapshot().middle).not.toHaveProperty('slide')
   })
 
+  test('a Canva choice that cannot be drawn falls back to the dance’s image', () => {
+    const hora = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    const link = { viewUrl: 'https://www.canva.com/design/DAH/TOK/view', designId: 'DAH' }
+    const deckId = saveDeck(db, link, { title: 'Deck', pages: [{ id: 'P1', title: null }] })
+    setDanceSlide(db, hora.danceId!, deckId, 1) // never captured
+    saveDeck(db, link, { title: 'Deck', pages: [{ id: 'P9', title: null }] }) // and gone from its deck
+    const { feed } = load(hora, { image: { version: '1-ab.png', missing: false }, shows: 'canva' })
+    expect(feed.snapshot().middle?.slide).toMatchObject({ kind: 'image' })
+  })
+
   test('a replaced image has a new URL version', () => {
     const hora = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
     const first = load(hora, { image: { version: '1-aa.png', missing: false } })
