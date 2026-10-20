@@ -14,12 +14,16 @@ export type UpcomingRow = { kind: 'dance'; entry: ProjectorEntry } | { kind: 'te
 
 // The middle dance's Canva slide (spec §8.3): its saved image, and whether main's live view of it
 // is showing over the slide area. The projector uses the slide layout when either is available.
-export interface ProjectorSlide {
-  deckId: number
-  pageId: string
-  imageUrl: string | null // fdp-media://slide/<deck>/<page>, when an image is saved
-  live: boolean
-}
+// A dance's own image (0.3.0 spec §3.7) is drawn in the same place; it needs no live view.
+export type ProjectorSlide =
+  | {
+      kind: 'canva'
+      deckId: number
+      pageId: string
+      imageUrl: string | null // fdp-media://slide/<deck>/<page>, when an image is saved
+      live: boolean
+    }
+  | { kind: 'image'; imageUrl: string } // fdp-media://dance-image/<dance>?v=…
 
 export type ProjectorMiddle =
   // The song that's loaded: playing, paused, or stopped (rewound, ▶ plays it again).

@@ -502,7 +502,7 @@ function startApp(): void {
       updateProjector()
     }
   })
-  const feed = createProjectorFeed({ db, player, projector: controller, live })
+  const feed = createProjectorFeed({ db, player, projector: controller, live, attachments })
   const keepAwake = new KeepAwake(powerSaveBlocker)
   updateProjector = coalesced(() => {
     feed.update()
