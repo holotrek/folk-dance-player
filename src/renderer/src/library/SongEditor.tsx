@@ -19,6 +19,7 @@ import NamePrompt from '../components/NamePrompt'
 import { errorMessage } from '../ipc-error'
 import DancePicker from './DancePicker'
 import DanceSlideField from './DanceSlideField'
+import NotesPdfField from './NotesPdfField'
 import { NotesField, SuggestField, TextField } from './fields'
 import { useLibraryApi } from './LibraryProvider'
 
@@ -289,6 +290,7 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
               value={d.notes}
               onSave={(notes) => run(() => api.invoke('library:updateDance', d.danceId, { notes }))}
             />
+            <NotesPdfField danceId={d.danceId} pdf={d.notesPdf} />
             <DanceSlideField danceId={d.danceId} danceName={d.name} slide={d.slide} />
           </Stack>
         </Paper>

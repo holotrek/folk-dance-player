@@ -31,7 +31,7 @@ coming up — while you keep programming on your laptop.
 Where your things live:
 
 - **Your library:** `~/Library/Application Support/Folk Dance Player`
-- **Backups** (one per start, the last 5): its `backups` folder (Help → Reveal Library Backups in Finder)
+- **Backups** (one per start, the last 5): its `backups` folder (Help → Reveal Library Backups in Finder). They copy the database only: PDFs attached to dances (`dance-notes/`) and slide images (`slide-images/`) are not in them
 - **The app log:** `~/Library/Logs/Folk Dance Player` (Help → Reveal Logs in Finder)
 
 ## Getting started (developers)

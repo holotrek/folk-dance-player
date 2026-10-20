@@ -334,6 +334,7 @@ PROGRAMS                  [+]
   - **Columns can be reordered** by dragging a header (or Alt+←/→ with a header focused); Dance / Song, the star and the ⋯ menu stay put. Each list (this table, the Program page's library list) keeps its own order, saved in settings; right-click a header for **Reset columns**.
   - **Dance / Song** shows the label (§4) and sorts by dance name, then song title, with a "+N" badge when the song has more than one dance.
   - **In a playlist** (shown in its own order), a **#** column numbers the songs in the playlist's order (whatever the sort or search). Dropping rows onto another row moves them there, and onto the space below the last row moves them to the end. **Remove from playlist** removes the selection. Reordering is off while a search is active, because the search hides part of the playlist.
+  - **PDF:** each dance in the editor has an **Attach PDF…** button (its written notes, for example). Main copies the chosen PDF into the app's data folder (`dance-notes/`), so moving or deleting the original does not break it; the editor then shows its file name with **Open** (the system's PDF viewer) and **Remove**, or "The PDF is missing" when the copy has gone. One PDF per dance; merging dances keeps the kept dance's, or adopts the other's when it has none.
   - **Same as song:** a song's default dance, when only that song uses it, has a **Same as song** box in the editor. While the dance's name equals the song's the box is checked and the name is greyed out, and renaming the song renames the dance. Unchecking makes the name editable; checking it sets the dance's name back to the song's.
   - **When one song is selected,** the side editor opens beside the table. A dance shared with other songs says so ("Also used by 2 other songs"), because edits apply to all of them.
 - **Selected song:** a side editor with two sections.
@@ -613,7 +614,7 @@ The music never stops because of a side failure, and the projector never shows a
 - **Program pre-check:** when a program is loaded and at startup, every file in it is checked for existence, so missing files are flagged before the event.
 - **Database safety:**
   - Writes use transactions.
-  - At startup, before migrations, the library is copied (`VACUUM INTO`, a consistent copy) to `backups/folk-dance-player-<date>_<time>.sqlite` in the app data folder, keeping the newest 5. A brand-new library isn't backed up. A failed backup is logged and startup goes on.
+  - At startup, before migrations, the library is copied (`VACUUM INTO`, a consistent copy) to `backups/folk-dance-player-<date>_<time>.sqlite` in the app data folder, keeping the newest 5. A brand-new library isn't backed up. A failed backup is logged and startup goes on. Attached PDFs and slide images (`dance-notes/`, `slide-images/`) are outside it: the backup copies the database only.
   - Migrations run in a transaction and abort startup with a clear message on failure.
 - **Crash or restart:** the program position is restored from `played_at`, and playback does not auto-resume.
 - **Import errors** are per file and never abort the batch (§5.4).

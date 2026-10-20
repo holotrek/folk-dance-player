@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Attach a PDF (its written notes, for example) to a dance in the song editor; **Open** shows it in your PDF viewer. The PDF is copied into the app's data folder, so moving the original doesn't matter. Attachments aren't part of the startup backups.
 - In the song editor, a song's default dance has a **Same as song** box: while it is checked the dance's name can't be edited, and renaming the song renames the dance too. Uncheck it to name the dance separately; check it again to set the dance's name back to the song's.
 - Drag a column header to reorder the columns of the Music page and of the Program page's library list (Alt+←/→ with a header focused also works). Each list keeps its own order, and right-clicking a header offers **Reset columns**.
 

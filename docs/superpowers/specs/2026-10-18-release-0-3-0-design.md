@@ -61,7 +61,7 @@ built on its own.
 | 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
 | 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Built (Plan 13) |
 | 3.5 | "Same as song" for a dance's name | Song editor | Built (Plan 14) |
-| 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Planned |
+| 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Built (Plan 15, PR 5a) |
 | 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Planned |
 | 3.8 | Select several program items and move them together | Program list | Planned |
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Planned |

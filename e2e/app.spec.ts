@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { drag, launch, workspace, type Running } from './app'
@@ -166,6 +167,31 @@ test('renaming a song renames its same-named dance', async () => {
   await expect(card.getByRole('checkbox', { name: 'Same as song' })).toBeChecked()
   await expect(card.getByLabel('Dance name')).toHaveValue('Hora Nova')
   await expect(card.getByLabel('Dance name')).toBeDisabled()
+})
+
+test('a PDF can be attached to a dance and removed from the editor', async () => {
+  // The file dialog is native, so the app is told which file the dialog would return.
+  const folder = mkdtempSync(join(tmpdir(), 'fdp-pdf-'))
+  const pdf = join(folder, 'Hora notes.pdf')
+  writeFileSync(pdf, '%PDF-1.4\n%%EOF\n')
+  try {
+    await running.app.close()
+    running = await launch(space.userData, { FDP_PICK_ATTACHMENT: pdf })
+    const { page } = running
+    await page.getByRole('tab', { name: 'Music' }).click()
+    await libraryRow('Hora').click()
+    await page.getByRole('button', { name: 'Attach PDF…' }).click()
+    await expect(page.getByText('Hora notes.pdf')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Open PDF' })).toBeVisible()
+    const stored = join(space.userData, 'dance-notes')
+    expect(readdirSync(stored)).toHaveLength(1)
+    rmSync(pdf) // the original is not needed any more
+    await page.getByRole('button', { name: 'Remove PDF' }).click()
+    await expect(page.getByRole('button', { name: 'Attach PDF…' })).toBeVisible()
+    expect(existsSync(stored) ? readdirSync(stored) : []).toEqual([])
+  } finally {
+    rmSync(folder, { recursive: true, force: true })
+  }
 })
 
 test('Settings… in the app menu opens the Settings page', async () => {
