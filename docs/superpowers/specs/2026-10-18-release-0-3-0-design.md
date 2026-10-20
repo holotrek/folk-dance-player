@@ -216,20 +216,24 @@ song is `updateSong` in `main/library/edit.ts`; `library_fts` triggers follow na
 
 **Design.**
 
-- The checkbox shows for a dance **linked to exactly one song** whose name equals that song's.
-  A dance shared by several songs (one dance, many tunes) never follows one of them.
-- **Recommended (open, §7):** keep it **derived, with no schema change.** The checkbox is checked
-  whenever the names are equal and the dance has one song. Renaming the song renames the dance
-  in the same transaction when the dance's name equaled the old title. Unchecking just makes the
-  entry editable; the dance stops following as soon as its name is changed.
+- The checkbox shows for every dance **linked to exactly one song**, so it never disappears when
+  the dance is renamed. A dance shared by several songs (one dance, many tunes) never follows
+  one of them and has no checkbox.
+- It is **checked** while the dance's name equals the song's. Unchecking makes the entry
+  editable. **Checking it again (decided 2026-10-19) sets the dance's name back to the song's**,
+  so the box can always be used to restore the link.
+- **Recommended (open, §7):** keep it **derived, with no schema change.** "Same as song" is
+  simply "the names are equal and the dance has one song". Renaming the song renames the dance
+  in the same transaction when the dance's name equaled the old title. The one thing that does
+  not persist is unchecking while the names are still equal: that lasts for the editor session.
 - The alternative is a stored flag (a column on the personal `dance_song_prefs` row), which would
-  let unchecking persist while the names are still equal and let the box be re-checked after the
-  names differ. It costs a migration and a data conversion for existing songs.
+  also make that unchecked state persist. It costs a migration and a data conversion for
+  existing songs; with re-checking available, it matters much less.
 - Linking a second song to the dance, or merging dances, ends the following by itself under the
   derived design (the dance then has two songs).
 
-**Tests.** Rename follows when checked; no checkbox for a shared dance; no checkbox when names
-differ; renaming updates search (`library_fts`) and the labels; the read-only entry.
+**Tests.** Rename follows when checked; no checkbox for a shared dance; the checkbox stays when
+names differ and checking it restores the song's name; renaming updates search (`library_fts`) and the labels; the read-only entry.
 
 ### 3.6 A PDF attached to a dance
 
