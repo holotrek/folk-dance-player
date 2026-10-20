@@ -102,6 +102,14 @@
 - [ ] **Step 5:** Hardware checklist item (section I): "Rename a song whose dance has the same name: the dance (and the library row, and a program item) follow; the Dance name entry is read-only while **Same as song** is checked, and editable after unchecking it. A dance used by two songs shows no checkbox." Run `npx prettier --check .`, `npm run typecheck`, `npx vitest run` — expect clean.
 - [ ] **Step 6:** Commit `docs: describe Same as song`.
 
+## Review follow-ups (after the independent review, 2026-10-19)
+
+- Unchecking now holds for the editor visit: the title save carries `keepDanceName` (`SongPatch`) while the default dance is unlocked, and `updateSong` then skips the follower.
+- Checking the box sends `sameAsSong` (`DancePatch`); `updateDance` names the dance with the song's current title and refuses a dance used by several songs. This avoids a stale title in the renderer.
+- The locked Dance name is `disabled` (clearly greyed out) instead of `readOnly`, and the box is in a row to the right of the entry.
+- The named SQL parameter replaces the interpolated song id in `updateSong`.
+- Deferred minor: a title save that changes only case or spaces also rewrites the dance's name.
+
 ## Self-Review
 
 - **Spec coverage:** the checkbox for a dance linked to one song with an equal name, the read-only entry, following the song's rename, a shared dance never following, merges and second links ending it by themselves (the dance then has two songs, so `sameAsSong` is false), search and labels staying right, and the listed tests → Tasks 1–3.

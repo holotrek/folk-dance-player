@@ -102,6 +102,9 @@ export interface SongDetail {
 export interface SongPatch {
   title?: string
   artist?: string | null
+  // With a new title: leave the song's default dance named as it is, even when it was named like the
+  // song (the editor sends it while "Same as song" is unchecked; 0.3.0 spec §3.5).
+  keepDanceName?: boolean
 }
 
 export interface DancePatch {
@@ -111,6 +114,9 @@ export interface DancePatch {
   danceType?: string | null
   difficulty?: number | null
   notes?: string | null
+  // Name the dance as its song is named now ("Same as song" checked); only for a dance used by
+  // one song. Wins over `name`.
+  sameAsSong?: boolean
 }
 
 // A dance offered by "Link an existing dance…".

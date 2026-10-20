@@ -194,14 +194,14 @@ export function updateSong(db: DatabaseSync, songId: number, patch: SongPatch): 
     // The song's default dance follows its name when it is the same as the old one and no other
     // song uses the dance (0.3.0 spec §3.5).
     const follower =
-      before && typeof values.title === 'string'
+      before && typeof values.title === 'string' && !patch.keepDanceName
         ? (db
             .prepare(
               `SELECT d.id AS danceId, d.name FROM dance_songs ds JOIN dances d ON d.id = ds.dance_id
-               WHERE ds.id = ${shownPairingSql(String(Math.trunc(songId)))}
+               WHERE ds.id = ${shownPairingSql(':songId')}
                  AND (SELECT COUNT(*) FROM dance_songs c WHERE c.dance_id = d.id) = 1`
             )
-            .get() as { danceId: number; name: string } | undefined)
+            .get({ songId }) as { danceId: number; name: string } | undefined)
         : undefined
     update(db, 'songs', 'id', songId, values)
     if (follower && before && sameName(follower.name, before.title)) {
@@ -210,9 +210,24 @@ export function updateSong(db: DatabaseSync, songId: number, patch: SongPatch): 
   })
 }
 
+// The title of the one song that uses a dance; a dance shared by several songs can't be "the same as
+// its song".
+function titleOfOnlySong(db: DatabaseSync, danceId: number): string {
+  const songs = db
+    .prepare(
+      `SELECT s.title FROM dance_songs ds JOIN songs s ON s.id = ds.song_id WHERE ds.dance_id = ?`
+    )
+    .all(danceId) as { title: string }[]
+  if (songs.length !== 1) {
+    throw new LibraryEditError('Only a dance used by one song can be the same as its song.')
+  }
+  return songs[0].title
+}
+
 export function updateDance(db: DatabaseSync, danceId: number, patch: DancePatch): void {
   const facts: Record<string, unknown> = {}
   if (patch.name !== undefined) facts.name = required(patch.name, 'A dance name')
+  if (patch.sameAsSong) facts.name = titleOfOnlySong(db, danceId)
   if (patch.country !== undefined) facts.country = optional(patch.country)
   if (patch.choreographer !== undefined) facts.choreographer = optional(patch.choreographer)
   if (patch.danceType !== undefined) facts.dance_type = optional(patch.danceType)

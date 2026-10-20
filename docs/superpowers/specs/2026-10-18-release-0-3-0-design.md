@@ -227,9 +227,11 @@ song is `updateSong` in `main/library/edit.ts`; `library_fts` triggers follow na
 - **Recommended (open, §7):** keep it **derived, with no schema change.** "Same as song" is
   simply "the names are equal and the dance has one song". Renaming the song renames the dance
   in the same transaction when the dance's name equaled the old title. The one thing that does
-  not persist is unchecking while the names are still equal: that lasts for the editor session.
+  not persist is unchecking while the names are still equal: that holds for the editor visit (a
+  title saved meanwhile leaves the dance alone) and is forgotten when the editor is left. While the
+  box is checked the name entry is greyed out, and the box sits to the right of it.
 - The alternative is a stored flag (a column on the personal `dance_song_prefs` row), which would
-  also make that unchecked state persist. It costs a migration and a data conversion for
+  also make that unchecked state persist beyond the editor visit. It costs a migration and a data conversion for
   existing songs; with re-checking available, it matters much less.
 - Linking a second song to the dance, or merging dances, ends the following by itself under the
   derived design (the dance then has two songs).

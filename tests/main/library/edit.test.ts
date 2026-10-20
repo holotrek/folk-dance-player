@@ -403,4 +403,25 @@ describe('same as song', () => {
     updateSong(db, songId, { artist: 'Taraf' })
     expect(dance(songId, danceId).name).toBe('Kolo')
   })
+
+  test('keepDanceName leaves the dance as it is when the song is renamed', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    updateSong(db, songId, { title: 'Kolo Veliko', keepDanceName: true })
+    expect(detail(songId).title).toBe('Kolo Veliko')
+    expect(dance(songId, danceId).name).toBe('Kolo')
+  })
+
+  test('updateDance with sameAsSong sets the name to the song’s current title', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Pravo' } })
+    updateDance(db, danceId!, { sameAsSong: true })
+    expect(dance(songId, danceId)).toMatchObject({ name: 'Kolo', sameAsSong: true })
+  })
+
+  test('sameAsSong is refused for a dance used by several songs', () => {
+    const a = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Pravo' } })
+    const b = addLibrarySong(db, { title: 'Other' })
+    link(db, a.danceId!, b.songId)
+    expect(() => updateDance(db, a.danceId!, { sameAsSong: true })).toThrow(LibraryEditError)
+    expect(dance(a.songId, a.danceId).name).toBe('Pravo')
+  })
 })

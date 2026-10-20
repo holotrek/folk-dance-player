@@ -264,11 +264,11 @@ describe('SongEditor', () => {
       })
     const card = () => within(danceCard('Pusteno Ludo'))
 
-    test('the default dance named like its song shows the box checked, with a read-only name', async () => {
+    test('the default dance named like its song shows the box checked, with a locked name', async () => {
       setup(withSameAsSong())
       await screen.findByLabelText('Title')
       expect(card().getByRole('checkbox', { name: 'Same as song' })).toBeChecked()
-      expect(card().getByLabelText('Dance name')).toHaveAttribute('readonly')
+      expect(card().getByLabelText('Dance name')).toBeDisabled()
     })
 
     test('a dance with a different name shows the box unchecked, with an editable name', async () => {
@@ -277,7 +277,7 @@ describe('SongEditor', () => {
       )
       const group = within(await screen.findByRole('group', { name: /^Pravo/ }))
       expect(group.getByRole('checkbox', { name: 'Same as song' })).not.toBeChecked()
-      expect(group.getByLabelText('Dance name')).not.toHaveAttribute('readonly')
+      expect(group.getByLabelText('Dance name')).not.toBeDisabled()
     })
 
     test("checking it sets the dance's name back to the song's title", async () => {
@@ -287,7 +287,7 @@ describe('SongEditor', () => {
       const group = within(await screen.findByRole('group', { name: /^Pravo/ }))
       await userEvent.click(group.getByRole('checkbox', { name: 'Same as song' }))
       await waitFor(() =>
-        expect(fake.callsTo('library:updateDance')).toEqual([[11, { name: 'Pusteno Ludo' }]])
+        expect(fake.callsTo('library:updateDance')).toEqual([[11, { sameAsSong: true }]])
       )
     })
 
@@ -296,10 +296,10 @@ describe('SongEditor', () => {
       await screen.findByLabelText('Title')
       await userEvent.click(card().getByRole('checkbox', { name: 'Same as song' }))
       expect(card().getByRole('checkbox', { name: 'Same as song' })).not.toBeChecked()
-      expect(card().getByLabelText('Dance name')).not.toHaveAttribute('readonly')
+      expect(card().getByLabelText('Dance name')).toBeEnabled()
       await userEvent.click(card().getByRole('checkbox', { name: 'Same as song' }))
       expect(card().getByRole('checkbox', { name: 'Same as song' })).toBeChecked()
-      expect(card().getByLabelText('Dance name')).toHaveAttribute('readonly')
+      expect(card().getByLabelText('Dance name')).toBeDisabled()
       expect(fake.callsTo('library:updateDance')).toEqual([]) // the names were already equal
     })
 
@@ -313,7 +313,39 @@ describe('SongEditor', () => {
       )
     })
 
-    test('a read-only name is not saved', async () => {
+    test('while the box is unchecked, a new song title keeps the dance name', async () => {
+      const fake = setup(withSameAsSong())
+      await screen.findByLabelText('Title')
+      await userEvent.click(card().getByRole('checkbox', { name: 'Same as song' }))
+      await edit(screen.getByLabelText('Title'), 'Pusteno Ludo II')
+      await waitFor(() =>
+        expect(fake.callsTo('library:updateSong')).toEqual([
+          [1, { title: 'Pusteno Ludo II', keepDanceName: true }]
+        ])
+      )
+    })
+
+    test('with the box checked, a new song title is sent plainly', async () => {
+      const fake = setup(withSameAsSong())
+      await screen.findByLabelText('Title')
+      await edit(screen.getByLabelText('Title'), 'Pusteno Ludo II')
+      await waitFor(() =>
+        expect(fake.callsTo('library:updateSong')).toEqual([[1, { title: 'Pusteno Ludo II' }]])
+      )
+    })
+
+    test('the box sits beside the dance name, on its right', async () => {
+      setup(withSameAsSong())
+      await screen.findByLabelText('Title')
+      const name = card().getByLabelText('Dance name')
+      const box = card().getByRole('checkbox', { name: 'Same as song' })
+      expect(name.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+      const row = name.closest('[data-same-as-song-row]')
+      expect(row).not.toBeNull()
+      expect(row).toBe(box.closest('[data-same-as-song-row]'))
+    })
+
+    test('a locked name is not saved', async () => {
       const fake = setup(withSameAsSong())
       await screen.findByLabelText('Title')
       await userEvent.type(card().getByLabelText('Dance name'), 'x')
@@ -325,7 +357,7 @@ describe('SongEditor', () => {
       setup() // fixture: the default dance has 3 songs; the other dance is not the default
       await screen.findByLabelText('Title')
       expect(screen.queryByRole('checkbox', { name: 'Same as song' })).toBeNull()
-      expect(screen.getAllByLabelText('Dance name')[0]).not.toHaveAttribute('readonly')
+      expect(screen.getAllByLabelText('Dance name')[0]).not.toBeDisabled()
     })
 
     test('only the default dance of a song with several dances has the box', async () => {

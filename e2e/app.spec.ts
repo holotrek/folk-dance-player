@@ -165,7 +165,7 @@ test('renaming a song renames its same-named dance', async () => {
   const card = page.getByRole('group', { name: 'Hora Nova' })
   await expect(card.getByRole('checkbox', { name: 'Same as song' })).toBeChecked()
   await expect(card.getByLabel('Dance name')).toHaveValue('Hora Nova')
-  await expect(card.getByLabel('Dance name')).toHaveAttribute('readonly', '')
+  await expect(card.getByLabel('Dance name')).toBeDisabled()
 })
 
 test('Settings… in the app menu opens the Settings page', async () => {
