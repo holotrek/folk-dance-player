@@ -60,7 +60,7 @@ built on its own.
 | 3.2 | One label order: `Dance ♪ Song` | `shared/labels.ts`, lists, Now Playing | Built (Plan 11) |
 | 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
 | 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Built (Plan 13) |
-| 3.5 | "Same as song" for a dance's name | Song editor | Planned |
+| 3.5 | "Same as song" for a dance's name | Song editor | Built (Plan 14) |
 | 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Planned |
 | 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Planned |
 | 3.8 | Select several program items and move them together | Program list | Planned |
@@ -216,20 +216,28 @@ song is `updateSong` in `main/library/edit.ts`; `library_fts` triggers follow na
 
 **Design.**
 
-- The checkbox shows for a dance **linked to exactly one song** whose name equals that song's.
-  A dance shared by several songs (one dance, many tunes) never follows one of them.
-- **Recommended (open, §7):** keep it **derived, with no schema change.** The checkbox is checked
-  whenever the names are equal and the dance has one song. Renaming the song renames the dance
-  in the same transaction when the dance's name equaled the old title. Unchecking just makes the
-  entry editable; the dance stops following as soon as its name is changed.
+- The checkbox shows on the song's **default dance** (decided 2026-10-19: for a song with several
+  dances, only the default), when that dance is **linked to exactly one song**, so it never
+  disappears when the dance is renamed. A song's other dances have no checkbox and never follow
+  the song, and neither does a dance shared by several songs (one dance, many tunes).
+  Changing which dance is the default moves the checkbox, and the following, to the new one.
+- It is **checked** while the dance's name equals the song's. Unchecking makes the entry
+  editable. **Checking it again (decided 2026-10-19) sets the dance's name back to the song's**,
+  so the box can always be used to restore the link.
+- **Recommended (open, §7):** keep it **derived, with no schema change.** "Same as song" is
+  simply "the names are equal and the dance has one song". Renaming the song renames the dance
+  in the same transaction when the dance's name equaled the old title. The one thing that does
+  not persist is unchecking while the names are still equal: that holds for the editor visit (a
+  title saved meanwhile leaves the dance alone) and is forgotten when the editor is left. While the
+  box is checked the name entry is greyed out, and the box sits to the right of it.
 - The alternative is a stored flag (a column on the personal `dance_song_prefs` row), which would
-  let unchecking persist while the names are still equal and let the box be re-checked after the
-  names differ. It costs a migration and a data conversion for existing songs.
+  also make that unchecked state persist beyond the editor visit. It costs a migration and a data conversion for
+  existing songs; with re-checking available, it matters much less.
 - Linking a second song to the dance, or merging dances, ends the following by itself under the
   derived design (the dance then has two songs).
 
-**Tests.** Rename follows when checked; no checkbox for a shared dance; no checkbox when names
-differ; renaming updates search (`library_fts`) and the labels; the read-only entry.
+**Tests.** Rename follows when checked; no checkbox for a shared dance; the checkbox stays when
+names differ and checking it restores the song's name; renaming updates search (`library_fts`) and the labels; the read-only entry.
 
 ### 3.6 A PDF attached to a dance
 
@@ -670,9 +678,9 @@ migration and the "copy a file into the app's data folder" helper.
 
 ## 7. Open questions for the maintainer
 
-1. **§3.5, derived or stored?** Is it enough that "Same as song" is derived from the names being
-   equal (recommended; no schema change; unchecking only unlocks the entry), or should unchecking
-   persist while the names are still equal, and the box be offered again after they differ?
+1. ~~**§3.5, derived or stored?**~~ Built derived (no schema change), with the box kept after a
+   rename and re-checking restoring the song's name (2026-10-19). Only unchecking while the
+   names are still equal is session-only; a stored flag would change that.
 2. **§3.9, STOP markers.** A STOP halts the program for as long as the teaching takes. Should the
    ending time ignore STOPs (and say "if there are no pauses"), or should STOPs add an assumed
    length that the organizer can set?

@@ -4,6 +4,7 @@ import {
   Alert,
   Badge,
   Button,
+  Checkbox,
   Group,
   Menu,
   Paper,
@@ -34,6 +35,8 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
   >(null)
   const [merging, setMerging] = useState<{ from: SongDance; into: DanceSearchResult } | null>(null)
   const [creating, setCreating] = useState(false)
+  // Dances whose "Same as song" box was unchecked, for this song and this visit to the editor.
+  const [unlocked, setUnlocked] = useState<Set<number>>(new Set())
 
   const load = useCallback(async () => {
     const [detail, lists] = await Promise.all([
@@ -45,6 +48,7 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
   }, [api, songId])
 
   useEffect(() => {
+    setUnlocked(new Set())
     setError(null)
     void load()
     return api.on('library:changed', () => void load())
@@ -62,6 +66,10 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
 
   if (!song) return null
   const linked = song.dances.map((d) => d.danceId)
+  // Unchecked "Same as song" on the default dance: a new title must not carry the dance along.
+  const keepsDanceName = song.dances.some(
+    (d) => d.isDefault && d.sameAsSong && unlocked.has(d.danceId)
+  )
 
   return (
     <Stack gap="sm">
@@ -75,7 +83,15 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
       <TextField
         label="Title"
         value={song.title}
-        onSave={(title) => run(() => api.invoke('library:updateSong', songId, { title }))}
+        onSave={(title) =>
+          run(() =>
+            api.invoke(
+              'library:updateSong',
+              songId,
+              keepsDanceName ? { title, keepDanceName: true } : { title }
+            )
+          )
+        }
       />
       <TextField
         label="Artist"
@@ -184,11 +200,38 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
                 apply to all of them.
               </Text>
             )}
-            <TextField
-              label="Dance name"
-              value={d.name}
-              onSave={(name) => run(() => api.invoke('library:updateDance', d.danceId, { name }))}
-            />
+            {/* 0.3.0 spec §3.5: the default dance of one song can follow the song's name. While it
+                does, its name is greyed out (disabled) so it's clear it can't be typed in. */}
+            <Group align="flex-end" wrap="nowrap" gap="sm" data-same-as-song-row>
+              <TextField
+                label="Dance name"
+                value={d.name}
+                disabled={d.sameAsSong && !unlocked.has(d.danceId)}
+                onSave={(name) => run(() => api.invoke('library:updateDance', d.danceId, { name }))}
+              />
+              {d.isDefault && d.songCount === 1 && (
+                <Checkbox
+                  size="xs"
+                  label="Same as song"
+                  mb={8}
+                  styles={{ label: { whiteSpace: 'nowrap' } }}
+                  checked={d.sameAsSong && !unlocked.has(d.danceId)}
+                  onChange={(e) => {
+                    const next = new Set(unlocked)
+                    if (e.currentTarget.checked) {
+                      next.delete(d.danceId)
+                      // Main names the dance as its song is named now, even for a title just saved.
+                      if (!d.sameAsSong) {
+                        void run(() =>
+                          api.invoke('library:updateDance', d.danceId, { sameAsSong: true })
+                        )
+                      }
+                    } else next.add(d.danceId)
+                    setUnlocked(next)
+                  }}
+                />
+              )}
+            </Group>
             <SuggestField
               label="Country"
               value={d.country}

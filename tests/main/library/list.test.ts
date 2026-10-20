@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { beforeEach, describe, expect, test } from 'vitest'
 import type { LibraryQuery } from '@shared/library'
+import { updateSong } from '../../../src/main/library/edit'
 import { listLibrary } from '../../../src/main/library/list'
 import { addDance, addLibrarySong, link, setDefaultDance } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
@@ -203,5 +204,13 @@ describe('listLibrary', () => {
     link(db, pravo, songId)
     setDefaultDance(db, songId, pravo)
     expect(listLibrary(db, all)[0].danceName).toBe('Pravo Rhodopsko Oro')
+  })
+
+  test('after a rename the library finds the new name, and the old one no longer matches', () => {
+    const { songId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    updateSong(db, songId, { title: 'Zikino' })
+    const rows = listLibrary(db, { ...all, search: 'Zikino' })
+    expect(rows.map((r) => r.label)).toEqual(['Zikino'])
+    expect(listLibrary(db, { ...all, search: 'Kolo' })).toEqual([])
   })
 })

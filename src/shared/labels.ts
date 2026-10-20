@@ -14,14 +14,16 @@ export interface LabelParts {
   choreographer: string | null // only when needed to tell the song's dances apart
 }
 
-const same = (a: string, b: string): boolean => a.trim().toLowerCase() === b.trim().toLowerCase()
+// Two names are the same when they differ only in case or surrounding spaces.
+export const sameName = (a: string, b: string): boolean =>
+  a.trim().toLowerCase() === b.trim().toLowerCase()
 
 export function labelParts(input: LabelInput): LabelParts {
   const songTitle = input.songTitle.trim()
   const dance = input.danceName?.trim()
   if (!dance) return { song: null, dance: songTitle, choreographer: null }
   return {
-    song: same(songTitle, dance) ? null : songTitle,
+    song: sameName(songTitle, dance) ? null : songTitle,
     dance,
     choreographer:
       input.choreographerCount > 1 && input.choreographer?.trim()
