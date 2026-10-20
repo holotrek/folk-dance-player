@@ -334,6 +334,7 @@ PROGRAMS                  [+]
   - **Columns can be reordered** by dragging a header (or Alt+←/→ with a header focused); Dance / Song, the star and the ⋯ menu stay put. Each list (this table, the Program page's library list) keeps its own order, saved in settings; right-click a header for **Reset columns**.
   - **Dance / Song** shows the label (§4) and sorts by dance name, then song title, with a "+N" badge when the song has more than one dance.
   - **In a playlist** (shown in its own order), a **#** column numbers the songs in the playlist's order (whatever the sort or search). Dropping rows onto another row moves them there, and onto the space below the last row moves them to the end. **Remove from playlist** removes the selection. Reordering is off while a search is active, because the search hides part of the playlist.
+  - **Same as song:** a song's default dance, when only that song uses it, has a **Same as song** box in the editor. While the dance's name equals the song's the box is checked and the name is read-only, and renaming the song renames the dance. Unchecking makes the name editable; checking it sets the dance's name back to the song's.
   - **When one song is selected,** the side editor opens beside the table. A dance shared with other songs says so ("Also used by 2 other songs"), because edits apply to all of them.
 - **Selected song:** a side editor with two sections.
   - **Song:** title and artist.

@@ -152,6 +152,22 @@ test('Alt+→ moves a column and the focus stays on its header', async () => {
   await expect(table.getByRole('columnheader').nth(5)).toContainText('Choreographer')
 })
 
+test('renaming a song renames its same-named dance', async () => {
+  const { page } = running
+  await page.getByRole('tab', { name: 'Music' }).click()
+  await libraryRow('Hora').click()
+  const title = page.getByLabel('Title', { exact: true })
+  await title.fill('Hora Nova')
+  await title.blur()
+  // One name, not "Hora ♪ Hora Nova": the dance followed the song.
+  await expect(libraryRow('Hora Nova')).toBeVisible()
+  await expect(libraryRow('Hora Nova')).not.toContainText('♪')
+  const card = page.getByRole('group', { name: 'Hora Nova' })
+  await expect(card.getByRole('checkbox', { name: 'Same as song' })).toBeChecked()
+  await expect(card.getByLabel('Dance name')).toHaveValue('Hora Nova')
+  await expect(card.getByLabel('Dance name')).toHaveAttribute('readonly', '')
+})
+
 test('Settings… in the app menu opens the Settings page', async () => {
   await running.app.evaluate(({ Menu }) => {
     const app = Menu.getApplicationMenu()!.items[0].submenu!
