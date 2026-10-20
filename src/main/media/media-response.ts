@@ -12,7 +12,11 @@ const MIME: Record<string, string> = {
   '.ogg': 'audio/ogg',
   '.oga': 'audio/ogg',
   '.opus': 'audio/ogg',
-  '.png': 'image/png'
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
+  '.gif': 'image/gif'
 }
 
 // One byte range from a Range header ("bytes=a-b", "bytes=a-" or "bytes=-n"), clamped to the

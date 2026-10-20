@@ -1,5 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
+import { danceImageUrl } from '@shared/media'
 import type { ProjectorProgress, ProjectorSlide, ProjectorSnapshot } from '@shared/projector'
+import type { AttachmentStore } from '../attachments/attachment-store'
 import { getDanceSlide } from '../canva/decks'
 import { listPlayed } from '../programs/history'
 import { getProgram } from '../programs/programs'
@@ -22,6 +24,8 @@ export function createProjectorFeed(deps: {
   player: Pick<PlayerSession, 'getState'>
   projector: Pick<ProjectorController, 'status' | 'send'>
   live: Pick<LiveSlide, 'show' | 'isLive'>
+  // A dance's own slide image and the choice between it and its Canva slide (§3.7).
+  attachments?: Pick<AttachmentStore, 'imageInfo' | 'slideShows'>
 }): ProjectorFeed {
   const snapshot = (): ProjectorSnapshot => {
     const state = deps.player.getState()
@@ -29,6 +33,17 @@ export function createProjectorFeed(deps: {
     let shown = false
     const slideFor = (danceId: number | null): ProjectorSlide | null => {
       const slide = danceId === null ? null : getDanceSlide(deps.db, danceId)
+      // A dance's own image shows when it is the chosen slide, or the only one. An image slide never
+      // starts the live Canva view, so it works offline. A missing image file falls back to Canva.
+      const info = danceId === null ? null : deps.attachments?.imageInfo(danceId)
+      if (danceId !== null && info && !info.missing) {
+        const shows = deps.attachments?.slideShows(danceId) ?? null
+        if (shows === 'image' || !slide) {
+          deps.live.show(null)
+          shown = true
+          return { kind: 'image', imageUrl: danceImageUrl(danceId, info.version) }
+        }
+      }
       // A slide gone from its deck can't be shown live; its saved image still can.
       const live =
         slide?.status === 'ok'
@@ -42,8 +57,15 @@ export function createProjectorFeed(deps: {
           : null
       deps.live.show(live)
       shown = true
-      if (!slide || (!slide.imageUrl && !live)) return null
+      if (!slide || (!slide.imageUrl && !live)) {
+        // The Canva slide can't be drawn: the dance's own image is better than nothing.
+        if (danceId !== null && info && !info.missing) {
+          return { kind: 'image', imageUrl: danceImageUrl(danceId, info.version) }
+        }
+        return null
+      }
       return {
+        kind: 'canva',
         deckId: slide.deckId,
         pageId: slide.pageId,
         imageUrl: slide.imageUrl,

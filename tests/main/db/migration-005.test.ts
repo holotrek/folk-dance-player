@@ -25,7 +25,7 @@ const mapping = (db: ReturnType<typeof openDatabase>): Record<string, unknown> =
 describe('migration 005: import mapping per destination', () => {
   test('applies as version 5', () => {
     const { db } = oldDatabase('artist', 'ignore')
-    expect(migrate(db, MIGRATIONS)).toEqual({ from: 4, to: 5 })
+    expect(migrate(db, MIGRATIONS.slice(0, 5))).toEqual({ from: 4, to: 5 })
     expect(getSchemaVersion(db)).toBe(5)
   })
 
@@ -44,7 +44,7 @@ describe('migration 005: import mapping per destination', () => {
     'artist→%s, album artist→%s becomes artist from %s, teacher from %s, choreographer from %s',
     (artist, album, artistFrom, teacherFrom, choreographerFrom) => {
       const { db } = oldDatabase(artist, album)
-      migrate(db, MIGRATIONS)
+      migrate(db, MIGRATIONS.slice(0, 5))
       expect(mapping(db)).toEqual({
         'import.artistFrom': artistFrom,
         'import.choreographerFrom': choreographerFrom,
@@ -61,7 +61,7 @@ describe('migration 005: import mapping per destination', () => {
   ])('an old value that is %s counts as the default', (_name, raw) => {
     const { db, put } = oldDatabase(null, 'teacher')
     put.run('import.artistTagTarget', raw)
-    migrate(db, MIGRATIONS)
+    migrate(db, MIGRATIONS.slice(0, 5))
     expect(mapping(db)).toEqual({
       'import.artistFrom': 'artistTag',
       'import.choreographerFrom': 'ignore',
@@ -72,7 +72,7 @@ describe('migration 005: import mapping per destination', () => {
   test('removes the two old keys and leaves genreIsCountry alone', () => {
     const { db, put } = oldDatabase('artist', 'teacher')
     put.run('import.genreIsCountry', 'false')
-    migrate(db, MIGRATIONS)
+    migrate(db, MIGRATIONS.slice(0, 5))
     const keys = (
       db.prepare('SELECT key FROM settings ORDER BY key').all() as { key: string }[]
     ).map((r) => r.key)
@@ -87,15 +87,15 @@ describe('migration 005: import mapping per destination', () => {
 
   test('writes nothing for a database that never changed the mapping', () => {
     const { db } = oldDatabase(null, null)
-    migrate(db, MIGRATIONS)
+    migrate(db, MIGRATIONS.slice(0, 5))
     expect(mapping(db)).toEqual({})
   })
 
   test('a database already at version 5 is not converted again', () => {
     const { db } = oldDatabase('teacher', 'artist')
-    migrate(db, MIGRATIONS)
+    migrate(db, MIGRATIONS.slice(0, 5))
     const first = mapping(db)
-    expect(migrate(db, MIGRATIONS)).toEqual({ from: 5, to: 5 })
+    expect(migrate(db, MIGRATIONS.slice(0, 5))).toEqual({ from: 5, to: 5 })
     expect(mapping(db)).toEqual(first)
   })
 
@@ -121,7 +121,7 @@ describe('migration 005: import mapping per destination', () => {
       insert.run('/m/a.mp3', null, 'Sonia', baseline) // Artist tag empty: used the Album Artist tag
       insert.run('/m/b.mp3', 'Taraf', 'Sonia', baseline.replace(/Sonia/g, 'Taraf')) // Artist tag set
       insert.run('/m/c.mp3', null, 'Sonia', null) // never synced
-      migrate(db, MIGRATIONS)
+      migrate(db, MIGRATIONS.slice(0, 5))
       const read = (path: string) =>
         db.prepare('SELECT sync_baseline AS b FROM files WHERE path = ?').get(path) as {
           b: string | null

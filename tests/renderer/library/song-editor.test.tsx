@@ -29,6 +29,9 @@ const detail = (overrides: Partial<SongDetail> = {}): SongDetail => ({
       songCount: 3,
       isDefault: true,
       sameAsSong: false,
+      notesPdf: null,
+      slideImage: null,
+      slideShows: null,
       label: 'Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo',
       slide: null
     },
@@ -45,6 +48,9 @@ const detail = (overrides: Partial<SongDetail> = {}): SongDetail => ({
       songCount: 1,
       isDefault: false,
       sameAsSong: false,
+      notesPdf: null,
+      slideImage: null,
+      slideShows: null,
       label: 'Lesnoto (Someone) ♪ Pusteno Ludo',
       slide: null
     }

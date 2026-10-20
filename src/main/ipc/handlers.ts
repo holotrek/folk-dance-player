@@ -1,3 +1,4 @@
+import type { AttachmentStore } from '../attachments/attachment-store'
 import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
 import type { RemoteStatus } from '@shared/program'
@@ -14,6 +15,8 @@ import type { SettingsStore } from '../settings/settings-store'
 export interface Dialogs {
   pickMusic(): Promise<string[]>
   pickAppleLibrary(): Promise<string | null>
+  pickPdf(): Promise<string | null>
+  pickImage(): Promise<string | null>
 }
 
 export interface HandlerDeps {
@@ -29,6 +32,23 @@ export interface HandlerDeps {
   remote?: { status(): RemoteStatus; requestAccess(): RemoteStatus }
   // The projector window (spec §8); reported off when absent.
   projector?: ProjectorDeps
+  // A dance's PDF and slide image (0.3.0 spec §3.6, §3.7); attaching fails when absent.
+  attachments?: Pick<
+    AttachmentStore,
+    | 'attachPdf'
+    | 'removePdf'
+    | 'pdfPath'
+    | 'pdfInfo'
+    | 'attachImage'
+    | 'removeImage'
+    | 'imagePath'
+    | 'imageInfo'
+    | 'slideShows'
+    | 'setSlideSource'
+    | 'deleteUnreferenced'
+  >
+  // Opens a file in the system's default application; resolves to an error message, or ''.
+  openPath?: (path: string) => Promise<string>
   // Canva decks and slide captures (spec §8.3); adding or linking fails when absent.
   canva?: CanvaDeps
   // Sync with Apple Music (sync spec); reported off when absent.

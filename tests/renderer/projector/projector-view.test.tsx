@@ -137,7 +137,13 @@ describe('projector view (spec §8.2)', () => {
   })
 
   describe('with a Canva slide (spec §8.3)', () => {
-    const slide = { deckId: 1, pageId: 'P6', imageUrl: 'fdp-media://slide/1/P6?v=1', live: false }
+    const slide = {
+      kind: 'canva' as const,
+      deckId: 1,
+      pageId: 'P6',
+      imageUrl: 'fdp-media://slide/1/P6?v=1',
+      live: false
+    }
     const withSlide: ProjectorSnapshot = {
       ...playing,
       middle: { kind: 'now', entry: pravo, playId: 4, paused: false, slide }
@@ -186,6 +192,22 @@ describe('projector view (spec §8.2)', () => {
       expect(screen.getByTestId('slide-area')).toHaveStyle({ width: '902px', height: '508px' })
       window.innerWidth = 1024
       window.innerHeight = 768
+    })
+
+    test('an image slide is drawn in the same slide area and layout', () => {
+      const image = { kind: 'image' as const, imageUrl: 'fdp-media://dance-image/7?v=7-ab.png' }
+      render(
+        <ProjectorView
+          snapshot={{
+            ...playing,
+            middle: { kind: 'now', entry: pravo, playId: 4, paused: false, slide: image }
+          }}
+          progress={null}
+        />
+      )
+      expect(screen.getByTestId('slide-row')).toBeInTheDocument()
+      expect(screen.getByTestId('slide-area')).toBeInTheDocument()
+      expect(screen.getByRole('img', { name: /Slide for/ })).toHaveAttribute('src', image.imageUrl)
     })
 
     test('without a slide the layout is unchanged', () => {

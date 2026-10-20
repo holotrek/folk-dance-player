@@ -9,6 +9,16 @@ export function parseMediaUrl(url: string): number | null {
   return match ? Number(match[1]) : null
 }
 
+// A dance's own slide image (0.3.0 spec §3.7), by dance ID; `version` (its stored file name, which
+// changes whenever the image is replaced) makes a replaced image load fresh.
+export const danceImageUrl = (danceId: number, version: string): string =>
+  `${MEDIA_SCHEME}://dance-image/${danceId}?v=${encodeURIComponent(version)}`
+
+export function parseDanceImageUrl(url: string): number | null {
+  const match = /^fdp-media:\/\/dance-image\/(\d+)\/?(?:\?.*)?$/.exec(url)
+  return match ? Number(match[1]) : null
+}
+
 // `version` (when the image was captured) makes a re-captured slide load fresh.
 export const slideUrl = (deckId: number, pageId: string, version: string): string =>
   `${MEDIA_SCHEME}://slide/${deckId}/${pageId}?v=${encodeURIComponent(version)}`

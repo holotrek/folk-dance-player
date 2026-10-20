@@ -1,4 +1,5 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { drag, launch, workspace, type Running } from './app'
@@ -166,6 +167,74 @@ test('renaming a song renames its same-named dance', async () => {
   await expect(card.getByRole('checkbox', { name: 'Same as song' })).toBeChecked()
   await expect(card.getByLabel('Dance name')).toHaveValue('Hora Nova')
   await expect(card.getByLabel('Dance name')).toBeDisabled()
+})
+
+test('a PDF can be attached to a dance and removed from the editor', async () => {
+  // The file dialog is native, so the app is told which file the dialog would return.
+  const folder = mkdtempSync(join(tmpdir(), 'fdp-pdf-'))
+  const pdf = join(folder, 'Hora notes.pdf')
+  writeFileSync(pdf, '%PDF-1.4\n%%EOF\n')
+  try {
+    await running.app.close()
+    running = await launch(space.userData, { FDP_PICK_ATTACHMENT: pdf })
+    const { page } = running
+    await page.getByRole('tab', { name: 'Music' }).click()
+    await libraryRow('Hora').click()
+    await page.getByRole('button', { name: 'Attach PDF…' }).click()
+    await expect(page.getByText('Hora notes.pdf')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Open PDF' })).toBeVisible()
+    const stored = join(space.userData, 'dance-notes')
+    expect(readdirSync(stored)).toHaveLength(1)
+    rmSync(pdf) // the original is not needed any more
+    await page.getByRole('button', { name: 'Remove PDF' }).click()
+    await expect(page.getByRole('button', { name: 'Attach PDF…' })).toBeVisible()
+    expect(existsSync(stored) ? readdirSync(stored) : []).toEqual([])
+  } finally {
+    rmSync(folder, { recursive: true, force: true })
+  }
+})
+
+test('a slide image is attached, and the projector snapshot carries it', async () => {
+  // A tiny PNG (its signature is what the app checks); the file dialog is replaced by the variable.
+  const folder = mkdtempSync(join(tmpdir(), 'fdp-image-'))
+  const png = join(folder, 'Hora slide.png')
+  writeFileSync(
+    png,
+    Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32)])
+  )
+  type Snapshot = { middle: { slide?: { kind: string; imageUrl: string } } | null }
+  try {
+    await running.app.close()
+    running = await launch(space.userData, { FDP_PICK_ATTACHMENT: png })
+    const { page, invoke } = running
+    await page.getByRole('tab', { name: 'Music' }).click()
+    await libraryRow('Hora').click()
+    await page.getByRole('button', { name: 'Upload image…' }).click()
+    await expect(page.getByText('Hora slide.png')).toBeVisible()
+    await expect(page.getByRole('img', { name: 'Image for Hora' })).toBeVisible()
+    expect(readdirSync(join(space.userData, 'slide-images'))).toHaveLength(1)
+    // With one source there is nothing to choose.
+    await expect(page.getByRole('radiogroup', { name: 'Show on the projector' })).toHaveCount(0)
+
+    await page.getByRole('tab', { name: 'Program' }).click()
+    await drag(page, libraryRow('Hora'), page.getByRole('region', { name: 'Program' }))
+    await expect
+      .poll(async () => (await invoke<Snapshot>('projector:getSnapshot')).middle?.slide)
+      .toMatchObject({
+        kind: 'image',
+        imageUrl: expect.stringContaining('fdp-media://dance-image/')
+      })
+
+    await page.getByRole('tab', { name: 'Music' }).click()
+    await libraryRow('Hora').click()
+    await page.getByRole('button', { name: 'Remove image' }).click()
+    await expect
+      .poll(async () => (await invoke<Snapshot>('projector:getSnapshot')).middle?.slide)
+      .toBeUndefined()
+    expect(readdirSync(join(space.userData, 'slide-images'))).toEqual([])
+  } finally {
+    rmSync(folder, { recursive: true, force: true })
+  }
 })
 
 test('Settings… in the app menu opens the Settings page', async () => {

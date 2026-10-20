@@ -163,7 +163,13 @@ describe('projector snapshot', () => {
   })
 
   test('the middle dance carries its slide, when it has one', () => {
-    const slide = { deckId: 1, pageId: 'P6', imageUrl: 'fdp-media://slide/1/P6', live: false }
+    const slide = {
+      kind: 'canva' as const,
+      deckId: 1,
+      pageId: 'P6',
+      imageUrl: 'fdp-media://slide/1/P6',
+      live: false
+    }
     const slideFor = (danceId: number | null) => (danceId === kolo.danceId ? slide : null)
     const playingKolo = buildProjectorSnapshot(
       state({

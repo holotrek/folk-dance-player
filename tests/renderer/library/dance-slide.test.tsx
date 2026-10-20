@@ -240,3 +240,93 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
     onLine.mockRestore()
   })
 })
+
+describe('a dance’s slide image (0.3.0 spec §3.7)', () => {
+  const image = {
+    name: 'Ali Pasa slide.png',
+    url: 'fdp-media://dance-image/11?v=11-ab.png',
+    missing: false
+  }
+
+  function setupImage(
+    slide: DanceSlide | null,
+    props: { image: typeof image | null; shows: 'canva' | 'image' | null },
+    extra: Record<string, unknown> = {}
+  ) {
+    const fake = createFakeApi({
+      'canva:decks': [deck],
+      'canva:deckPages': pages,
+      'canva:clearSlide': undefined,
+      'library:attachSlideImage': true,
+      'library:removeSlideImage': undefined,
+      'library:setSlideSource': undefined,
+      ...extra
+    })
+    renderWithLibrary(
+      <DanceSlideField
+        danceId={11}
+        danceName="Ali Paşa"
+        slide={slide}
+        image={props.image}
+        shows={props.shows}
+      />,
+      fake.api
+    )
+    return fake
+  }
+
+  test('Upload image… asks main to attach one for this dance', async () => {
+    const fake = setupImage(null, { image: null, shows: null })
+    await userEvent.click(screen.getByRole('button', { name: 'Upload image…' }))
+    expect(fake.callsTo('library:attachSlideImage')).toEqual([[11]])
+  })
+
+  test('with an image: a thumbnail, its file name, Replace… and Remove', async () => {
+    const fake = setupImage(null, { image, shows: null })
+    expect(screen.getByText('Ali Pasa slide.png')).toBeInTheDocument()
+    expect(screen.getByRole('img', { name: 'Image for Ali Paşa' })).toHaveAttribute(
+      'src',
+      image.url
+    )
+    expect(screen.queryByRole('button', { name: 'Upload image…' })).toBeNull()
+    await userEvent.click(screen.getByRole('button', { name: 'Replace image' }))
+    expect(fake.callsTo('library:attachSlideImage')).toEqual([[11]])
+    await userEvent.click(screen.getByRole('button', { name: 'Remove image' }))
+    expect(fake.callsTo('library:removeSlideImage')).toEqual([[11]])
+  })
+
+  test('the toggle is hidden with only a Canva slide, and with only an image', () => {
+    setupImage(linked, { image: null, shows: null })
+    expect(screen.queryByRole('radiogroup', { name: 'Show on the projector' })).toBeNull()
+  })
+
+  test('the toggle is hidden with only an image', () => {
+    setupImage(null, { image, shows: null })
+    expect(screen.queryByRole('radiogroup', { name: 'Show on the projector' })).toBeNull()
+  })
+
+  test('with both, the toggle shows the current choice, and choosing Image tells main', async () => {
+    const fake = setupImage(linked, { image, shows: 'canva' })
+    const group = screen.getByRole('radiogroup', { name: 'Show on the projector' })
+    expect(within(group).getByRole('radio', { name: 'Canva slide' })).toBeChecked()
+    await userEvent.click(within(group).getByText('Image'))
+    expect(fake.callsTo('library:setSlideSource')).toEqual([[11, 'image']])
+  })
+
+  test('a missing image says so and offers Upload image…', () => {
+    setupImage(null, { image: { ...image, missing: true }, shows: null })
+    expect(screen.getByText(/The image is missing/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Upload image…' })).toBeInTheDocument()
+    expect(screen.queryByRole('img', { name: 'Image for Ali Paşa' })).toBeNull()
+  })
+
+  test('an error from attaching is shown', async () => {
+    setupImage(
+      null,
+      { image: null, shows: null },
+      { 'library:attachSlideImage': () => Promise.reject(new Error('That file is not an image.')) }
+    )
+    await userEvent.click(screen.getByRole('button', { name: 'Upload image…' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('That file is not an image.')
+  })
+})

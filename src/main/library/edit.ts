@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { randomUUID } from 'crypto'
 import { formatLabel, labelParts, sameName } from '@shared/labels'
+import { danceImageUrl } from '@shared/media'
 import type {
   DancePatch,
   DanceSearchResult,
@@ -61,7 +62,15 @@ interface DanceRow {
   isDefault: number
 }
 
-export function getSongDetail(db: DatabaseSync, songId: number): SongDetail | null {
+export function getSongDetail(
+  db: DatabaseSync,
+  songId: number,
+  attachments?: {
+    pdfInfo?(danceId: number): { name: string; missing: boolean } | null
+    imageInfo?(danceId: number): { name: string; version: string; missing: boolean } | null
+    slideShows?(danceId: number): 'canva' | 'image' | null
+  }
+): SongDetail | null {
   const song = db
     .prepare(
       `SELECT s.id AS songId, f.id AS fileId, s.title, s.artist, f.path, f.duration_ms AS durationMs,
@@ -96,10 +105,19 @@ export function getSongDetail(db: DatabaseSync, songId: number): SongDetail | nu
   const choreographerCount = new Set(
     rows.map((r) => r.choreographer?.trim()).filter((c): c is string => !!c)
   ).size
+  const slideImageOf = (danceId: number): SongDance['slideImage'] => {
+    const info = attachments?.imageInfo?.(danceId)
+    return info
+      ? { name: info.name, url: danceImageUrl(danceId, info.version), missing: info.missing }
+      : null
+  }
   const dances: SongDance[] = rows.map((r) => ({
     ...r,
     isDefault: r.isDefault === 1,
     sameAsSong: r.isDefault === 1 && r.songCount === 1 && sameName(r.name, song.title),
+    notesPdf: attachments?.pdfInfo?.(r.danceId) ?? null,
+    slideImage: slideImageOf(r.danceId),
+    slideShows: attachments?.slideShows?.(r.danceId) ?? null,
     slide: getDanceSlide(db, r.danceId),
     label: formatLabel(
       labelParts({
@@ -314,10 +332,12 @@ export function unlinkDance(db: DatabaseSync, songId: number, danceId: number): 
 }
 
 // Combines `removeId` into `keepId`: its songs (with their teachers), song defaults, program items
-// and history move to the kept dance; the kept dance's empty fields are filled from it.
-export function mergeDances(db: DatabaseSync, keepId: number, removeId: number): void {
+// and history move to the kept dance; the kept dance's empty fields are filled from it. Returns the
+// stored attachment files the merge left unreferenced (paths relative to the app data folder), for
+// the caller to delete once the merge is done.
+export function mergeDances(db: DatabaseSync, keepId: number, removeId: number): string[] {
   if (keepId === removeId) throw new LibraryEditError("A dance can't be merged into itself.")
-  inTransaction(db, () => {
+  return inTransaction(db, () => {
     const links = db
       .prepare(
         `SELECT ds.id, ds.song_id AS songId, p.teacher FROM dance_songs ds
@@ -358,6 +378,8 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
     if (keptNotes && removedNotes && keptNotes !== removedNotes) {
       update(db, 'dance_prefs', 'dance_id', keepId, { notes: `${keptNotes}\n\n${removedNotes}` })
     }
+    // Before the removed dance's Canva slide can fill the kept dance's empty one.
+    const keptHadCanva = hasCanvaSlide(db, keepId)
     fillEmptyFrom(db, 'dance_prefs', 'dance_id', keepId, removeId, [
       'difficulty',
       'notes',
@@ -373,8 +395,69 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
          UNION SELECT dance_a FROM distinct_dances WHERE dance_b = ?)
        WHERE other <> ?`
     ).run(keepId, keepId, removeId, removeId, keepId)
+    const orphans = mergeAttachments(db, keepId, removeId, keptHadCanva)
     db.prepare('DELETE FROM dances WHERE id = ?').run(removeId)
+    return orphans
   })
+}
+
+const hasCanvaSlide = (db: DatabaseSync, danceId: number): boolean =>
+  !!db
+    .prepare(
+      'SELECT 1 FROM dance_prefs WHERE dance_id = ? AND canva_deck_id IS NOT NULL AND canva_page_id IS NOT NULL'
+    )
+    .get(danceId)
+
+// A dance's PDF and slide image stay with the kept dance; a kept dance without one takes the removed
+// dance's (its shown name and stored file together). The removed dance's file is reported when not
+// taken. The projector's choice between the Canva slide and the image: the kept dance's own wins,
+// else the removed dance's, and it is cleared unless the merged dance has both sources.
+function mergeAttachments(
+  db: DatabaseSync,
+  keepId: number,
+  removeId: number,
+  keptHadCanva: boolean
+): string[] {
+  type Row = {
+    pdfName: string | null
+    pdfPath: string | null
+    imageName: string | null
+    imagePath: string | null
+    source: 'canva' | 'image' | null
+  }
+  const read = (id: number): Row | undefined =>
+    db
+      .prepare(
+        `SELECT notes_pdf_name AS pdfName, notes_pdf_path AS pdfPath, slide_image_name AS imageName,
+           slide_image_path AS imagePath, slide_source AS source
+         FROM dance_prefs WHERE dance_id = ?`
+      )
+      .get(id) as Row | undefined
+  const kept = read(keepId)
+  const gone = read(removeId)
+  const orphans: string[] = []
+  const take: Record<string, string | null> = {}
+  if (gone?.pdfPath) {
+    if (kept?.pdfPath) orphans.push(`dance-notes/${gone.pdfPath}`)
+    else Object.assign(take, { notes_pdf_name: gone.pdfName, notes_pdf_path: gone.pdfPath })
+  }
+  if (gone?.imagePath) {
+    if (kept?.imagePath) orphans.push(`slide-images/${gone.imagePath}`)
+    else Object.assign(take, { slide_image_name: gone.imageName, slide_image_path: gone.imagePath })
+  }
+  const hasImage = !!(kept?.imagePath ?? take.slide_image_path)
+  const hasCanva = hasCanvaSlide(db, keepId)
+  // A kept dance that already had both sources keeps its own choice (NULL is the default Canva);
+  // the removed dance's choice is adopted only when the merge gave the kept dance its second source.
+  const keptHadBoth = !!kept?.imagePath && keptHadCanva
+  take.slide_source =
+    hasImage && hasCanva
+      ? keptHadBoth
+        ? kept!.source
+        : (kept?.source ?? gone?.source ?? null)
+      : null
+  update(db, 'dance_prefs', 'dance_id', keepId, take)
+  return orphans
 }
 
 function fillEmptyFrom(
@@ -397,19 +480,26 @@ function fillEmptyFrom(
 
 // "Same dance" on a suggestion (spec §6.3): the song is linked to `otherId` and it becomes the
 // default. The song's own dance is merged into it when no other song uses it.
-export function sameDance(db: DatabaseSync, songId: number, ownId: number, otherId: number): void {
-  inTransaction(db, () => {
+export function sameDance(
+  db: DatabaseSync,
+  songId: number,
+  ownId: number,
+  otherId: number
+): string[] {
+  return inTransaction(db, () => {
     const ownSongs = (
       db.prepare('SELECT COUNT(*) AS n FROM dance_songs WHERE dance_id = ?').get(ownId) as {
         n: number
       }
     ).n
+    let orphans: string[] = []
     if (ownSongs <= 1) {
-      mergeDances(db, otherId, ownId)
+      orphans = mergeDances(db, otherId, ownId)
     } else {
       linkAndMaybeDefault(db, songId, otherId)
     }
     setDefaultDance(db, songId, otherId)
+    return orphans
   })
 }
 

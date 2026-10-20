@@ -61,8 +61,8 @@ built on its own.
 | 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
 | 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Built (Plan 13) |
 | 3.5 | "Same as song" for a dance's name | Song editor | Built (Plan 14) |
-| 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Planned |
-| 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Planned |
+| 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Built (Plan 15, PR 5a) |
+| 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Built (Plan 15, PR 5b) |
 | 3.8 | Select several program items and move them together | Program list | Planned |
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Planned |
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Planned |
@@ -686,8 +686,7 @@ migration and the "copy a file into the app's data folder" helper.
    length that the organizer can set?
 3. **§3.9, the projector.** Which times show, where, and how prominently? My guess is one quiet
    "Ending about 9:42 PM" in the footer, and not the total.
-4. **§3.7, the default.** When a dance has both a Canva slide and an image, is the Canva slide the
-   right default until the toggle is used?
+4. ~~**§3.7, the default.**~~ Built with the Canva slide as the default until the toggle is used (2026-10-20).
 5. **§3.6, the PDF.** Is opening it in the system's PDF viewer acceptable, or should it open in an
    app window? Is one PDF per dance enough?
 6. ~~**§3.4, old settings.**~~ Decided 2026-10-19: where an old mapping sent both tags to one field, the Artist tag keeps it.

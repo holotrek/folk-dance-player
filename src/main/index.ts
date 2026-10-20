@@ -18,7 +18,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
 import type { EventChannel, EventContract, PageTarget } from '@shared/contract'
-import { MEDIA_SCHEME, parseMediaUrl, parseSlideUrl } from '@shared/media'
+import { MEDIA_SCHEME, parseDanceImageUrl, parseMediaUrl, parseSlideUrl } from '@shared/media'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { AppleSync } from './apple-sync/apple-sync'
@@ -41,6 +41,7 @@ import { backupDatabase } from './db/backup'
 import { openDatabase } from './db/connection'
 import { getSchemaVersion, migrate, SchemaTooNewError } from './db/migrate'
 import { MIGRATIONS } from './db/migrations'
+import { AttachmentStore } from './attachments/attachment-store'
 import { importDialogs } from './import/dialogs'
 import { ImportBusyError, ImportService, savedMapping } from './import/import-service'
 import { findEditedApplePlaylists } from './import/save-playlists'
@@ -356,15 +357,21 @@ function startApp(): void {
     log
   })
 
+  // A dance's PDF and slide image: copies in the app data folder (0.3.0 spec §3.6, §3.7).
+  const attachments = new AttachmentStore({ db, dir: app.getPath('userData') })
+
   protocol.handle(MEDIA_SCHEME, (request) => {
     const fileId = parseMediaUrl(request.url)
     const slide = parseSlideUrl(request.url)
+    const danceImage = parseDanceImageUrl(request.url)
     const path =
       fileId !== null
         ? trackPath(db, fileId)
         : slide
           ? slideImagePath(db, slide.deckId, slide.pageId)
-          : null
+          : danceImage !== null
+            ? attachments.imagePath(danceImage)
+            : null
     return mediaResponse(path, request.headers.get('range'))
   })
 
@@ -495,7 +502,7 @@ function startApp(): void {
       updateProjector()
     }
   })
-  const feed = createProjectorFeed({ db, player, projector: controller, live })
+  const feed = createProjectorFeed({ db, player, projector: controller, live, attachments })
   const keepAwake = new KeepAwake(powerSaveBlocker)
   updateProjector = coalesced(() => {
     feed.update()
@@ -535,6 +542,8 @@ function startApp(): void {
       appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) }),
       importer,
       dialogs: importDialogs,
+      attachments,
+      openPath: (path) => shell.openPath(path),
       player,
       remote,
       projector: {

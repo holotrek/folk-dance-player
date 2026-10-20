@@ -425,3 +425,208 @@ describe('same as song', () => {
     expect(dance(a.songId, a.danceId).name).toBe('Pravo')
   })
 })
+
+describe('getSongDetail: PDFs', () => {
+  test('carries each dance’s PDF name and whether it is missing', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    const lesnoto = addDance(db, { name: 'Lesnoto' })
+    link(db, lesnoto, songId)
+    const info = (id: number) => (id === danceId ? { name: 'Hora notes.pdf', missing: true } : null)
+    const dances = getSongDetail(db, songId, { pdfInfo: info })!.dances
+    expect(dances.map((d) => d.notesPdf)).toEqual([{ name: 'Hora notes.pdf', missing: true }, null])
+  })
+
+  test('is null without an attachment store', () => {
+    const { songId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    expect(getSongDetail(db, songId)!.dances[0].notesPdf).toBeNull()
+  })
+})
+
+describe('mergeDances: PDFs', () => {
+  const setPdf = (danceId: number, name: string, stored: string) =>
+    db
+      .prepare(
+        `INSERT INTO dance_prefs (dance_id, notes_pdf_name, notes_pdf_path) VALUES (?, ?, ?)
+         ON CONFLICT (dance_id) DO UPDATE SET notes_pdf_name = excluded.notes_pdf_name,
+           notes_pdf_path = excluded.notes_pdf_path`
+      )
+      .run(danceId, name, stored)
+  const pdf = (danceId: number) =>
+    db
+      .prepare(
+        'SELECT notes_pdf_name AS name, notes_pdf_path AS path FROM dance_prefs WHERE dance_id = ?'
+      )
+      .get(danceId)
+  const two = () => ({
+    a: addLibrarySong(db, { title: 'A', dance: { name: 'Lesnoto' } }),
+    b: addLibrarySong(db, { title: 'B', dance: { name: 'Lesnoto' } })
+  })
+
+  test('the kept dance keeps its PDF, and the removed dance’s file is reported unreferenced', () => {
+    const { a, b } = two()
+    setPdf(a.danceId!, 'keep.pdf', '1-aa.pdf')
+    setPdf(b.danceId!, 'gone.pdf', '2-bb.pdf')
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual(['dance-notes/2-bb.pdf'])
+    expect(pdf(a.danceId!)).toEqual({ name: 'keep.pdf', path: '1-aa.pdf' })
+  })
+
+  test('the kept dance takes the removed dance’s PDF when it has none, and nothing is reported', () => {
+    const { a, b } = two()
+    setPdf(b.danceId!, 'gone.pdf', '2-bb.pdf')
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual([])
+    expect(pdf(a.danceId!)).toEqual({ name: 'gone.pdf', path: '2-bb.pdf' })
+  })
+
+  test('without PDFs nothing changes and nothing is reported', () => {
+    const { a, b } = two()
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual([])
+    expect((pdf(a.danceId!) as { path: string | null } | undefined)?.path ?? null).toBeNull()
+  })
+
+  test('“Same dance” merges the same way and reports the unreferenced file', () => {
+    const own = addLibrarySong(db, { title: 'Own', dance: { name: 'Lesnoto' } })
+    const other = addLibrarySong(db, { title: 'Other', dance: { name: 'Lesnoto' } })
+    setPdf(own.danceId!, 'mine.pdf', '1-aa.pdf')
+    setPdf(other.danceId!, 'theirs.pdf', '2-bb.pdf')
+    expect(sameDance(db, own.songId, own.danceId!, other.danceId!)).toEqual([
+      'dance-notes/1-aa.pdf'
+    ])
+    expect(pdf(other.danceId!)).toEqual({ name: 'theirs.pdf', path: '2-bb.pdf' })
+  })
+})
+
+describe('getSongDetail: slide images', () => {
+  test('carries each dance’s image (with a version URL) and which slide is shown', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    const lesnoto = addDance(db, { name: 'Lesnoto' })
+    link(db, lesnoto, songId)
+    const attachments = {
+      imageInfo: (id: number) =>
+        id === danceId ? { name: 'a.png', version: '1-ab.png', missing: false } : null,
+      slideShows: (id: number) => (id === danceId ? ('image' as const) : null)
+    }
+    const dances = getSongDetail(db, songId, attachments)!.dances
+    expect(dances[0].slideImage).toEqual({
+      name: 'a.png',
+      url: `fdp-media://dance-image/${danceId}?v=1-ab.png`,
+      missing: false
+    })
+    expect(dances[0].slideShows).toBe('image')
+    expect(dances[1].slideImage).toBeNull()
+    expect(dances[1].slideShows).toBeNull()
+  })
+
+  test('is null without an attachment store', () => {
+    const { songId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    expect(getSongDetail(db, songId)!.dances[0]).toMatchObject({
+      slideImage: null,
+      slideShows: null
+    })
+  })
+})
+
+describe('mergeDances: slide images and the slide choice', () => {
+  const prefs = (danceId: number, cols: Record<string, string | number | null>) => {
+    db.prepare('INSERT OR IGNORE INTO dance_prefs (dance_id) VALUES (?)').run(danceId)
+    for (const [k, v] of Object.entries(cols)) {
+      db.prepare(`UPDATE dance_prefs SET ${k} = ? WHERE dance_id = ?`).run(v, danceId)
+    }
+  }
+  const read = (danceId: number) =>
+    db
+      .prepare(
+        `SELECT slide_image_name AS name, slide_image_path AS path, slide_source AS source,
+           canva_deck_id AS deck FROM dance_prefs WHERE dance_id = ?`
+      )
+      .get(danceId) as {
+      name: string | null
+      path: string | null
+      source: string | null
+      deck: number | null
+    }
+  const two = () => ({
+    a: addLibrarySong(db, { title: 'A', dance: { name: 'Lesnoto' } }),
+    b: addLibrarySong(db, { title: 'B', dance: { name: 'Lesnoto' } })
+  })
+  const deck = () =>
+    Number(
+      db
+        .prepare("INSERT INTO canva_decks (view_url, design_id, pages) VALUES (?, 'D', '[]')")
+        .run(`https://x/${Math.random()}/view`).lastInsertRowid
+    )
+  const canva = (danceId: number, deckId: number) =>
+    prefs(danceId, { canva_deck_id: deckId, canva_page_id: 'P1', canva_page_index: 1 })
+
+  test('the kept dance keeps its image; the removed dance’s file is reported unreferenced', () => {
+    const { a, b } = two()
+    prefs(a.danceId!, { slide_image_name: 'keep.png', slide_image_path: '1-aa.png' })
+    prefs(b.danceId!, { slide_image_name: 'gone.png', slide_image_path: '2-bb.png' })
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual(['slide-images/2-bb.png'])
+    expect(read(a.danceId!)).toMatchObject({ name: 'keep.png', path: '1-aa.png' })
+  })
+
+  test('the kept dance takes the removed dance’s image when it has none', () => {
+    const { a, b } = two()
+    prefs(b.danceId!, { slide_image_name: 'gone.png', slide_image_path: '2-bb.png' })
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual([])
+    expect(read(a.danceId!)).toMatchObject({ name: 'gone.png', path: '2-bb.png' })
+  })
+
+  test('the kept dance’s own choice wins when it has both sources', () => {
+    const { a, b } = two()
+    const d = deck()
+    canva(a.danceId!, d)
+    prefs(a.danceId!, {
+      slide_image_name: 'a.png',
+      slide_image_path: '1-aa.png',
+      slide_source: 'canva'
+    })
+    prefs(b.danceId!, {
+      slide_image_name: 'b.png',
+      slide_image_path: '2-bb.png',
+      slide_source: 'image'
+    })
+    canva(b.danceId!, d)
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(read(a.danceId!).source).toBe('canva')
+  })
+
+  test('a kept dance that already had both sources keeps the default Canva choice', () => {
+    const { a, b } = two()
+    const d = deck()
+    canva(a.danceId!, d)
+    prefs(a.danceId!, { slide_image_name: 'a.png', slide_image_path: '1-aa.png' }) // choice never touched
+    canva(b.danceId!, d)
+    prefs(b.danceId!, {
+      slide_image_name: 'b.png',
+      slide_image_path: '2-bb.png',
+      slide_source: 'image'
+    })
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(read(a.danceId!)).toMatchObject({ path: '1-aa.png', source: null })
+  })
+
+  test('the removed dance’s choice is adopted when the kept dance had none and both sources now exist', () => {
+    const { a, b } = two()
+    canva(a.danceId!, deck())
+    prefs(b.danceId!, {
+      slide_image_name: 'b.png',
+      slide_image_path: '2-bb.png',
+      slide_source: 'image'
+    })
+    canva(b.danceId!, deck())
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(read(a.danceId!)).toMatchObject({ path: '2-bb.png', source: 'image' })
+  })
+
+  test('the choice is cleared when the merged dance does not have both', () => {
+    const { a, b } = two()
+    prefs(b.danceId!, {
+      slide_image_name: 'b.png',
+      slide_image_path: '2-bb.png',
+      slide_source: 'image'
+    })
+    mergeDances(db, a.danceId!, b.danceId!)
+    expect(read(a.danceId!)).toMatchObject({ path: '2-bb.png', source: null })
+  })
+})
