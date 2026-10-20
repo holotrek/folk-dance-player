@@ -18,7 +18,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
 import type { EventChannel, EventContract, PageTarget } from '@shared/contract'
-import { MEDIA_SCHEME, parseMediaUrl, parseSlideUrl } from '@shared/media'
+import { MEDIA_SCHEME, parseDanceImageUrl, parseMediaUrl, parseSlideUrl } from '@shared/media'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
 import { AppleSync } from './apple-sync/apple-sync'
@@ -363,12 +363,15 @@ function startApp(): void {
   protocol.handle(MEDIA_SCHEME, (request) => {
     const fileId = parseMediaUrl(request.url)
     const slide = parseSlideUrl(request.url)
+    const danceImage = parseDanceImageUrl(request.url)
     const path =
       fileId !== null
         ? trackPath(db, fileId)
         : slide
           ? slideImagePath(db, slide.deckId, slide.pageId)
-          : null
+          : danceImage !== null
+            ? attachments.imagePath(danceImage)
+            : null
     return mediaResponse(path, request.headers.get('range'))
   })
 

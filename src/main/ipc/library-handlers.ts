@@ -82,6 +82,20 @@ export function libraryHandlers(
     'library:removeNotesPdf': edit((danceId) =>
       (deps.attachments ?? unavailable()).removePdf(danceId)
     ),
+    'library:attachSlideImage': async (danceId) => {
+      const attachments = deps.attachments ?? unavailable()
+      const path = await deps.dialogs.pickImage()
+      if (!path) return false
+      attachments.attachImage(danceId, path)
+      deps.onLibraryChanged()
+      return true
+    },
+    'library:removeSlideImage': edit((danceId) =>
+      (deps.attachments ?? unavailable()).removeImage(danceId)
+    ),
+    'library:setSlideSource': edit((danceId, source) =>
+      (deps.attachments ?? unavailable()).setSlideSource(danceId, source)
+    ),
     'library:sameDance': edit((songId, ownId, otherId) => {
       deps.attachments?.deleteUnreferenced(sameDance(db, songId, ownId, otherId))
     }),

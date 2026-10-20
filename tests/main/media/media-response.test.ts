@@ -98,3 +98,17 @@ describe('dance image URLs', () => {
     expect(parseDanceImageUrl('https://dance-image/7')).toBeNull()
   })
 })
+
+describe('image content types', () => {
+  test.each([
+    ['slide.jpg', 'image/jpeg'],
+    ['slide.jpeg', 'image/jpeg'],
+    ['slide.webp', 'image/webp'],
+    ['slide.gif', 'image/gif'],
+    ['slide.png', 'image/png']
+  ])('%s is served as %s', async (name, type) => {
+    const file = join(dir, name)
+    writeFileSync(file, Buffer.from('x'))
+    expect((await mediaResponse(file, null)).headers.get('content-type')).toBe(type)
+  })
+})

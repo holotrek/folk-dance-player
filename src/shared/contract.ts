@@ -82,6 +82,10 @@ export interface InvokeContract {
   'library:attachNotesPdf': { args: [danceId: number]; result: boolean }
   'library:openNotesPdf': { args: [danceId: number]; result: void }
   'library:removeNotesPdf': { args: [danceId: number]; result: void }
+  // A dance's slide image and which slide the projector shows (§3.7).
+  'library:attachSlideImage': { args: [danceId: number]; result: boolean }
+  'library:removeSlideImage': { args: [danceId: number]; result: void }
+  'library:setSlideSource': { args: [danceId: number, source: 'canva' | 'image']; result: void }
   'library:sameDance': { args: [songId: number, ownId: number, otherId: number]; result: void }
   'library:markDifferent': { args: [danceA: number, danceB: number]; result: void }
   'library:searchDances': { args: [text: string]; result: DanceSearchResult[] }
@@ -217,6 +221,9 @@ export const INVOKE_CHANNELS = [
   'library:attachNotesPdf',
   'library:openNotesPdf',
   'library:removeNotesPdf',
+  'library:attachSlideImage',
+  'library:removeSlideImage',
+  'library:setSlideSource',
   'library:sameDance',
   'library:markDifferent',
   'library:searchDances',

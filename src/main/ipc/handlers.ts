@@ -16,6 +16,7 @@ export interface Dialogs {
   pickMusic(): Promise<string[]>
   pickAppleLibrary(): Promise<string | null>
   pickPdf(): Promise<string | null>
+  pickImage(): Promise<string | null>
 }
 
 export interface HandlerDeps {

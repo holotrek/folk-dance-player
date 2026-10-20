@@ -33,7 +33,8 @@ function setup() {
     dialogs: {
       pickMusic: async () => [],
       pickAppleLibrary: async () => null,
-      pickPdf: async () => null
+      pickPdf: async () => null,
+      pickImage: async () => null
     },
     player,
     fileExists: (path) => !missing.has(path),

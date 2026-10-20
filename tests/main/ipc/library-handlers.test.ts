@@ -28,7 +28,8 @@ function setup(over: (db: ReturnType<typeof createTestDb>) => Partial<HandlerDep
     dialogs: {
       pickMusic: async () => [],
       pickAppleLibrary: async () => null,
-      pickPdf: async () => null
+      pickPdf: async () => null,
+      pickImage: async () => null
     },
     player: testPlayer(db, settings),
     onLibraryChanged: () => void changes++,
@@ -115,6 +116,14 @@ describe('PDF handlers', () => {
     dirs.push(root)
     const file = join(root, 'Hora notes.pdf')
     writeFileSync(file, '%PDF-1.4\n%%EOF\n')
+    const image = join(root, 'Slide.png')
+    writeFileSync(
+      image,
+      Buffer.concat([
+        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+        Buffer.alloc(8)
+      ])
+    )
     const opened: string[] = []
     let attachments!: AttachmentStore
     const ctx = setup((db) => {
@@ -123,7 +132,8 @@ describe('PDF handlers', () => {
         dialogs: {
           pickMusic: async () => [],
           pickAppleLibrary: async () => null,
-          pickPdf: async () => (picked === 'FILE' ? file : picked)
+          pickPdf: async () => (picked === 'FILE' ? file : picked === 'IMAGE' ? null : picked),
+          pickImage: async () => (picked === 'IMAGE' ? image : picked === 'FILE' ? null : picked)
         },
         attachments,
         openPath: async (path: string) => {
@@ -206,6 +216,52 @@ describe('PDF handlers', () => {
     const path = attachments.pdfPath(a.danceId!)!
     expect(() => h['library:mergeDances'](a.danceId!, a.danceId!)).toThrow()
     expect(existsSync(path)).toBe(true)
+  })
+
+  test('attaching a slide image through the dialog records it, with a version URL', async () => {
+    const { db, h, changes } = build('IMAGE')
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    expect(await h['library:attachSlideImage'](s.danceId!)).toBe(true)
+    const image = (await h['library:song'](s.songId))?.dances[0].slideImage
+    expect(image).toMatchObject({ name: 'Slide.png', missing: false })
+    expect(image?.url).toMatch(new RegExp(`^fdp-media://dance-image/${s.danceId}\\?v=`))
+    expect(changes()).toBe(1)
+  })
+
+  test('a canceled image dialog returns false and changes nothing', async () => {
+    const { db, h, changes } = build(null)
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    expect(await h['library:attachSlideImage'](s.danceId!)).toBe(false)
+    expect(changes()).toBe(0)
+  })
+
+  test('removing the slide image announces the change', async () => {
+    const { db, h, attachments, changes } = build('IMAGE')
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    await h['library:attachSlideImage'](s.danceId!)
+    await h['library:removeSlideImage'](s.danceId!)
+    expect(attachments.imagePath(s.danceId!)).toBeNull()
+    expect(changes()).toBe(2)
+  })
+
+  test('the slide choice is refused without both sources, and accepted with both', async () => {
+    const { db, h, attachments } = build('IMAGE')
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    await h['library:attachSlideImage'](s.danceId!)
+    expect(() => h['library:setSlideSource'](s.danceId!, 'image')).toThrow()
+    const deck = Number(
+      db
+        .prepare(
+          "INSERT INTO canva_decks (view_url, design_id, pages) VALUES ('https://x/v', 'D', '[]')"
+        )
+        .run().lastInsertRowid
+    )
+    db.prepare(
+      'UPDATE dance_prefs SET canva_deck_id = ?, canva_page_id = ?, canva_page_index = 1 WHERE dance_id = ?'
+    ).run(deck, 'P1', s.danceId)
+    await h['library:setSlideSource'](s.danceId!, 'image')
+    expect(attachments.slideShows(s.danceId!)).toBe('image')
+    expect((await h['library:song'](s.songId))?.dances[0].slideShows).toBe('image')
   })
 
   test('without attachments the PDF channels refuse', async () => {

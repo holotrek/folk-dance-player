@@ -29,7 +29,8 @@ function makeDeps(overrides: Partial<HandlerDeps> = {}): HandlerDeps {
     dialogs: {
       pickMusic: async () => [],
       pickAppleLibrary: async () => null,
-      pickPdf: async () => null
+      pickPdf: async () => null,
+      pickImage: async () => null
     },
     player: testPlayer(db, settings),
     onLibraryChanged: () => undefined,
@@ -70,7 +71,8 @@ describe('import and library handlers', () => {
       dialogs: {
         pickMusic: async () => ['/Music/Balkan'],
         pickAppleLibrary: async () => null,
-        pickPdf: async () => null
+        pickPdf: async () => null,
+        pickImage: async () => null
       }
     })
     expect(await h['import:pickMusic']()).toEqual(['/Music/Balkan'])
@@ -81,7 +83,8 @@ describe('import and library handlers', () => {
       dialogs: {
         pickMusic: async () => [],
         pickAppleLibrary: async () => '/x/Library.xml',
-        pickPdf: async () => null
+        pickPdf: async () => null,
+        pickImage: async () => null
       }
     })
     expect(await h['import:pickAppleLibrary']()).toBe('/x/Library.xml')

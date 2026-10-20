@@ -26,7 +26,8 @@ function setup() {
     dialogs: {
       pickMusic: async () => [],
       pickAppleLibrary: async () => null,
-      pickPdf: async () => null
+      pickPdf: async () => null,
+      pickImage: async () => null
     },
     player: testPlayer(db, settings),
     onLibraryChanged: () => undefined,
