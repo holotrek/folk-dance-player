@@ -8,6 +8,7 @@ interface FieldProps {
   label: string
   value: string | null
   onSave: (value: string) => void
+  readOnly?: boolean
 }
 
 // The field's text while editing, and a blur handler that saves it once if it changed. A value
@@ -33,6 +34,7 @@ export function TextField(props: FieldProps): React.JSX.Element {
     <TextInput
       label={props.label}
       value={draft}
+      readOnly={props.readOnly}
       onChange={(e) => setDraft(e.currentTarget.value)}
       onBlur={onBlur}
     />
