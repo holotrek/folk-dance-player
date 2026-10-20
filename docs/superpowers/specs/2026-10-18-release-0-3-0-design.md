@@ -216,9 +216,11 @@ song is `updateSong` in `main/library/edit.ts`; `library_fts` triggers follow na
 
 **Design.**
 
-- The checkbox shows for every dance **linked to exactly one song**, so it never disappears when
-  the dance is renamed. A dance shared by several songs (one dance, many tunes) never follows
-  one of them and has no checkbox.
+- The checkbox shows on the song's **default dance** (decided 2026-10-19: for a song with several
+  dances, only the default), when that dance is **linked to exactly one song**, so it never
+  disappears when the dance is renamed. A song's other dances have no checkbox and never follow
+  the song, and neither does a dance shared by several songs (one dance, many tunes).
+  Changing which dance is the default moves the checkbox, and the following, to the new one.
 - It is **checked** while the dance's name equals the song's. Unchecking makes the entry
   editable. **Checking it again (decided 2026-10-19) sets the dance's name back to the song's**,
   so the box can always be used to restore the link.

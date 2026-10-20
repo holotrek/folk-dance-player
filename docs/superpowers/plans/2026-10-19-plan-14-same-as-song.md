@@ -4,7 +4,7 @@
 
 **Goal:** In the song editor, a dance whose name is the same as its song's shows a **Same as song** checkbox and a read-only name entry. While it applies, renaming the song renames the dance too.
 
-**Architecture:** The "same as song" state is **derived** (the spec's recommendation, open question 1): a dance is "same as song" when it is linked to exactly one song and its name equals that song's title (ignoring case and surrounding spaces, the same equality labels use). Main computes it into `SongDance.sameAsSong`; `updateSong` renames such dances in the same transaction as the title. The renderer shows the checkbox and keeps unchecking as editor-session state. No schema change, no migration.
+**Architecture:** The "same as song" state is **derived** (the spec's recommendation, open question 1): a song's **default dance** is "same as song" when it is linked to exactly one song and its name equals that song's title (ignoring case and surrounding spaces, the same equality labels use). Main computes it into `SongDance.sameAsSong`; `updateSong` renames that dance in the same transaction as the title. The renderer shows the checkbox on the default dance only and keeps unchecking as editor-session state. No schema change, no migration.
 
 **Tech Stack:** As Plans 1–13. No new dependencies.
 
@@ -21,7 +21,7 @@
 
 ## Review Focus
 
-- A song with two dances of its own, only one named like the song: only that one follows.
+- A song with two dances of its own: only the default dance can be "same as song" and follow a rename; a second dance with the same name as the song, not the default, neither shows the box nor follows. Changing which dance is the default moves the box and the following to the new default.
 - Names equal except for case or surrounding spaces (`hora ` vs `Hora`): treated as the same; after a rename the dance's name is the new title exactly.
 - A song renamed to the same text it already has, or to a case/space variant of itself: nothing breaks and the dance ends up equal to the new title.
 - A dance used by two songs whose name equals one song's title: no checkbox, no following, no matter which song is renamed.
@@ -47,22 +47,23 @@
 - Test: `tests/shared/labels.test.ts`, `tests/main/library/edit.test.ts`, `tests/main/library/list.test.ts`
 
 **Interfaces:**
-- Produces: `sameName(a, b)` — equal ignoring case and surrounding spaces (the rule `labelParts` already used). `SongDance.sameAsSong` is `true` when the dance's `songCount` is 1 and `sameName(dance.name, song.title)`. `updateSong(db, songId, patch)` keeps its signature; when `patch.title` changes the title, then in the same transaction every dance linked to the song that is linked to **only** this song and whose name was `sameName` as the **old** title gets the new (trimmed) title as its name.
+- Produces: `sameName(a, b)` — equal ignoring case and surrounding spaces (the rule `labelParts` already used). `SongDance.sameAsSong` is `true` when the dance is the song's default dance (`isDefault`), its `songCount` is 1, and `sameName(dance.name, song.title)`. `updateSong(db, songId, patch)` keeps its signature; when `patch.title` changes the title, then in the same transaction the song's default dance, if it is linked to **only** this song and its name was `sameName` as the **old** title, gets the new (trimmed) title as its name.
 
 - [ ] **Step 1: Write failing tests:**
   - `labels.test.ts`: `'sameName ignores case and surrounding spaces'` (`sameName(' hora ', 'Hora')` is true; `'Hora'` vs `'Hora Mare'` is false).
   - `edit.test.ts` (using `addLibrarySong`, `addDance`, `link` from the fixtures):
-    - `'getSongDetail marks a dance that is the song's only use of its name as sameAsSong'`: a song `Kolo` with its automatic dance `Kolo` → `sameAsSong` true; a second linked dance `Lesnoto` → false.
+    - `'getSongDetail marks the default dance that is the song's only use of its name as sameAsSong'`: a song `Kolo` with its automatic (default) dance `Kolo` → `sameAsSong` true; a second linked, non-default dance `Lesnoto` → false; a second non-default dance also named `Kolo` → false.
     - `'a dance shared by two songs is never sameAsSong'`: link the dance `Kolo` to a second song → false for both songs.
     - `'a dance whose name differs only by case is sameAsSong'`.
-    - `'renaming the song renames its same-named dance in the same change'`: `updateSong(db, id, { title: 'Kolo Veliko' })` → the dance name is `Kolo Veliko`, its `sameAsSong` stays true, and the song's other dance is untouched.
+    - `'renaming the song renames its same-named default dance in the same change'`: `updateSong(db, id, { title: 'Kolo Veliko' })` → the default dance's name is `Kolo Veliko`, its `sameAsSong` stays true, and the song's other dances are untouched (including a non-default dance that was also named `Kolo`).
+    - `'after Make default, the new default is the one that follows'`: with two dances named alike, `setDefaultDance` to the second, then a rename → only the second is renamed.
     - `'trims the new title for the dance too'`: title `'  Kolo X '` → dance name `Kolo X`.
     - `'a renamed song leaves a dance with a different name alone'`.
     - `'a shared dance is not renamed with one of its songs'`.
     - `'a failed title (blank) changes neither song nor dance'` (throws `LibraryEditError`, dance name unchanged).
   - `list.test.ts`: `'after a rename the library finds the new name, and the old one no longer matches'`: `listLibrary` with `search: 'Veliko'` finds the song; `search: 'Kolo'` does not match a song renamed to `Veliko` (use distinct words so the old and new names share no token), and the row's `label` is the new name.
 - [ ] **Step 2:** Run `npx vitest run tests/shared/labels.test.ts tests/main/library` — expect FAIL.
-- [ ] **Step 3:** Implement. In `getSongDetail` compute `sameAsSong` per dance from `songCount` and `song.title`. In `updateSong`, wrap the title change and the dance renames in `inTransaction`; find the followers by selecting the song's dances with `songCount = 1` (a `COUNT(*)` over `dance_songs` for the dance) and filtering in code with `sameName(name, oldTitle)`; update their `name` to the new trimmed title. Skip the follower pass when `patch.title` is undefined.
+- [ ] **Step 3:** Implement. In `getSongDetail` compute `sameAsSong` per dance from `isDefault`, `songCount` and `song.title`. In `updateSong`, wrap the title change and the dance rename in `inTransaction`; find the song's default dance with the same pairing rule `getSongDetail` uses (`shownPairingSql`), require its `songCount` to be 1 (a `COUNT(*)` over `dance_songs` for the dance) and `sameName(name, oldTitle)`, then update its `name` to the new trimmed title. Skip the pass when `patch.title` is undefined.
 - [ ] **Step 4:** Run `npx vitest run tests/shared tests/main` — expect PASS. Update fixtures that build a `SongDance` by hand (`tests/renderer/library/song-editor.test.tsx` and any other, found with `npm run typecheck`) by adding `sameAsSong: false`.
 - [ ] **Step 5:** Commit `feat: a dance named like its song follows the song's rename`.
 
@@ -74,14 +75,14 @@
 
 **Interfaces:**
 - Consumes: `SongDance.sameAsSong` (Task 1).
-- Produces: in a dance card for a dance with `songCount === 1`, a Mantine `Checkbox` labelled **Same as song** appears beside the **Dance name** entry. It is checked when `d.sameAsSong` is true and the dance is not unlocked; then the name entry is read-only. Unchecking it (editor state keyed by `danceId`, cleared when `songId` changes) makes the entry editable. The box stays after the name is edited away from the title, unchecked. **Checking it** removes the dance from the unlocked set and, when the name differs from the song's title, calls `library:updateDance` with `{ name: <song title> }` so the dance is the same as the song again. A dance with `songCount > 1` has neither the checkbox nor a read-only entry.
+- Produces: in the card of a song's **default** dance (`d.isDefault`) with `songCount === 1`, a Mantine `Checkbox` labelled **Same as song** appears beside the **Dance name** entry. It is checked when `d.sameAsSong` is true and the dance is not unlocked; then the name entry is read-only. Unchecking it (editor state keyed by `danceId`, cleared when `songId` changes) makes the entry editable. The box stays after the name is edited away from the title, unchecked. **Checking it** removes the dance from the unlocked set and, when the name differs from the song's title, calls `library:updateDance` with `{ name: <song title> }` so the dance is the same as the song again. A dance that is not the default, or has `songCount > 1`, has neither the checkbox nor a read-only entry.
 
 - [ ] **Step 1: Write failing tests** (in `song-editor.test.tsx`; build the detail with one dance `sameAsSong: true` and the existing fixtures' other dance `false`):
   - `'a dance named like its song shows Same as song, checked, with a read-only name'`: the checkbox is checked within that dance's group, and `getByLabelText('Dance name')` is `readOnly` (`toHaveAttribute('readonly')`).
   - `'a dance with a different name shows the box unchecked, with an editable name'`; `'checking it sets the dance's name back to the song's title'` (one `library:updateDance` call with `{ name }` equal to the song's title); `'checking it when the names are already equal (after unchecking) only locks the entry and makes no call'`.
   - `'a dance used by several songs has no checkbox and an editable name'`.
   - `'unchecking Same as song makes the name editable'`: after clicking the checkbox it is unchecked and the entry has no `readonly`; editing it and leaving the field calls `library:updateDance` with the new name.
-  - `'the checkbox state is per dance'`: unchecking one dance's box leaves another same-as-song dance's box checked (give both `sameAsSong: true` in this test).
+  - `'only the default dance of a song with several dances has the box'`: with two dances, the default one shows it (a one-song dance) and the other does not; `'when the default changes, the box is on the new default'` (re-render the editor with the detail's `isDefault` flags swapped).
   - `'editing the name away from the title keeps the box, unchecked'` (the reloaded dance has `sameAsSong: false`, the box is still there).
   - `'a read-only name can't be saved'`: typing is ignored and no `library:updateDance` call is made.
 - [ ] **Step 2:** Run `npx vitest run tests/renderer/library/song-editor.test.tsx` — expect FAIL.
@@ -96,8 +97,8 @@
 
 - [ ] **Step 1:** e2e test `'renaming a song renames its same-named dance'`: on the Music page select **Hora** (click its row), in the editor's **Song** section set **Title** to `Hora Nova` and leave the field; expect the library row to read `Hora Nova` (one name, not `Hora ♪ Hora Nova`) and the dance card's **Same as song** box to be checked with the **Dance name** entry showing `Hora Nova` and read-only. Run `npm run test:e2e` (ask the user first: it takes over their screen) — expect all pass.
 - [ ] **Step 2:** Docs: main spec §6.3 gets a bullet "**Same as song:** a dance linked to one song has a **Same as song** box, checked (with a read-only name) while the names match; renaming the song renames the dance. Unchecking makes the name editable, and checking it sets the dance's name back to the song's." The 0.3.0 spec marks §3.5 built (Plan 14) and question 1 "built as recommended (derived); revisit if a persistent opt-out is wanted".
-- [ ] **Step 3:** AGENTS.md decision (dated, newest first): "**'Same as song' is derived, not stored.** A dance is 'same as song' when it is linked to exactly one song and its name equals the song's title (case and spaces ignored, `sameName`); `getSongDetail` reports it as `sameAsSong` and `updateSong` renames such dances in the same transaction. Why: no schema change or data conversion, and the rule is the one labels already use. The box shows for every dance with one song, and checking it sets the dance's name to the song's. Consequence: unchecking while the names are still equal lasts only for the editor session, so a song renamed before the dance is edited still carries the dance along. _Rejected:_ a stored flag (a migration and a conversion for existing songs, for a case that rarely matters); renaming dances shared with other songs." 
-- [ ] **Step 4:** CHANGELOG under Unreleased → Added: "In the song editor, a dance used by one song has a **Same as song** box: while it is checked the dance's name can't be edited, and renaming the song renames the dance too. Uncheck it to name the dance separately; check it again to set the dance's name back to the song's."
+- [ ] **Step 3:** AGENTS.md decision (dated, newest first): "**'Same as song' is derived, not stored, and belongs to the song's default dance.** A default dance is 'same as song' when it is linked to exactly one song and its name equals the song's title (case and spaces ignored, `sameName`); `getSongDetail` reports it as `sameAsSong` and `updateSong` renames that dance in the same transaction. Why: no schema change or data conversion, the rule is the one labels already use, and the default dance is the one shown for the song in the lists. The box shows for the default dance when it has one song, and checking it sets the dance's name to the song's. Consequence: unchecking while the names are still equal lasts only for the editor session, so a song renamed before the dance is edited still carries the dance along; a song's other dances never follow. _Rejected:_ a stored flag (a migration and a conversion for existing songs, for a case that rarely matters); renaming dances shared with other songs."
+- [ ] **Step 4:** CHANGELOG under Unreleased → Added: "In the song editor, a dance used by one song has a **Same as song** box on its default dance: while it is checked the dance's name can't be edited, and renaming the song renames the dance too. Uncheck it to name the dance separately; check it again to set the dance's name back to the song's."
 - [ ] **Step 5:** Hardware checklist item (section I): "Rename a song whose dance has the same name: the dance (and the library row, and a program item) follow; the Dance name entry is read-only while **Same as song** is checked, and editable after unchecking it. A dance used by two songs shows no checkbox." Run `npx prettier --check .`, `npm run typecheck`, `npx vitest run` — expect clean.
 - [ ] **Step 6:** Commit `docs: describe Same as song`.
 
@@ -105,4 +106,4 @@
 
 - **Spec coverage:** the checkbox for a dance linked to one song with an equal name, the read-only entry, following the song's rename, a shared dance never following, merges and second links ending it by themselves (the dance then has two songs, so `sameAsSong` is false), search and labels staying right, and the listed tests → Tasks 1–3.
 - **Types:** `sameName`, `SongDance.sameAsSong` and `updateSong` (Task 1) are what Task 2 and the e2e test use.
-- **Decision recorded:** question 1 is built as recommended (derived), with the maintainer's addition that the box stays for any one-song dance and checking it restores the song's name (2026-10-19). A persistent opt-out while the names are equal would be a stored flag and a migration (a later, separate change).
+- **Decision recorded:** question 1 is built as recommended (derived), with the maintainer's addition that the box stays for the default dance of a song when that dance has one song, and checking it restores the song's name (2026-10-19). A persistent opt-out while the names are equal would be a stored flag and a migration (a later, separate change).
