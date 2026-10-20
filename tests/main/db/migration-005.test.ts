@@ -53,6 +53,22 @@ describe('migration 005: import mapping per destination', () => {
     }
   )
 
+  test.each([
+    ['not JSON at all', 'composer'],
+    ['a JSON number', '5'],
+    ['a JSON object', '{"x":1}'],
+    ['JSON null', 'null']
+  ])('an old value that is %s counts as the default', (_name, raw) => {
+    const { db, put } = oldDatabase(null, 'teacher')
+    put.run('import.artistTagTarget', raw)
+    migrate(db, MIGRATIONS)
+    expect(mapping(db)).toEqual({
+      'import.artistFrom': 'artistTag',
+      'import.choreographerFrom': 'ignore',
+      'import.teacherFrom': 'albumArtistTag'
+    })
+  })
+
   test('removes the two old keys and leaves genreIsCountry alone', () => {
     const { db, put } = oldDatabase('artist', 'teacher')
     put.run('import.genreIsCountry', 'false')
@@ -81,5 +97,65 @@ describe('migration 005: import mapping per destination', () => {
     const first = mapping(db)
     expect(migrate(db, MIGRATIONS)).toEqual({ from: 5, to: 5 })
     expect(mapping(db)).toEqual(first)
+  })
+
+  // The old mapping filled a field from the Album Artist tag when both tags targeted it and the Artist
+  // tag was empty, and a sync stored that in the baseline. The new mapping gives such a field
+  // nothing, so the baseline moves to match, or the next sync would read it as a change in Music
+  // and clear the field.
+  describe('synced songs whose old mapping sent both tags to one field', () => {
+    const synced = (artist: string, album: string) => {
+      const { db } = oldDatabase(artist, album)
+      const insert = db.prepare(
+        `INSERT INTO files (path, file_size, mtime_ms, source, tag_artist, tag_album_artist, sync_baseline)
+         VALUES (?, 1, 1, 'files', ?, ?, ?)`
+      )
+      const baseline = JSON.stringify({
+        title: 'Kolo',
+        artist: 'Sonia',
+        danceName: 'Kolo',
+        country: null,
+        choreographer: 'Sonia',
+        teacher: 'Sonia'
+      })
+      insert.run('/m/a.mp3', null, 'Sonia', baseline) // Artist tag empty: used the Album Artist tag
+      insert.run('/m/b.mp3', 'Taraf', 'Sonia', baseline.replace(/Sonia/g, 'Taraf')) // Artist tag set
+      insert.run('/m/c.mp3', null, 'Sonia', null) // never synced
+      migrate(db, MIGRATIONS)
+      const read = (path: string) =>
+        db.prepare('SELECT sync_baseline AS b FROM files WHERE path = ?').get(path) as {
+          b: string | null
+        }
+      return { a: read('/m/a.mp3').b, b: read('/m/b.mp3').b, c: read('/m/c.mp3').b }
+    }
+
+    test('the conflicted field in the baseline becomes what the new mapping gives', () => {
+      const { a, b, c } = synced('artist', 'artist')
+      expect(JSON.parse(a!)).toMatchObject({
+        artist: null,
+        teacher: 'Sonia',
+        choreographer: 'Sonia'
+      })
+      expect(JSON.parse(b!)).toMatchObject({ artist: 'Taraf' }) // the Artist tag still feeds it
+      expect(c).toBeNull()
+    })
+
+    test('the same for Teacher and Choreographer', () => {
+      expect(JSON.parse(synced('teacher', 'teacher').a!)).toMatchObject({
+        teacher: null,
+        artist: 'Sonia'
+      })
+      expect(JSON.parse(synced('choreographer', 'choreographer').a!)).toMatchObject({
+        choreographer: null,
+        artist: 'Sonia'
+      })
+    })
+
+    test('a mapping with no conflict leaves baselines alone', () => {
+      expect(JSON.parse(synced('artist', 'teacher').a!)).toMatchObject({
+        artist: 'Sonia',
+        teacher: 'Sonia'
+      })
+    })
   })
 })

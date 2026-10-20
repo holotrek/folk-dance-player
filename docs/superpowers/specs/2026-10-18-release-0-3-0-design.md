@@ -616,8 +616,8 @@ for the maintainer to decide, before any plan is written.
 
 | Migration | Change |
 |-----------|--------|
-| `006-dance-attachments` | `dance_prefs`: `notes_pdf_name`, `notes_pdf_path`, `slide_image_name`, `slide_image_path`, `slide_source` (§3.6, §3.7) |
 | `005-import-mapping` | Rewrites the saved import settings from two keys to three (§3.4); built |
+| `006-dance-attachments` | `dance_prefs`: `notes_pdf_name`, `notes_pdf_path`, `slide_image_name`, `slide_image_path`, `slide_source` (§3.6, §3.7) |
 | `007-holding-items` | New `holding_items` table (song, dance, position; unique per pair) replacing `file_prefs.in_holding`/`holding_position`; copies existing held songs (§3.12) |
 
 No migration for §3.5 under the recommended design, or for §3.13 (two new settings keys). §3.1 to §3.3 and §3.8 to §3.11 change no tables.
