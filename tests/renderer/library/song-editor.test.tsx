@@ -28,6 +28,7 @@ const detail = (overrides: Partial<SongDetail> = {}): SongDetail => ({
       teacher: 'Sonia Dion',
       songCount: 3,
       isDefault: true,
+      sameAsSong: false,
       label: 'Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo',
       slide: null
     },
@@ -43,6 +44,7 @@ const detail = (overrides: Partial<SongDetail> = {}): SongDetail => ({
       teacher: null,
       songCount: 1,
       isDefault: false,
+      sameAsSong: false,
       label: 'Lesnoto (Someone) ♪ Pusteno Ludo',
       slide: null
     }

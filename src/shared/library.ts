@@ -67,6 +67,9 @@ export interface SongDance {
   teacher: string | null // on this dance–song pairing
   songCount: number // songs this dance is linked to ("also used by N songs")
   isDefault: boolean
+  // The song's default dance, used by this song only, named like the song: it follows the song's
+  // name (0.3.0 spec §3.5).
+  sameAsSong: boolean
   label: string
   slide: DanceSlide | null // its Canva slide (spec §8.3)
 }

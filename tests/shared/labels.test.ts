@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { formatLabel, labelParts } from '@shared/labels'
+import { formatLabel, labelParts, sameName } from '@shared/labels'
 
 // Spec §4 "Labels".
 describe('labelParts / formatLabel', () => {
@@ -73,5 +73,12 @@ describe('labelParts / formatLabel', () => {
         choreographerCount: 0
       })
     ).toEqual({ song: null, dance: 'Untitled', choreographer: null })
+  })
+})
+
+describe('sameName', () => {
+  test('ignores case and surrounding spaces', () => {
+    expect(sameName(' hora ', 'Hora')).toBe(true)
+    expect(sameName('Hora', 'Hora Mare')).toBe(false)
   })
 })

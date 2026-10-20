@@ -320,3 +320,87 @@ describe('searchDances', () => {
     expect(searchDances(db, '').length).toBe(2)
   })
 })
+
+describe('same as song', () => {
+  const dance = (songId: number, danceId: number | null) =>
+    detail(songId).dances.find((d) => d.danceId === danceId)!
+  const names = (songId: number) => detail(songId).dances.map((d) => d.name)
+
+  test('the default dance that is the only use of its name is sameAsSong', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    const lesnoto = addDance(db, { name: 'Lesnoto' })
+    link(db, lesnoto, songId)
+    const namesake = addDance(db, { name: 'Kolo' })
+    link(db, namesake, songId)
+    expect(dance(songId, danceId).sameAsSong).toBe(true)
+    expect(dance(songId, lesnoto).sameAsSong).toBe(false)
+    expect(dance(songId, namesake).sameAsSong).toBe(false) // not the default
+  })
+
+  test('a dance shared by two songs is never sameAsSong', () => {
+    const a = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    const b = addLibrarySong(db, { title: 'Other' })
+    link(db, a.danceId!, b.songId)
+    expect(dance(a.songId, a.danceId).sameAsSong).toBe(false)
+  })
+
+  test('a name that differs only by case or spaces counts as the same', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: ' kolo ' } })
+    expect(dance(songId, danceId).sameAsSong).toBe(true)
+  })
+
+  test('renaming the song renames its same-named default dance, and only that one', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    const namesake = addDance(db, { name: 'Kolo' })
+    link(db, namesake, songId)
+    const lesnoto = addDance(db, { name: 'Lesnoto' })
+    link(db, lesnoto, songId)
+    updateSong(db, songId, { title: 'Kolo Veliko' })
+    expect(dance(songId, danceId)).toMatchObject({ name: 'Kolo Veliko', sameAsSong: true })
+    expect(dance(songId, namesake).name).toBe('Kolo')
+    expect(dance(songId, lesnoto).name).toBe('Lesnoto')
+  })
+
+  test('after Make default, the new default is the one that follows', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    const namesake = addDance(db, { name: 'Kolo' })
+    link(db, namesake, songId)
+    setDefaultDance(db, songId, namesake)
+    updateSong(db, songId, { title: 'Kolo Veliko' })
+    expect(dance(songId, namesake).name).toBe('Kolo Veliko')
+    expect(dance(songId, danceId).name).toBe('Kolo')
+  })
+
+  test('the new title is trimmed for the dance too', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    updateSong(db, songId, { title: '  Kolo X ' })
+    expect(dance(songId, danceId).name).toBe('Kolo X')
+  })
+
+  test('a dance with a different name is left alone', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Pusteno', dance: { name: 'Pravo' } })
+    updateSong(db, songId, { title: 'Pusteno Ludo' })
+    expect(dance(songId, danceId).name).toBe('Pravo')
+  })
+
+  test('a shared dance is not renamed with one of its songs', () => {
+    const a = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    const b = addLibrarySong(db, { title: 'Other' })
+    link(db, a.danceId!, b.songId)
+    updateSong(db, a.songId, { title: 'Kolo Veliko' })
+    expect(names(a.songId)).toEqual(['Kolo'])
+  })
+
+  test('a blank title changes neither the song nor the dance', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    expect(() => updateSong(db, songId, { title: '  ' })).toThrow(LibraryEditError)
+    expect(detail(songId).title).toBe('Kolo')
+    expect(dance(songId, danceId).name).toBe('Kolo')
+  })
+
+  test('an artist-only edit leaves the dance alone', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    updateSong(db, songId, { artist: 'Taraf' })
+    expect(dance(songId, danceId).name).toBe('Kolo')
+  })
+})
