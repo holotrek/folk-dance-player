@@ -32,7 +32,10 @@ export interface HandlerDeps {
   // The projector window (spec §8); reported off when absent.
   projector?: ProjectorDeps
   // A dance's PDF and slide image (0.3.0 spec §3.6, §3.7); attaching fails when absent.
-  attachments?: Pick<AttachmentStore, 'attachPdf' | 'removePdf' | 'pdfPath' | 'pdfInfo'>
+  attachments?: Pick<
+    AttachmentStore,
+    'attachPdf' | 'removePdf' | 'pdfPath' | 'pdfInfo' | 'deleteUnreferenced'
+  >
   // Opens a file in the system's default application; resolves to an error message, or ''.
   openPath?: (path: string) => Promise<string>
   // Canva decks and slide captures (spec §8.3); adding or linking fails when absent.

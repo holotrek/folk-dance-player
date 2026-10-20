@@ -319,10 +319,12 @@ export function unlinkDance(db: DatabaseSync, songId: number, danceId: number): 
 }
 
 // Combines `removeId` into `keepId`: its songs (with their teachers), song defaults, program items
-// and history move to the kept dance; the kept dance's empty fields are filled from it.
-export function mergeDances(db: DatabaseSync, keepId: number, removeId: number): void {
+// and history move to the kept dance; the kept dance's empty fields are filled from it. Returns the
+// stored attachment files the merge left unreferenced (paths relative to the app data folder), for
+// the caller to delete once the merge is done.
+export function mergeDances(db: DatabaseSync, keepId: number, removeId: number): string[] {
   if (keepId === removeId) throw new LibraryEditError("A dance can't be merged into itself.")
-  inTransaction(db, () => {
+  return inTransaction(db, () => {
     const links = db
       .prepare(
         `SELECT ds.id, ds.song_id AS songId, p.teacher FROM dance_songs ds
@@ -378,8 +380,27 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
          UNION SELECT dance_a FROM distinct_dances WHERE dance_b = ?)
        WHERE other <> ?`
     ).run(keepId, keepId, removeId, removeId, keepId)
+    const orphans = mergeAttachments(db, keepId, removeId)
     db.prepare('DELETE FROM dances WHERE id = ?').run(removeId)
+    return orphans
   })
+}
+
+// A dance's PDF stays with the kept dance; a kept dance without one takes the removed dance's
+// (its shown name and stored file together). The removed dance's file is reported when not taken.
+function mergeAttachments(db: DatabaseSync, keepId: number, removeId: number): string[] {
+  const read = db.prepare(
+    'SELECT notes_pdf_name AS name, notes_pdf_path AS path FROM dance_prefs WHERE dance_id = ?'
+  )
+  const kept = read.get(keepId) as { name: string | null; path: string | null } | undefined
+  const gone = read.get(removeId) as { name: string | null; path: string | null } | undefined
+  if (!gone?.path) return []
+  if (kept?.path) return [`dance-notes/${gone.path}`]
+  update(db, 'dance_prefs', 'dance_id', keepId, {
+    notes_pdf_name: gone.name,
+    notes_pdf_path: gone.path
+  })
+  return []
 }
 
 function fillEmptyFrom(
@@ -402,19 +423,26 @@ function fillEmptyFrom(
 
 // "Same dance" on a suggestion (spec §6.3): the song is linked to `otherId` and it becomes the
 // default. The song's own dance is merged into it when no other song uses it.
-export function sameDance(db: DatabaseSync, songId: number, ownId: number, otherId: number): void {
-  inTransaction(db, () => {
+export function sameDance(
+  db: DatabaseSync,
+  songId: number,
+  ownId: number,
+  otherId: number
+): string[] {
+  return inTransaction(db, () => {
     const ownSongs = (
       db.prepare('SELECT COUNT(*) AS n FROM dance_songs WHERE dance_id = ?').get(ownId) as {
         n: number
       }
     ).n
+    let orphans: string[] = []
     if (ownSongs <= 1) {
-      mergeDances(db, otherId, ownId)
+      orphans = mergeDances(db, otherId, ownId)
     } else {
       linkAndMaybeDefault(db, songId, otherId)
     }
     setDefaultDance(db, songId, otherId)
+    return orphans
   })
 }
 

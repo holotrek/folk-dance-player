@@ -144,6 +144,19 @@ export class AttachmentStore {
     return existsSync(path) ? path : null
   }
 
+  // Deletes stored files (paths like 'dance-notes/<name>') that no dance refers to any more, after a
+  // merge. Anything outside the attachment folders, or still referenced, is left alone.
+  deleteUnreferenced(relativePaths: string[]): void {
+    for (const relative of relativePaths) {
+      const match = /^dance-notes\/([^/\\]+)$/.exec(relative)
+      if (!match || match[1] === '..' || match[1] === '.') continue
+      const stillUsed = this.db
+        .prepare('SELECT 1 FROM dance_prefs WHERE notes_pdf_path = ?')
+        .get(match[1])
+      if (!stillUsed) rmSync(join(this.folder(PDF_DIR), match[1]), { force: true })
+    }
+  }
+
   pdfInfo(danceId: number): { name: string; missing: boolean } | null {
     const row = this.db
       .prepare(

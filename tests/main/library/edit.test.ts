@@ -441,3 +441,56 @@ describe('getSongDetail: PDFs', () => {
     expect(getSongDetail(db, songId)!.dances[0].notesPdf).toBeNull()
   })
 })
+
+describe('mergeDances: PDFs', () => {
+  const setPdf = (danceId: number, name: string, stored: string) =>
+    db
+      .prepare(
+        `INSERT INTO dance_prefs (dance_id, notes_pdf_name, notes_pdf_path) VALUES (?, ?, ?)
+         ON CONFLICT (dance_id) DO UPDATE SET notes_pdf_name = excluded.notes_pdf_name,
+           notes_pdf_path = excluded.notes_pdf_path`
+      )
+      .run(danceId, name, stored)
+  const pdf = (danceId: number) =>
+    db
+      .prepare(
+        'SELECT notes_pdf_name AS name, notes_pdf_path AS path FROM dance_prefs WHERE dance_id = ?'
+      )
+      .get(danceId)
+  const two = () => ({
+    a: addLibrarySong(db, { title: 'A', dance: { name: 'Lesnoto' } }),
+    b: addLibrarySong(db, { title: 'B', dance: { name: 'Lesnoto' } })
+  })
+
+  test('the kept dance keeps its PDF, and the removed dance’s file is reported unreferenced', () => {
+    const { a, b } = two()
+    setPdf(a.danceId!, 'keep.pdf', '1-aa.pdf')
+    setPdf(b.danceId!, 'gone.pdf', '2-bb.pdf')
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual(['dance-notes/2-bb.pdf'])
+    expect(pdf(a.danceId!)).toEqual({ name: 'keep.pdf', path: '1-aa.pdf' })
+  })
+
+  test('the kept dance takes the removed dance’s PDF when it has none, and nothing is reported', () => {
+    const { a, b } = two()
+    setPdf(b.danceId!, 'gone.pdf', '2-bb.pdf')
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual([])
+    expect(pdf(a.danceId!)).toEqual({ name: 'gone.pdf', path: '2-bb.pdf' })
+  })
+
+  test('without PDFs nothing changes and nothing is reported', () => {
+    const { a, b } = two()
+    expect(mergeDances(db, a.danceId!, b.danceId!)).toEqual([])
+    expect((pdf(a.danceId!) as { path: string | null } | undefined)?.path ?? null).toBeNull()
+  })
+
+  test('“Same dance” merges the same way and reports the unreferenced file', () => {
+    const own = addLibrarySong(db, { title: 'Own', dance: { name: 'Lesnoto' } })
+    const other = addLibrarySong(db, { title: 'Other', dance: { name: 'Lesnoto' } })
+    setPdf(own.danceId!, 'mine.pdf', '1-aa.pdf')
+    setPdf(other.danceId!, 'theirs.pdf', '2-bb.pdf')
+    expect(sameDance(db, own.songId, own.danceId!, other.danceId!)).toEqual([
+      'dance-notes/1-aa.pdf'
+    ])
+    expect(pdf(other.danceId!)).toEqual({ name: 'theirs.pdf', path: '2-bb.pdf' })
+  })
+})

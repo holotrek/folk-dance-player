@@ -148,3 +148,35 @@ describe('AttachmentStore: PDFs', () => {
     expect(store().pdfInfo(dance())).toBeNull()
   })
 })
+
+describe('AttachmentStore: deleteUnreferenced', () => {
+  test('deletes unreferenced files and keeps referenced ones', () => {
+    const id = dance()
+    const s = store()
+    s.attachPdf(id, source('keep.pdf'))
+    mkdirSync(join(dataDir, 'dance-notes'), { recursive: true })
+    writeFileSync(join(dataDir, 'dance-notes', 'orphan.pdf'), PDF)
+    s.deleteUnreferenced([
+      `dance-notes/orphan.pdf`,
+      `dance-notes/${stored().find((n) => n !== 'orphan.pdf')}`
+    ])
+    expect(stored()).toHaveLength(1)
+    expect(s.pdfPath(id)).not.toBeNull()
+  })
+
+  test('never touches anything outside the attachment folders', () => {
+    const outside = join(root, 'precious.txt')
+    writeFileSync(outside, 'keep me')
+    store().deleteUnreferenced([
+      '../precious.txt',
+      'dance-notes/../../precious.txt',
+      '/etc/hosts',
+      'other/x'
+    ])
+    expect(readFileSync(outside, 'utf8')).toBe('keep me')
+  })
+
+  test('a file that is already gone is fine', () => {
+    expect(() => store().deleteUnreferenced(['dance-notes/none.pdf'])).not.toThrow()
+  })
+})

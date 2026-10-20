@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, test } from 'vitest'
@@ -183,6 +183,29 @@ describe('PDF handlers', () => {
     await h['library:removeNotesPdf'](s.danceId!)
     expect(attachments.pdfPath(s.danceId!)).toBeNull()
     expect(changes()).toBe(2)
+  })
+
+  test('after a merge the unreferenced PDF is deleted from disk, and the adopted one is kept', async () => {
+    const { db, h, attachments } = build('FILE')
+    const a = addLibrarySong(db, { title: 'A', dance: { name: 'Lesnoto' } })
+    const b = addLibrarySong(db, { title: 'B', dance: { name: 'Lesnoto' } })
+    await h['library:attachNotesPdf'](a.danceId!)
+    const aPath = attachments.pdfPath(a.danceId!)!
+    await h['library:attachNotesPdf'](b.danceId!)
+    const bPath = attachments.pdfPath(b.danceId!)!
+    await h['library:mergeDances'](a.danceId!, b.danceId!)
+    expect(existsSync(aPath)).toBe(true)
+    expect(existsSync(bPath)).toBe(false)
+    expect(attachments.pdfPath(a.danceId!)).toBe(aPath)
+  })
+
+  test('a failed merge deletes nothing', async () => {
+    const { db, h, attachments } = build('FILE')
+    const a = addLibrarySong(db, { title: 'A', dance: { name: 'Lesnoto' } })
+    await h['library:attachNotesPdf'](a.danceId!)
+    const path = attachments.pdfPath(a.danceId!)!
+    expect(() => h['library:mergeDances'](a.danceId!, a.danceId!)).toThrow()
+    expect(existsSync(path)).toBe(true)
   })
 
   test('without attachments the PDF channels refuse', async () => {
