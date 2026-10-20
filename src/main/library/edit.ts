@@ -61,7 +61,11 @@ interface DanceRow {
   isDefault: number
 }
 
-export function getSongDetail(db: DatabaseSync, songId: number): SongDetail | null {
+export function getSongDetail(
+  db: DatabaseSync,
+  songId: number,
+  attachments?: { pdfInfo(danceId: number): { name: string; missing: boolean } | null }
+): SongDetail | null {
   const song = db
     .prepare(
       `SELECT s.id AS songId, f.id AS fileId, s.title, s.artist, f.path, f.duration_ms AS durationMs,
@@ -100,6 +104,7 @@ export function getSongDetail(db: DatabaseSync, songId: number): SongDetail | nu
     ...r,
     isDefault: r.isDefault === 1,
     sameAsSong: r.isDefault === 1 && r.songCount === 1 && sameName(r.name, song.title),
+    notesPdf: attachments?.pdfInfo(r.danceId) ?? null,
     slide: getDanceSlide(db, r.danceId),
     label: formatLabel(
       labelParts({

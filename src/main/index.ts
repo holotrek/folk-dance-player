@@ -41,6 +41,7 @@ import { backupDatabase } from './db/backup'
 import { openDatabase } from './db/connection'
 import { getSchemaVersion, migrate, SchemaTooNewError } from './db/migrate'
 import { MIGRATIONS } from './db/migrations'
+import { AttachmentStore } from './attachments/attachment-store'
 import { importDialogs } from './import/dialogs'
 import { ImportBusyError, ImportService, savedMapping } from './import/import-service'
 import { findEditedApplePlaylists } from './import/save-playlists'
@@ -356,6 +357,9 @@ function startApp(): void {
     log
   })
 
+  // A dance's PDF and slide image: copies in the app data folder (0.3.0 spec §3.6, §3.7).
+  const attachments = new AttachmentStore({ db, dir: app.getPath('userData') })
+
   protocol.handle(MEDIA_SCHEME, (request) => {
     const fileId = parseMediaUrl(request.url)
     const slide = parseSlideUrl(request.url)
@@ -535,6 +539,8 @@ function startApp(): void {
       appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) }),
       importer,
       dialogs: importDialogs,
+      attachments,
+      openPath: (path) => shell.openPath(path),
       player,
       remote,
       projector: {

@@ -26,7 +26,11 @@ function makeDeps(overrides: Partial<HandlerDeps> = {}): HandlerDeps {
       previewApple: async () => ({ trackCount: 0, playlists: [], tagSample: [] }),
       checkPlaylistConflicts: () => []
     },
-    dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
+    dialogs: {
+      pickMusic: async () => [],
+      pickAppleLibrary: async () => null,
+      pickPdf: async () => null
+    },
     player: testPlayer(db, settings),
     onLibraryChanged: () => undefined,
     onProgramsChanged: () => undefined,
@@ -63,14 +67,22 @@ describe('createHandlers', () => {
 describe('import and library handlers', () => {
   test('import:pickMusic returns what the user picked', async () => {
     const h = makeHandlers({
-      dialogs: { pickMusic: async () => ['/Music/Balkan'], pickAppleLibrary: async () => null }
+      dialogs: {
+        pickMusic: async () => ['/Music/Balkan'],
+        pickAppleLibrary: async () => null,
+        pickPdf: async () => null
+      }
     })
     expect(await h['import:pickMusic']()).toEqual(['/Music/Balkan'])
   })
 
   test('import:pickAppleLibrary returns the chosen file or null', async () => {
     const h = makeHandlers({
-      dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => '/x/Library.xml' }
+      dialogs: {
+        pickMusic: async () => [],
+        pickAppleLibrary: async () => '/x/Library.xml',
+        pickPdf: async () => null
+      }
     })
     expect(await h['import:pickAppleLibrary']()).toBe('/x/Library.xml')
   })

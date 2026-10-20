@@ -78,6 +78,10 @@ export interface InvokeContract {
   'library:createDance': { args: [songId: number, name: string]; result: number }
   'library:unlinkDance': { args: [songId: number, danceId: number]; result: void }
   'library:mergeDances': { args: [keepId: number, removeId: number]; result: void }
+  // A dance's PDF (0.3.0 spec §3.6): the dialog is opened in main; false when it was canceled.
+  'library:attachNotesPdf': { args: [danceId: number]; result: boolean }
+  'library:openNotesPdf': { args: [danceId: number]; result: void }
+  'library:removeNotesPdf': { args: [danceId: number]; result: void }
   'library:sameDance': { args: [songId: number, ownId: number, otherId: number]; result: void }
   'library:markDifferent': { args: [danceA: number, danceB: number]; result: void }
   'library:searchDances': { args: [text: string]; result: DanceSearchResult[] }
@@ -210,6 +214,9 @@ export const INVOKE_CHANNELS = [
   'library:createDance',
   'library:unlinkDance',
   'library:mergeDances',
+  'library:attachNotesPdf',
+  'library:openNotesPdf',
+  'library:removeNotesPdf',
   'library:sameDance',
   'library:markDifferent',
   'library:searchDances',

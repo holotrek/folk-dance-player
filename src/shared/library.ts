@@ -70,6 +70,7 @@ export interface SongDance {
   // The song's default dance, used by this song only, named like the song: it follows the song's
   // name (0.3.0 spec §3.5).
   sameAsSong: boolean
+  notesPdf: { name: string; missing: boolean } | null // its attached PDF (0.3.0 spec §3.6)
   label: string
   slide: DanceSlide | null // its Canva slide (spec §8.3)
 }

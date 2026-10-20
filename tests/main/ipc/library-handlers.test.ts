@@ -1,13 +1,17 @@
-import { describe, expect, test } from 'vitest'
+import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { afterEach, describe, expect, test } from 'vitest'
 import type { InvokeHandlers } from '@shared/contract'
 import { emptySummary } from '@shared/import'
+import { AttachmentStore } from '../../../src/main/attachments/attachment-store'
 import { createHandlers, type HandlerDeps } from '../../../src/main/ipc/handlers'
 import { SettingsStore } from '../../../src/main/settings/settings-store'
 import { addLibrarySong } from '../helpers/library-fixtures'
 import { createTestDb } from '../helpers/test-db'
 import { testPlayer } from '../helpers/test-player'
 
-function setup() {
+function setup(over: (db: ReturnType<typeof createTestDb>) => Partial<HandlerDeps> = () => ({})) {
   const db = createTestDb()
   const settings = new SettingsStore(db)
   let changes = 0
@@ -21,10 +25,15 @@ function setup() {
       previewApple: async () => ({ trackCount: 0, playlists: [], tagSample: [] }),
       checkPlaylistConflicts: () => []
     },
-    dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
+    dialogs: {
+      pickMusic: async () => [],
+      pickAppleLibrary: async () => null,
+      pickPdf: async () => null
+    },
     player: testPlayer(db, settings),
     onLibraryChanged: () => void changes++,
-    onProgramsChanged: () => undefined
+    onProgramsChanged: () => undefined,
+    ...over(db)
   }
   return {
     db,
@@ -89,5 +98,96 @@ describe('library handlers', () => {
       countries: [],
       danceTypes: ['Line']
     })
+  })
+})
+
+describe('PDF handlers', () => {
+  const dirs: string[] = []
+  afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })))
+
+  // Handlers with a real AttachmentStore on a temp folder; `picked` is what the dialog returns
+  // ('FILE' is a small PDF made here).
+  function build(
+    picked: string | null,
+    openPath: (path: string) => Promise<string> = async () => ''
+  ) {
+    const root = mkdtempSync(join(tmpdir(), 'fdp-pdf-'))
+    dirs.push(root)
+    const file = join(root, 'Hora notes.pdf')
+    writeFileSync(file, '%PDF-1.4\n%%EOF\n')
+    const opened: string[] = []
+    let attachments!: AttachmentStore
+    const ctx = setup((db) => {
+      attachments = new AttachmentStore({ db, dir: join(root, 'data') })
+      return {
+        dialogs: {
+          pickMusic: async () => [],
+          pickAppleLibrary: async () => null,
+          pickPdf: async () => (picked === 'FILE' ? file : picked)
+        },
+        attachments,
+        openPath: async (path: string) => {
+          opened.push(path)
+          return openPath(path)
+        }
+      }
+    })
+    return { ...ctx, attachments, opened }
+  }
+
+  test('attaching a PDF through the dialog records it and announces the change', async () => {
+    const { db, h, changes } = build('FILE')
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    expect(await h['library:attachNotesPdf'](s.danceId!)).toBe(true)
+    expect((await h['library:song'](s.songId))?.dances[0].notesPdf).toEqual({
+      name: 'Hora notes.pdf',
+      missing: false
+    })
+    expect(changes()).toBe(1)
+  })
+
+  test('a canceled dialog returns false and changes nothing', async () => {
+    const { db, h, changes } = build(null)
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    expect(await h['library:attachNotesPdf'](s.danceId!)).toBe(false)
+    expect((await h['library:song'](s.songId))?.dances[0].notesPdf).toBeNull()
+    expect(changes()).toBe(0)
+  })
+
+  test('Open passes the stored path to openPath, never a path from the caller', async () => {
+    const { db, h, attachments, opened } = build('FILE')
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    await h['library:attachNotesPdf'](s.danceId!)
+    await h['library:openNotesPdf'](s.danceId!)
+    expect(opened).toEqual([attachments.pdfPath(s.danceId!)])
+  })
+
+  test('Open on a missing PDF is refused', async () => {
+    const { db, h, opened } = build('FILE')
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    await expect(h['library:openNotesPdf'](s.danceId!)).rejects.toThrow('The PDF is missing.')
+    expect(opened).toEqual([])
+  })
+
+  test('an error string from the system becomes an error', async () => {
+    const { db, h } = build('FILE', async () => 'no application')
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    await h['library:attachNotesPdf'](s.danceId!)
+    await expect(h['library:openNotesPdf'](s.danceId!)).rejects.toThrow(/no application/)
+  })
+
+  test('Remove deletes the PDF and announces the change', async () => {
+    const { db, h, attachments, changes } = build('FILE')
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    await h['library:attachNotesPdf'](s.danceId!)
+    await h['library:removeNotesPdf'](s.danceId!)
+    expect(attachments.pdfPath(s.danceId!)).toBeNull()
+    expect(changes()).toBe(2)
+  })
+
+  test('without attachments the PDF channels refuse', async () => {
+    const { db, h } = setup()
+    const s = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    await expect(h['library:attachNotesPdf'](s.danceId!)).rejects.toThrow(/aren't available/)
   })
 })

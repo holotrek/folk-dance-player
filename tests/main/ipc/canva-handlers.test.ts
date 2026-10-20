@@ -37,7 +37,11 @@ function setup(withCanva = true) {
       previewApple: async () => ({ trackCount: 0, playlists: [], tagSample: [] }),
       checkPlaylistConflicts: () => []
     },
-    dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
+    dialogs: {
+      pickMusic: async () => [],
+      pickAppleLibrary: async () => null,
+      pickPdf: async () => null
+    },
     player: testPlayer(db, settings),
     onLibraryChanged: () => void libraryChanges++,
     onProgramsChanged: () => undefined,

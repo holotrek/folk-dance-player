@@ -425,3 +425,19 @@ describe('same as song', () => {
     expect(dance(a.songId, a.danceId).name).toBe('Pravo')
   })
 })
+
+describe('getSongDetail: PDFs', () => {
+  test('carries each dance’s PDF name and whether it is missing', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    const lesnoto = addDance(db, { name: 'Lesnoto' })
+    link(db, lesnoto, songId)
+    const info = (id: number) => (id === danceId ? { name: 'Hora notes.pdf', missing: true } : null)
+    const dances = getSongDetail(db, songId, { pdfInfo: info })!.dances
+    expect(dances.map((d) => d.notesPdf)).toEqual([{ name: 'Hora notes.pdf', missing: true }, null])
+  })
+
+  test('is null without an attachment store', () => {
+    const { songId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    expect(getSongDetail(db, songId)!.dances[0].notesPdf).toBeNull()
+  })
+})

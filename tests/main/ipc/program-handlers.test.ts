@@ -30,7 +30,11 @@ function setup() {
       previewApple: async () => ({ trackCount: 0, playlists: [], tagSample: [] }),
       checkPlaylistConflicts: () => []
     },
-    dialogs: { pickMusic: async () => [], pickAppleLibrary: async () => null },
+    dialogs: {
+      pickMusic: async () => [],
+      pickAppleLibrary: async () => null,
+      pickPdf: async () => null
+    },
     player,
     fileExists: (path) => !missing.has(path),
     onLibraryChanged: () => void counts.library++,
