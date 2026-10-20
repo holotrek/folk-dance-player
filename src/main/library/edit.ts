@@ -1,6 +1,7 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { randomUUID } from 'crypto'
 import { formatLabel, labelParts, sameName } from '@shared/labels'
+import { danceImageUrl } from '@shared/media'
 import type {
   DancePatch,
   DanceSearchResult,
@@ -64,7 +65,11 @@ interface DanceRow {
 export function getSongDetail(
   db: DatabaseSync,
   songId: number,
-  attachments?: { pdfInfo(danceId: number): { name: string; missing: boolean } | null }
+  attachments?: {
+    pdfInfo?(danceId: number): { name: string; missing: boolean } | null
+    imageInfo?(danceId: number): { name: string; version: string; missing: boolean } | null
+    slideShows?(danceId: number): 'canva' | 'image' | null
+  }
 ): SongDetail | null {
   const song = db
     .prepare(
@@ -100,11 +105,19 @@ export function getSongDetail(
   const choreographerCount = new Set(
     rows.map((r) => r.choreographer?.trim()).filter((c): c is string => !!c)
   ).size
+  const slideImageOf = (danceId: number): SongDance['slideImage'] => {
+    const info = attachments?.imageInfo?.(danceId)
+    return info
+      ? { name: info.name, url: danceImageUrl(danceId, info.version), missing: info.missing }
+      : null
+  }
   const dances: SongDance[] = rows.map((r) => ({
     ...r,
     isDefault: r.isDefault === 1,
     sameAsSong: r.isDefault === 1 && r.songCount === 1 && sameName(r.name, song.title),
-    notesPdf: attachments?.pdfInfo(r.danceId) ?? null,
+    notesPdf: attachments?.pdfInfo?.(r.danceId) ?? null,
+    slideImage: slideImageOf(r.danceId),
+    slideShows: attachments?.slideShows?.(r.danceId) ?? null,
     slide: getDanceSlide(db, r.danceId),
     label: formatLabel(
       labelParts({

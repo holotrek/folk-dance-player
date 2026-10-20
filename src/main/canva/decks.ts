@@ -160,7 +160,8 @@ export function setDanceSlideByPage(
 
 export function clearDanceSlide(db: DatabaseSync, danceId: number): void {
   db.prepare(
-    `UPDATE dance_prefs SET canva_deck_id = NULL, canva_page_id = NULL, canva_page_index = NULL
+    `UPDATE dance_prefs SET canva_deck_id = NULL, canva_page_id = NULL, canva_page_index = NULL,
+       slide_source = NULL
      WHERE dance_id = ?`
   ).run(danceId)
 }

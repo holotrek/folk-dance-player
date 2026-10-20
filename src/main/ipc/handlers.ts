@@ -34,7 +34,17 @@ export interface HandlerDeps {
   // A dance's PDF and slide image (0.3.0 spec §3.6, §3.7); attaching fails when absent.
   attachments?: Pick<
     AttachmentStore,
-    'attachPdf' | 'removePdf' | 'pdfPath' | 'pdfInfo' | 'deleteUnreferenced'
+    | 'attachPdf'
+    | 'removePdf'
+    | 'pdfPath'
+    | 'pdfInfo'
+    | 'attachImage'
+    | 'removeImage'
+    | 'imagePath'
+    | 'imageInfo'
+    | 'slideShows'
+    | 'setSlideSource'
+    | 'deleteUnreferenced'
   >
   // Opens a file in the system's default application; resolves to an error message, or ''.
   openPath?: (path: string) => Promise<string>

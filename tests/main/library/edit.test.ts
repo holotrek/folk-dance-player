@@ -494,3 +494,33 @@ describe('mergeDances: PDFs', () => {
     expect(pdf(other.danceId!)).toEqual({ name: 'theirs.pdf', path: '2-bb.pdf' })
   })
 })
+
+describe('getSongDetail: slide images', () => {
+  test('carries each dance’s image (with a version URL) and which slide is shown', () => {
+    const { songId, danceId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    const lesnoto = addDance(db, { name: 'Lesnoto' })
+    link(db, lesnoto, songId)
+    const attachments = {
+      imageInfo: (id: number) =>
+        id === danceId ? { name: 'a.png', version: '1-ab.png', missing: false } : null,
+      slideShows: (id: number) => (id === danceId ? ('image' as const) : null)
+    }
+    const dances = getSongDetail(db, songId, attachments)!.dances
+    expect(dances[0].slideImage).toEqual({
+      name: 'a.png',
+      url: `fdp-media://dance-image/${danceId}?v=1-ab.png`,
+      missing: false
+    })
+    expect(dances[0].slideShows).toBe('image')
+    expect(dances[1].slideImage).toBeNull()
+    expect(dances[1].slideShows).toBeNull()
+  })
+
+  test('is null without an attachment store', () => {
+    const { songId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    expect(getSongDetail(db, songId)!.dances[0]).toMatchObject({
+      slideImage: null,
+      slideShows: null
+    })
+  })
+})

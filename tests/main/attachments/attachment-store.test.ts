@@ -180,3 +180,161 @@ describe('AttachmentStore: deleteUnreferenced', () => {
     expect(() => store().deleteUnreferenced(['dance-notes/none.pdf'])).not.toThrow()
   })
 })
+
+// Smallest files that carry each image format's signature.
+const PNG = Buffer.concat([
+  Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
+  Buffer.alloc(20)
+])
+const JPEG = Buffer.concat([Buffer.from([0xff, 0xd8, 0xff, 0xe0]), Buffer.alloc(20)])
+const GIF = Buffer.concat([Buffer.from('GIF89a'), Buffer.alloc(20)])
+const WEBP = Buffer.concat([
+  Buffer.from('RIFF'),
+  Buffer.alloc(4),
+  Buffer.from('WEBPVP8 '),
+  Buffer.alloc(8)
+])
+const storedImages = (): string[] => {
+  try {
+    return readdirSync(join(dataDir, 'slide-images'))
+  } catch {
+    return []
+  }
+}
+const withCanva = (danceId: number): void => {
+  const deck = Number(
+    db
+      .prepare("INSERT INTO canva_decks (view_url, design_id, pages) VALUES (?, 'D', '[]')")
+      .run(`https://x/${Math.random()}/view`).lastInsertRowid
+  )
+  db.prepare(
+    `INSERT INTO dance_prefs (dance_id, canva_deck_id, canva_page_id, canva_page_index)
+     VALUES (?, ?, 'P1', 1)
+     ON CONFLICT (dance_id) DO UPDATE SET canva_deck_id = excluded.canva_deck_id,
+       canva_page_id = excluded.canva_page_id, canva_page_index = excluded.canva_page_index`
+  ).run(danceId, deck)
+}
+
+describe('AttachmentStore: slide images', () => {
+  test.each([
+    ['photo.png', PNG, '.png'],
+    ['photo.jpg', JPEG, '.jpg'],
+    ['photo.jpeg', JPEG, '.jpg'],
+    ['photo.gif', GIF, '.gif'],
+    ['photo.webp', WEBP, '.webp']
+  ])('attaching %s copies it into slide-images and records its name', (name, bytes, ext) => {
+    const id = dance()
+    const s = store()
+    s.attachImage(id, source(name, bytes))
+    const info = s.imageInfo(id)
+    expect(info).toMatchObject({ name, missing: false })
+    expect(storedImages()).toHaveLength(1)
+    expect(storedImages()[0]).toMatch(new RegExp(`^${id}-[0-9a-f]{8}\\${ext}$`))
+    expect(readFileSync(s.imagePath(id)!)).toEqual(bytes)
+  })
+
+  test('a file that is not an image is refused, even when named .png', () => {
+    const id = dance()
+    expect(() => store().attachImage(id, source('fake.png', 'hello world'))).toThrow(
+      LibraryEditError
+    )
+    expect(store().imageInfo(id)).toBeNull()
+    expect(storedImages()).toEqual([])
+  })
+
+  test('an unsupported extension is refused, even with image bytes', () => {
+    const id = dance()
+    expect(() => store().attachImage(id, source('photo.bmp', PNG))).toThrow(LibraryEditError)
+    expect(storedImages()).toEqual([])
+  })
+
+  test('a file over the limit is refused', () => {
+    const id = dance()
+    expect(() => store({ maxImageBytes: 10 }).attachImage(id, source('big.png', PNG))).toThrow(
+      /larger/
+    )
+  })
+
+  test('attaching again replaces the file and gives a new version; a failed copy leaves the old image', () => {
+    const id = dance()
+    const s = store()
+    s.attachImage(id, source('one.png', PNG))
+    const first = s.imageInfo(id)!.version
+    s.attachImage(id, source('two.jpg', JPEG))
+    expect(s.imageInfo(id)!.version).not.toBe(first)
+    expect(storedImages()).toHaveLength(1)
+    const failing = store({
+      copyFile: () => {
+        throw new Error('disk full')
+      }
+    })
+    expect(() => failing.attachImage(id, source('three.png', PNG))).toThrow(LibraryEditError)
+    expect(store().imageInfo(id)?.name).toBe('two.jpg')
+    expect(storedImages()).toHaveLength(1)
+  })
+
+  test('slideShows is null with only an image, null with only a Canva slide, and canva by default with both', () => {
+    const id = dance()
+    const s = store()
+    expect(s.slideShows(id)).toBeNull()
+    s.attachImage(id, source('a.png', PNG))
+    expect(s.slideShows(id)).toBeNull()
+    const other = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } }).danceId!
+    withCanva(other)
+    expect(s.slideShows(other)).toBeNull()
+    withCanva(id)
+    expect(s.slideShows(id)).toBe('canva')
+  })
+
+  test('setSlideSource changes the choice only with both sources', () => {
+    const id = dance()
+    const s = store()
+    expect(() => s.setSlideSource(id, 'image')).toThrow(LibraryEditError)
+    s.attachImage(id, source('a.png', PNG))
+    expect(() => s.setSlideSource(id, 'image')).toThrow(LibraryEditError)
+    withCanva(id)
+    s.setSlideSource(id, 'image')
+    expect(s.slideShows(id)).toBe('image')
+    s.setSlideSource(id, 'canva')
+    expect(s.slideShows(id)).toBe('canva')
+  })
+
+  test('removing the image clears the file, the record and the choice', () => {
+    const id = dance()
+    const s = store()
+    s.attachImage(id, source('a.png', PNG))
+    withCanva(id)
+    s.setSlideSource(id, 'image')
+    s.removeImage(id)
+    expect(s.imageInfo(id)).toBeNull()
+    expect(storedImages()).toEqual([])
+    expect(s.slideShows(id)).toBeNull()
+    expect(
+      db.prepare('SELECT slide_source AS s FROM dance_prefs WHERE dance_id = ?').get(id)
+    ).toEqual({ s: null })
+    expect(() => s.removeImage(id)).not.toThrow()
+  })
+
+  test('imageInfo reports a deleted file as missing, and imagePath is null', () => {
+    const id = dance()
+    const s = store()
+    s.attachImage(id, source('a.png', PNG))
+    rmSync(s.imagePath(id)!)
+    expect(s.imageInfo(id)).toMatchObject({ name: 'a.png', missing: true })
+    expect(s.imagePath(id)).toBeNull()
+  })
+
+  test('deleteUnreferenced also handles slide images and keeps referenced ones', () => {
+    const id = dance()
+    const s = store()
+    s.attachImage(id, source('a.png', PNG))
+    mkdirSync(join(dataDir, 'slide-images'), { recursive: true })
+    writeFileSync(join(dataDir, 'slide-images', 'orphan.png'), PNG)
+    s.deleteUnreferenced([
+      'slide-images/orphan.png',
+      `slide-images/${storedImages().find((n) => n !== 'orphan.png')}`
+    ])
+    expect(storedImages()).toHaveLength(1)
+    expect(s.imagePath(id)).not.toBeNull()
+  })
+})

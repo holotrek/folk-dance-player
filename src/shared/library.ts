@@ -71,6 +71,10 @@ export interface SongDance {
   // name (0.3.0 spec §3.5).
   sameAsSong: boolean
   notesPdf: { name: string; missing: boolean } | null // its attached PDF (0.3.0 spec §3.6)
+  slideImage: { name: string; url: string; missing: boolean } | null // its slide image (§3.7)
+  // Which slide the projector shows when the dance has both a Canva slide and an image; null
+  // otherwise (there is nothing to choose).
+  slideShows: 'canva' | 'image' | null
   label: string
   slide: DanceSlide | null // its Canva slide (spec §8.3)
 }

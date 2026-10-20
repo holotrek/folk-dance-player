@@ -2,7 +2,14 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
-import { mediaUrl, parseMediaUrl, parseSlideUrl, slideUrl } from '@shared/media'
+import {
+  danceImageUrl,
+  mediaUrl,
+  parseDanceImageUrl,
+  parseMediaUrl,
+  parseSlideUrl,
+  slideUrl
+} from '@shared/media'
 import { mediaResponse, parseRange } from '../../../src/main/media/media-response'
 
 const dir = mkdtempSync(join(tmpdir(), 'fdp-media-'))
@@ -74,5 +81,20 @@ describe('mediaResponse', () => {
   test('serves a saved slide as a PNG', async () => {
     const res = await mediaResponse(image, null)
     expect(res.headers.get('content-type')).toBe('image/png')
+  })
+})
+
+describe('dance image URLs', () => {
+  test('round trip by dance ID, with the version making a replaced image load fresh', () => {
+    const url = danceImageUrl(7, '7-ab12cd34.png')
+    expect(url).toBe('fdp-media://dance-image/7?v=7-ab12cd34.png')
+    expect(parseDanceImageUrl(url)).toBe(7)
+  })
+
+  test('rejects other schemes, other hosts and malformed ids', () => {
+    expect(parseDanceImageUrl('fdp-media://file/7')).toBeNull()
+    expect(parseDanceImageUrl('fdp-media://dance-image/7x')).toBeNull()
+    expect(parseDanceImageUrl('fdp-media://dance-image/../etc')).toBeNull()
+    expect(parseDanceImageUrl('https://dance-image/7')).toBeNull()
   })
 })
