@@ -26,7 +26,7 @@
   "dependencies": {
     "@electron-toolkit/preload": "3.0.2",
     "@electron-toolkit/utils": "4.0.0",
-    "@mantine/core": "9.6.3",
+    "@mantine/core": "9.7.2",
     "@mantine/hooks": "9.6.3",
     "@mantine/notifications": "9.6.3",
     "@tanstack/react-virtual": "3.14.13",
