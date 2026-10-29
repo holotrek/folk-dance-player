@@ -28,7 +28,7 @@
     "@electron-toolkit/utils": "4.0.0",
     "@mantine/core": "9.6.3",
     "@mantine/hooks": "9.6.3",
-    "@mantine/notifications": "9.6.3",
+    "@mantine/notifications": "9.7.2",
     "@tanstack/react-virtual": "3.14.13",
     "zustand": "5.0.15"
   },
