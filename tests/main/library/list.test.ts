@@ -46,10 +46,23 @@ describe('listLibrary', () => {
         danceType: null,
         difficulty: null,
         danceCount: 1,
+        hasNotesPdf: false,
         label: 'Hora Mare ♪ Hora de la Munte',
         playlistItemId: null,
         playlistNumber: null
       }
+    ])
+  })
+
+  test('says whether the shown dance has a PDF attached', () => {
+    const { danceId } = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora Mare' } })
+    addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    db.prepare(
+      "INSERT INTO dance_prefs (dance_id, notes_pdf_name, notes_pdf_path) VALUES (?, 'hora.pdf', '1-ab.pdf')"
+    ).run(danceId)
+    expect(listLibrary(db, all).map((r) => [r.title, r.hasNotesPdf])).toEqual([
+      ['Hora', true],
+      ['Kolo', false]
     ])
   })
 

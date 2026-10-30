@@ -10,6 +10,8 @@ export const TRACK_COLUMNS = `f.id AS fileId, s.id AS songId, d.id AS danceId, s
   f.is_missing AS isMissing, (f.removed_at IS NOT NULL) AS isRemoved,
   COALESCE((SELECT fp.is_favorite FROM file_prefs fp WHERE fp.file_id = f.id), 0) AS isFavorite,
   (SELECT COUNT(*) FROM dance_songs c WHERE c.song_id = s.id) AS danceCount,
+  EXISTS (SELECT 1 FROM dance_prefs dp WHERE dp.dance_id = d.id AND dp.notes_pdf_path IS NOT NULL)
+    AS hasNotesPdf,
   ${choreographerCountSql('s.id')} AS choreographerCount`
 
 // Joins the pairing for dance `danceExpr` (falling back to the song's shown dance when it is
@@ -35,6 +37,7 @@ export interface TrackRow {
   isRemoved: number
   isFavorite: number
   danceCount: number
+  hasNotesPdf: number
   choreographerCount: number
 }
 
@@ -58,7 +61,8 @@ export function toTrack(row: TrackRow): Track {
     isMissing: row.isMissing === 1,
     isRemoved: row.isRemoved === 1,
     isFavorite: row.isFavorite === 1,
-    danceCount: row.danceCount
+    danceCount: row.danceCount,
+    hasNotesPdf: row.hasNotesPdf === 1
   }
 }
 

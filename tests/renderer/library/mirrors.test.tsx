@@ -122,6 +122,7 @@ describe('a mirror on the Music page', () => {
       danceType: null,
       difficulty: null,
       danceCount: 1,
+      hasNotesPdf: false,
       label: 'Kolo',
       playlistItemId: 5,
       playlistNumber: 1

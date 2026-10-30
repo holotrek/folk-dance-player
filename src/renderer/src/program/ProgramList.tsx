@@ -22,7 +22,8 @@ import { openRowMenu } from '../library/SongMenu'
 import { useProgram, useProgramStore } from './ProgramProvider'
 import classes from './ProgramList.module.css'
 
-// One program item's options: Edit details, its dance (when the song has several), favorite, a STOP
+// One program item's options: Edit details, Open PDF (when its dance has one), its dance (when the
+// song has several), favorite, a STOP
 // before it, remove.
 function ItemMenu(props: {
   item: ProgramItem
@@ -60,6 +61,11 @@ function ItemMenu(props: {
       <Menu.Dropdown>
         {item.kind === 'track' && (
           <Menu.Item onClick={() => editSong(item.songId)}>Edit details</Menu.Item>
+        )}
+        {item.kind === 'track' && item.hasNotesPdf && item.danceId !== null && (
+          <Menu.Item onClick={run(() => api.invoke('library:openNotesPdf', item.danceId!))}>
+            Open PDF
+          </Menu.Item>
         )}
         {dances.length > 1 && item.kind === 'track' && (
           <>

@@ -102,6 +102,8 @@ export default function HoldingPanel(): React.JSX.Element {
             <SongMenu
               songId={r.songId}
               fileId={r.fileId}
+              danceId={r.danceId}
+              hasNotesPdf={r.hasNotesPdf}
               label={r.label}
               isFavorite={r.isFavorite}
               className={classes.options}

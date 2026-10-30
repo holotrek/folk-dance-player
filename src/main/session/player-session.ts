@@ -325,7 +325,8 @@ export class PlayerSession {
           isMissing: false,
           isRemoved: false,
           isFavorite: track.isFavorite,
-          danceCount: track.danceCount
+          danceCount: track.danceCount,
+          hasNotesPdf: track.hasNotesPdf
         }
       }
     })

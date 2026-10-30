@@ -35,6 +35,7 @@ const libraryRow = (fileId: number, title: string): LibraryRow => ({
   danceType: null,
   difficulty: null,
   danceCount: 1,
+  hasNotesPdf: false,
   label: title,
   playlistItemId: null,
   playlistNumber: null
@@ -58,6 +59,7 @@ function setup(
     'programs:get': options.programsGet ?? (loaded ? (options.programs ?? program) : null),
     'programs:addTracks': options.addTracks ?? [9],
     'library:setFavorite': undefined,
+    'library:openNotesPdf': undefined,
     'programs:addStop': 10,
     'programs:reorder': undefined,
     'programs:removeItems': undefined,
@@ -208,6 +210,23 @@ describe('program list', () => {
       within(await menu('STOP / TEACHING')).getByRole('menuitem', { name: 'Remove' })
     )
     expect(fake.callsTo('programs:removeItems')).toEqual([[5, [2]]])
+  })
+
+  test('an item’s menu offers Open PDF only for a dance with a PDF', async () => {
+    const withPdf = track(103, 'Lesnoto', { danceId: 2103, hasNotesPdf: true })
+    const fake = setup({
+      programs: { ...program, items: [item(1, hora), item(4, withPdf)] }
+    })
+    const menu = (name: string) => screen.findByRole('menu', { name: `Options for ${name}` })
+    await screen.findByText('Lesnoto')
+    await userEvent.pointer({ keys: '[MouseRight]', target: rowFor('Hora') })
+    expect(
+      within(await menu('Hora')).queryByRole('menuitem', { name: 'Open PDF' })
+    ).not.toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await userEvent.pointer({ keys: '[MouseRight]', target: rowFor('Lesnoto') })
+    await userEvent.click(within(await menu('Lesnoto')).getByRole('menuitem', { name: 'Open PDF' }))
+    expect(fake.callsTo('library:openNotesPdf')).toEqual([[2103]])
   })
 
   test('an item’s menu opens its song on the Music page (Edit details); a STOP has none', async () => {

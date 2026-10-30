@@ -35,6 +35,7 @@ const row = (songId: number, title: string, isMissing: boolean): LibraryRow => (
   danceType: null,
   difficulty: null,
   danceCount: 1,
+  hasNotesPdf: false,
   label: title,
   playlistItemId: null,
   playlistNumber: null

@@ -24,6 +24,7 @@ export interface Track {
   isRemoved: boolean // removed from the library (sync spec §6.4): shown greyed, never played
   isFavorite: boolean
   danceCount: number // dances linked to the song; > 1 offers the Dance menu
+  hasNotesPdf: boolean // the dance has a PDF attached; the item's menu offers Open PDF
 }
 
 export type ProgramItem = { id: number; kind: 'stop' } | ({ id: number; kind: 'track' } & Track)

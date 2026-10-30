@@ -155,6 +155,8 @@ const MENU_COLUMN: Column = {
     <SongMenu
       songId={r.songId}
       fileId={r.fileId}
+      danceId={r.danceId}
+      hasNotesPdf={r.hasNotesPdf}
       label={r.label}
       isFavorite={r.isFavorite}
       className={classes.options}

@@ -110,8 +110,19 @@ describe('program items', () => {
       teacher: 'Sonia Dion',
       durationMs: 185_000,
       isMissing: false,
-      danceCount: 1
+      danceCount: 1,
+      hasNotesPdf: false
     })
+  })
+
+  test('each song item says whether its dance has a PDF attached', () => {
+    const p = createProgram(db, 'Set')
+    addTracks(db, p, [hora.fileId, kolo.fileId])
+    db.prepare(
+      "INSERT INTO dance_prefs (dance_id, notes_pdf_name, notes_pdf_path) VALUES (?, 'kolo.pdf', '1-ab.pdf')"
+    ).run(kolo.danceId)
+    const items = getProgram(db, p)!.items as Extract<ProgramItem, { kind: 'track' }>[]
+    expect(items.map((i) => i.hasNotesPdf)).toEqual([false, true])
   })
 
   test('each song item says whether its song is a favorite', () => {

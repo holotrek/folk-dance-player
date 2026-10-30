@@ -25,6 +25,7 @@ const row = (songId: number): LibraryRow => ({
   danceType: null,
   difficulty: null,
   danceCount: 1,
+  hasNotesPdf: false,
   label: `Song ${songId}`,
   playlistItemId: null,
   playlistNumber: null

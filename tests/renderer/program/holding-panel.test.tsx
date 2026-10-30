@@ -9,7 +9,14 @@ import { renderWithLibrary } from '../library/render-library'
 import { playerState } from './fixtures'
 
 const held = { fileId: 101, songId: 1, label: 'Hora', country: 'Romania' } as LibraryRow
-const kolo = { fileId: 102, songId: 2, label: 'Kolo', country: 'Serbia' } as LibraryRow
+const kolo = {
+  fileId: 102,
+  songId: 2,
+  danceId: 12,
+  label: 'Kolo',
+  country: 'Serbia',
+  hasNotesPdf: true
+} as LibraryRow
 
 const files = (ids: number[]) => ({
   dataTransfer: { types: [FILES_MIME], getData: () => JSON.stringify(ids) }
@@ -23,6 +30,7 @@ function setup(onShowMusic?: () => void) {
     'library:list': (query: LibraryQuery) => (query.filter.kind === 'holding' ? rows : []),
     'library:setHolding': undefined,
     'library:setFavorite': undefined,
+    'library:openNotesPdf': undefined,
     'player:preview': undefined
   })
   renderWithLibrary(<HoldingPanel />, fake.api, onShowMusic)
@@ -115,5 +123,27 @@ describe('holding panel', () => {
       })
     )
     expect(fake.callsTo('library:setFavorite')).toEqual([[[102], true]])
+  })
+
+  test('a held song’s menu offers Open PDF only when its dance has one', async () => {
+    const { fake } = setup()
+    await screen.findByText('Hora')
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Hora' }))
+    expect(
+      within(await screen.findByRole('menu', { name: 'Options for Hora' })).queryByRole(
+        'menuitem',
+        {
+          name: 'Open PDF'
+        }
+      )
+    ).not.toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Kolo' }))
+    await userEvent.click(
+      within(await screen.findByRole('menu', { name: 'Options for Kolo' })).getByRole('menuitem', {
+        name: 'Open PDF'
+      })
+    )
+    expect(fake.callsTo('library:openNotesPdf')).toEqual([[12]])
   })
 })
