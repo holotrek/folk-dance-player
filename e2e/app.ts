@@ -77,14 +77,23 @@ async function dragToPoint(page: Page, source: Locator, x: number, y: number): P
   await page.mouse.up()
 }
 
-// Drops `source` on the Program panel near its bottom edge: below the list however many items it
-// holds and however small the window is. The panel's center can land on an item, and a drop on an
-// item goes before it (a small CI display did exactly that).
-export async function dropInProgram(page: Page, source: Locator): Promise<void> {
-  const panel = await page.getByRole('region', { name: 'Program' }).boundingBox()
-  if (!panel) throw new Error('dropInProgram: the Program panel is not visible')
+// Drops `source` on a panel near its bottom edge: below its list however many items it holds and
+// however small the window is. The panel's center can land on an item, and a drop on an item goes
+// before it (a small CI display did exactly that).
+async function dropInPanel(
+  page: Page,
+  source: Locator,
+  name: 'Program' | 'Holding'
+): Promise<void> {
+  const panel = await page.getByRole('region', { name }).boundingBox()
+  if (!panel) throw new Error(`dropInPanel: the ${name} panel is not visible`)
   await dragToPoint(page, source, panel.x + panel.width / 2, panel.y + panel.height - 12)
 }
+
+export const dropInProgram = (page: Page, source: Locator): Promise<void> =>
+  dropInPanel(page, source, 'Program')
+export const dropInHolding = (page: Page, source: Locator): Promise<void> =>
+  dropInPanel(page, source, 'Holding')
 
 export interface FakeMusicTrack {
   id: number // becomes the persistent ID

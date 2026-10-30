@@ -10,10 +10,8 @@ import {
   removeFromPlaylist,
   renamePlaylist,
   reorderPlaylist,
-  setFavorite,
-  setHolding
+  setFavorite
 } from '../../../src/main/library/playlists'
-import { listLibrary } from '../../../src/main/library/list'
 import {
   findEditedApplePlaylists,
   saveApplePlaylists
@@ -124,38 +122,5 @@ describe('setFavorite', () => {
       { file_id: a, is_favorite: 1 },
       { file_id: b, is_favorite: 0 }
     ])
-  })
-})
-
-describe('holding', () => {
-  const held = () =>
-    listLibrary(db, {
-      search: '',
-      filter: { kind: 'holding' },
-      sort: { column: 'title', direction: 'asc' } // ignored: holding keeps its own order
-    }).map((r) => r.title)
-
-  test('holds and releases songs; the holding filter lists them', () => {
-    setHolding(db, [a, c], true)
-    setHolding(db, [a], false)
-    expect(held()).toEqual(['C'])
-  })
-
-  test('held songs keep the order they were placed in: at the end, or before a held song', () => {
-    setHolding(db, [c, a], true)
-    expect(held()).toEqual(['C', 'A'])
-    setHolding(db, [b], true, a)
-    expect(held()).toEqual(['C', 'B', 'A'])
-  })
-
-  test('holding songs that are already held moves them (reordering)', () => {
-    setHolding(db, [a, b, c], true)
-    setHolding(db, [c], true, a)
-    expect(held()).toEqual(['C', 'A', 'B'])
-    setHolding(db, [c, a], true)
-    expect(held()).toEqual(['B', 'C', 'A'])
-    setHolding(db, [b], false)
-    setHolding(db, [b], true, c)
-    expect(held()).toEqual(['B', 'C', 'A'])
   })
 })

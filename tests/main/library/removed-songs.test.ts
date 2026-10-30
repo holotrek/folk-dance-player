@@ -7,8 +7,7 @@ import {
   addToPlaylist,
   createPlaylist,
   listPlaylists,
-  setFavorite,
-  setHolding
+  setFavorite
 } from '../../../src/main/library/playlists'
 import { getLibraryStats } from '../../../src/main/library/stats'
 import { listPlayed, logPlay } from '../../../src/main/programs/history'
@@ -34,7 +33,6 @@ describe('removed songs', () => {
     const kolo = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
     addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
     setFavorite(db, [kolo.fileId], true)
-    setHolding(db, [kolo.fileId], true)
     const playlist = createPlaylist(db, 'Mine')
     addToPlaylist(db, playlist, [kolo.fileId])
     removeSong(db, kolo.fileId)
@@ -42,7 +40,6 @@ describe('removed songs', () => {
     expect(titles({ kind: 'all' })).toEqual(['Hora'])
     expect(titles({ kind: 'all' }, 'kolo')).toEqual([])
     expect(titles({ kind: 'favorites' })).toEqual([])
-    expect(titles({ kind: 'holding' })).toEqual([])
     expect(titles({ kind: 'playlist', playlistId: playlist })).toEqual([])
     expect(listPlaylists(db).find((p) => p.id === playlist)?.itemCount).toBe(0)
     expect(getLibraryStats(db).fileCount).toBe(1)

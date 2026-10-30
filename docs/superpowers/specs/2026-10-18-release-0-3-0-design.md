@@ -69,7 +69,7 @@ built on its own.
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Built (Plan 20) |
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Built (Plan 19) |
 | 3.11 | End Program, then Start New Program | Program list, sidebar | Built (Plan 18) |
-| 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned (Plan 21) |
+| 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Built (Plan 21) |
 | 3.13 | Reorder columns in the Music and Program lists | `LibraryTable`, settings | Built (Plan 12) |
 | 3.14 | Quick-set a field from the song's own tags | Song editor | **To investigate** |
 

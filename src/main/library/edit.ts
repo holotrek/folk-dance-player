@@ -364,6 +364,12 @@ export function mergeDances(db: DatabaseSync, keepId: number, removeId: number):
       const col = table === 'song_prefs' ? 'default_dance_id' : 'dance_id'
       db.prepare(`UPDATE ${table} SET ${col} = ? WHERE ${col} = ?`).run(keepId, removeId)
     }
+    // Held pairs follow the merge. A song already held as the kept dance keeps that row; the
+    // removed dance's row for it is left behind and goes with the dance.
+    db.prepare('UPDATE OR IGNORE holding_items SET dance_id = ? WHERE dance_id = ?').run(
+      keepId,
+      removeId
+    )
     fillEmptyFrom(db, 'dances', 'id', keepId, removeId, ['country', 'choreographer', 'dance_type'])
     db.prepare('INSERT OR IGNORE INTO dance_prefs (dance_id) VALUES (?)').run(keepId)
     // Notes are never dropped: when both dances have them, the removed dance's are appended.

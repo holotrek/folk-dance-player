@@ -29,6 +29,9 @@ export interface Track {
   hasNotesPdf: boolean // the dance has a PDF attached; the item's menu offers Open PDF
 }
 
+// A held song with the dance it is held as (0.3.0 spec §3.12); `id` is its place in Holding.
+export type HoldingItem = { id: number } & Track
+
 export type ProgramItem = { id: number; kind: 'stop' } | ({ id: number; kind: 'track' } & Track)
 
 // A program with its unplayed items, in order (spec §6.2: played items aren't shown).

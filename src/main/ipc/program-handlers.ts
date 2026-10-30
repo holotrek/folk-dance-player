@@ -2,6 +2,7 @@ import type { InvokeHandlers } from '@shared/contract'
 import { NO_REMOTE } from '@shared/program'
 import { checkProgramFiles } from '../programs/file-check'
 import { listPlayed } from '../programs/history'
+import { moveFromHolding, moveToHolding } from '../programs/holding-moves'
 import {
   addStop,
   addTracks,
@@ -55,6 +56,16 @@ export function programHandlers(deps: HandlerDeps): Pick<InvokeHandlers, Program
     'programs:addTracks': edit((programId, fileIds, before) =>
       addTracks(db, programId, fileIds, before)
     ),
+    // Both lists change, so both are announced (main coalesces the notices).
+    'programs:moveToHolding': edit((programId, itemIds, before) => {
+      moveToHolding(db, programId, itemIds, before)
+      deps.onLibraryChanged()
+    }),
+    'programs:moveFromHolding': edit((programId, holdingIds, before) => {
+      const added = moveFromHolding(db, programId, holdingIds, before)
+      deps.onLibraryChanged()
+      return added
+    }),
     'programs:addStop': edit((programId, before) => addStop(db, programId, before)),
     'programs:reorder': edit((programId, itemIds) => reorderItems(db, programId, itemIds)),
     'programs:removeItems': edit((programId, itemIds) => removeItems(db, programId, itemIds)),

@@ -5,6 +5,7 @@ import { holdingOrder } from './003-holding-order'
 import { appleSync } from './004-apple-sync'
 import { importMapping } from './005-import-mapping'
 import { danceAttachments } from './006-dance-attachments'
+import { holdingItems } from './007-holding-items'
 
 // Append new migrations here; versions must stay 1..n in order.
 export const MIGRATIONS: readonly Migration[] = [
@@ -13,5 +14,6 @@ export const MIGRATIONS: readonly Migration[] = [
   holdingOrder,
   appleSync,
   importMapping,
-  danceAttachments
+  danceAttachments,
+  holdingItems
 ]

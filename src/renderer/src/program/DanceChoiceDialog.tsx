@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Button, Group, Modal, Radio, Stack } from '@mantine/core'
 import type { SongDance } from '@shared/library'
-import type { ProgramItem } from '@shared/program'
 
 export interface DanceChoice {
-  item: Extract<ProgramItem, { kind: 'track' }>
+  // The row (a program item or a held song) just added, as its song's default dance.
+  item: { id: number; title: string; danceId: number | null }
   dances: SongDance[]
 }
 
-// Songs just added to the program that have several dances: which one each is danced as. Each
+// Songs just added to the program or Holding that have several dances: which one each is danced as. Each
 // starts at the song's default (what was added); closing the dialog keeps those.
 export default function DanceChoiceDialog(props: {
   choices: DanceChoice[]

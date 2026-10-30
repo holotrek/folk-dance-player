@@ -21,6 +21,7 @@ import type {
 import type {
   PlayedEntry,
   PlayerState,
+  HoldingItem,
   ProgramDetail,
   ProgramSummary,
   RemoteStatus
@@ -106,11 +107,14 @@ export interface InvokeContract {
   'playlists:reorder': { args: [playlistId: number, itemIds: number[]]; result: void }
   // Music's playlist folders (sync spec §6.2).
   'playlists:folders': { args: []; result: PlaylistFolder[] }
-  // Holding places songs before `beforeFileId` (a held song) or at the end; held songs move.
-  'library:setHolding': {
-    args: [fileIds: number[], held: boolean, beforeFileId?: number | null]
-    result: void
-  }
+  // Holding (0.3.0 spec §3.12): song-and-dance pairs in the order they were placed. `before` is a
+  // holding row id (null: the end). Holding a song holds it as its default dance and returns the
+  // holding rows, so the caller can ask which dance; a pair already held moves to the new spot.
+  'library:holding': { args: []; result: HoldingItem[] }
+  'library:holdSongs': { args: [fileIds: number[], before: number | null]; result: number[] }
+  'library:moveHolding': { args: [itemIds: number[], before: number | null]; result: void }
+  'library:releaseHolding': { args: [itemIds: number[]]; result: void }
+  'library:setHoldingDance': { args: [itemId: number, danceId: number]; result: void }
   'programs:list': { args: [search: string]; result: ProgramSummary[] }
   'programs:get': { args: [programId: number]; result: ProgramDetail | null }
   'programs:create': { args: [name: string]; result: number }
@@ -121,6 +125,16 @@ export interface InvokeContract {
   'programs:setCurrent': { args: [programId: number | null]; result: void }
   'programs:addTracks': {
     args: [programId: number, fileIds: number[], beforeItemId: number | null]
+    result: number[]
+  }
+  // Moves between a program and Holding: one operation each way (a transaction, one notice).
+  // `before` is a holding row id for moveToHolding and a program item id for moveFromHolding.
+  'programs:moveToHolding': {
+    args: [programId: number, itemIds: number[], before: number | null]
+    result: void
+  }
+  'programs:moveFromHolding': {
+    args: [programId: number, holdingIds: number[], before: number | null]
     result: number[]
   }
   'programs:addStop': { args: [programId: number, beforeItemId: number | null]; result: number }
@@ -240,7 +254,11 @@ export const INVOKE_CHANNELS = [
   'playlists:remove',
   'playlists:reorder',
   'playlists:folders',
-  'library:setHolding',
+  'library:holding',
+  'library:holdSongs',
+  'library:moveHolding',
+  'library:releaseHolding',
+  'library:setHoldingDance',
   'programs:list',
   'programs:get',
   'programs:create',
@@ -249,6 +267,8 @@ export const INVOKE_CHANNELS = [
   'programs:delete',
   'programs:setCurrent',
   'programs:addTracks',
+  'programs:moveToHolding',
+  'programs:moveFromHolding',
   'programs:addStop',
   'programs:reorder',
   'programs:removeItems',

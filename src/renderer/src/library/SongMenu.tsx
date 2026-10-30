@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { ActionIcon, Menu } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import type { SongDance } from '@shared/library'
 import { errorMessage } from '../ipc-error'
 import { useEditSong } from '../navigation'
 import { favoriteIds, pdfDanceIds, type RowTarget } from './row-targets'
@@ -23,6 +25,11 @@ export default function SongMenu(props: {
   label: string
   isFavorite: boolean
   targets?: RowTarget[] // the songs the favorites items act on; this song alone by default
+  danceCount?: number
+  // Holding: the dance the song is held as, which the menu can change (when it has several).
+  danceChoice?: { current: number | null; onChoose: (danceId: number) => void }
+  // Holding: the last, red item (Release), which acts on the whole selection.
+  onRemove?: { label: string; run: () => void }
   className?: string
 }): React.JSX.Element {
   const api = useLibraryApi()
@@ -36,8 +43,17 @@ export default function SongMenu(props: {
     }
   ]
   const pdfs = pdfDanceIds(targets)
+  const [dances, setDances] = useState<SongDance[]>([])
   return (
-    <Menu position="right-start" withinPortal>
+    <Menu
+      position="right-start"
+      withinPortal
+      onOpen={() => {
+        if (props.danceChoice && (props.danceCount ?? 1) > 1) {
+          void api.invoke('library:song', props.songId).then((s) => setDances(s?.dances ?? []))
+        }
+      }}
+    >
       <Menu.Target>
         <ActionIcon
           variant="subtle"
@@ -70,7 +86,27 @@ export default function SongMenu(props: {
             Open PDF
           </Menu.Item>
         )}
+        {props.danceChoice && targets.length < 2 && dances.length > 1 && (
+          <>
+            <Menu.Label>Dance</Menu.Label>
+            {dances.map((d) => (
+              <Menu.Item
+                key={d.danceId}
+                leftSection={d.danceId === props.danceChoice!.current ? '✓' : null}
+                onClick={() => props.danceChoice!.onChoose(d.danceId)}
+              >
+                {d.label}
+              </Menu.Item>
+            ))}
+            <Menu.Divider />
+          </>
+        )}
         <FavoriteItems targets={targets} />
+        {props.onRemove && (
+          <Menu.Item color="red" onClick={props.onRemove.run}>
+            {props.onRemove.label}
+          </Menu.Item>
+        )}
       </Menu.Dropdown>
     </Menu>
   )

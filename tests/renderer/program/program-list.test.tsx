@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { LibraryRow, SongDetail } from '@shared/library'
 import type { ProgramDetail } from '@shared/program'
-import { FILES_MIME, ITEMS_MIME } from '@renderer/library/drag'
+import { FILES_MIME, HOLDING_MIME, ITEM_SONGS_MIME, ITEMS_MIME } from '@renderer/library/drag'
 import LibraryTable from '@renderer/library/LibraryTable'
 import ProgramList from '@renderer/program/ProgramList'
 import { createFakeApi } from '../fake-api'
@@ -62,6 +62,7 @@ function setup(
     'library:openNotesPdf': undefined,
     'programs:addStop': 10,
     'programs:reorder': undefined,
+    'programs:moveFromHolding': [],
     'programs:removeItems': undefined,
     'programs:setItemDance': undefined,
     'programs:rename': undefined,
@@ -376,6 +377,54 @@ describe('End Program and Start New Program', () => {
     expect(await screen.findByText(/Nothing left to play/)).toBeInTheDocument()
     expect(endButton()).toBeEnabled()
     expect(screen.queryByRole('button', { name: 'Start New Program' })).toBeNull()
+  })
+})
+
+describe('Holding and the program', () => {
+  const heldRows = (ids: number[]) => ({
+    dataTransfer: { types: [HOLDING_MIME], getData: () => JSON.stringify(ids) }
+  })
+
+  test('a drag from Holding moves the songs in, before the item dropped on or at the end', async () => {
+    const fake = setup()
+    await screen.findByText('Hora')
+    fireEvent.drop(rowFor('Kolo'), heldRows([7, 8]))
+    fireEvent.drop(screen.getByRole('region', { name: 'Program' }), heldRows([9]))
+    await waitFor(() =>
+      expect(fake.callsTo('programs:moveFromHolding')).toEqual([
+        [5, [7, 8], 3],
+        [5, [9], null]
+      ])
+    )
+  })
+
+  test('with no program loaded, a drag from Holding starts one named for today first', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 14, 12))
+    const fake = setup({ loaded: false })
+    fireEvent.drop(await screen.findByText(/Or drag songs here/), heldRows([7]))
+    await waitFor(() => expect(fake.callsTo('programs:moveFromHolding')).toEqual([[6, [7], null]]))
+    expect(fake.callsTo('programs:create')).toEqual([['Wed Oct 14']])
+  })
+
+  test('a song dragged from the library does not touch Holding', async () => {
+    const fake = setup()
+    await screen.findByText('Hora')
+    fireEvent.drop(rowFor('Kolo'), files([201]))
+    await waitFor(() => expect(fake.callsTo('programs:addTracks')).toEqual([[5, [201], 3]]))
+    expect(fake.callsTo('programs:moveFromHolding')).toEqual([])
+  })
+
+  test('a drag of program items says whether it carries a song (Holding refuses STOP markers alone)', async () => {
+    setup()
+    await screen.findByText('Hora')
+    const start = (row: HTMLElement) => {
+      const dataTransfer = { setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' }
+      fireEvent.dragStart(row, { dataTransfer })
+      return dataTransfer.setData.mock.calls.map((c) => c[0])
+    }
+    expect(start(rowFor('Hora'))).toContain(ITEM_SONGS_MIME)
+    expect(start(rowFor('STOP / TEACHING'))).not.toContain(ITEM_SONGS_MIME)
   })
 })
 

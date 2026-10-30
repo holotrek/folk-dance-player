@@ -1,7 +1,7 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
-import type { LibraryQuery, LibraryRow } from '@shared/library'
+import type { LibraryRow } from '@shared/library'
 import ProgramPage from '@renderer/pages/ProgramPage'
 import MusicPage from '@renderer/pages/MusicPage'
 import { createFakeApi } from '../fake-api'
@@ -25,7 +25,8 @@ function setup(page: 'program' | 'music') {
   const fake = createFakeApi({
     'player:getState': playerState({ programId: null }),
     // The library list has the song; holding is empty.
-    'library:list': (query: LibraryQuery) => (query.filter.kind === 'holding' ? [] : [row]),
+    'library:list': [row],
+    'library:holding': [],
     'library:stats': { fileCount: 1 },
     'player:preview': undefined,
     'library:song': null // the Music page opens the song editor for the selected song
