@@ -132,10 +132,10 @@ test('the sidebar and the Program page show the program’s times', async () => 
   const sidebar = page.getByRole('group', { name: 'Programs' })
   await expect(sidebar.getByText(/Total play time: \d+:\d\d/)).toBeVisible()
   await expect(program.getByText(/Total play time: \d+:\d\d/)).toBeVisible()
-  await expect(program.getByText(/^Ending on /)).toBeVisible()
+  await expect(program.getByText(/^Ending about /)).toBeVisible()
 
   await page.getByRole('button', { name: 'End Program' }).click()
-  await expect(program.getByText(/Ending on/)).toHaveCount(0)
+  await expect(program.getByText(/Ending about/)).toHaveCount(0)
 })
 
 test('Edit details on a program item opens its song in the Music page editor', async () => {

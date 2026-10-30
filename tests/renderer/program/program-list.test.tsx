@@ -336,7 +336,7 @@ describe('the header’s times', () => {
     const buttons = screen.getByRole('button', { name: 'End Program' })
     expect(title.compareDocumentPosition(times) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(times.compareDocumentPosition(buttons) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(screen.getByText(/^Ending on /)).toBeInTheDocument()
+    expect(screen.getByText(/^Ending about /)).toBeInTheDocument()
   })
 })
 

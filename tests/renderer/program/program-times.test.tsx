@@ -43,7 +43,7 @@ const later = (ms: number) =>
   act(async () => {
     vi.advanceTimersByTime(ms)
   })
-const endingText = (afterMs: number) => `Ending on ${formatClock(START.getTime() + afterMs)}`
+const endingText = (afterMs: number) => `Ending about ${formatClock(START.getTime() + afterMs)}`
 
 describe('program times on the Program page', () => {
   test('shows the total and the time the program will end', async () => {
@@ -65,15 +65,15 @@ describe('program times on the Program page', () => {
   test('while playing it stays steady as the position advances', async () => {
     await setup([item(2, kolo), item(3, tfilati)], playing(hora))
     act(() => store.getState().setPosition(60_000))
-    const before = screen.getByText(/^Ending on/).textContent
+    const before = screen.getByText(/^Ending about/).textContent
     await later(60_000)
     act(() => store.getState().setPosition(120_000))
-    expect(screen.getByText(/^Ending on/).textContent).toBe(before)
+    expect(screen.getByText(/^Ending about/).textContent).toBe(before)
   })
 
   test('says “if no pauses” when the program has a STOP', async () => {
     await setup([item(1, hora), stop(2), item(3, kolo)], playerState())
-    expect(screen.getByText(/^Ending on .* if no pauses$/)).toBeInTheDocument()
+    expect(screen.getByText(/^Ending about .* if no pauses$/)).toBeInTheDocument()
   })
 
   test('has no “if no pauses” without a STOP', async () => {
@@ -84,11 +84,11 @@ describe('program times on the Program page', () => {
   test('shows nothing when nothing is left to play', async () => {
     await setup([], playerState())
     expect(screen.queryByText(/Total play time/)).toBeNull()
-    expect(screen.queryByText(/Ending on/)).toBeNull()
+    expect(screen.queryByText(/Ending about/)).toBeNull()
   })
 
   test('shows nothing with no program loaded', async () => {
     await setup([], playerState({ programId: null }))
-    expect(screen.queryByText(/Total play time|Ending on/)).toBeNull()
+    expect(screen.queryByText(/Total play time|Ending about/)).toBeNull()
   })
 })

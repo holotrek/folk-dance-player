@@ -34,7 +34,7 @@ export default function ProgramTimes(): React.JSX.Element | null {
         </Text>
       )}
       <Text size="xs" c="dimmed" title="Pauses at STOP markers are not counted">
-        {`Ending on ${formatClock(endsAt)}${pauses ? ' if no pauses' : ''}`}
+        {`Ending about ${formatClock(endsAt)}${pauses ? ' if no pauses' : ''}`}
       </Text>
     </Stack>
   )

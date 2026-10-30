@@ -376,7 +376,7 @@ items disappear); component tests with modifier keys; the end-to-end drag helper
 - A program shows its **total play time**, **adding the auto-continue seconds** when auto-continue
   is on.
 - **Sidebar** (the Programs section, left): under "N songs to play", a line "Total play time: X:XX".
-- **Program page:** the same total, plus **"Ending on X:XX"** (the current time plus the time
+- **Program page:** the same total, plus **"Ending about X:XX"** (the current time plus the time
   that remains), **centered** in the program panel's header, with room between it and both the
   title on the left and the buttons on the right.
 - The projector shows one quiet "Ending about 9:42 PM" line in its footer (decided 2026-10-30); never the total.

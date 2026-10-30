@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** The sidebar shows each program's total play time; the Program page shows the loaded program's total and when it will end ("Ending on 9:42 PM"); the projector's footer shows one quiet "Ending about 9:42 PM".
+**Goal:** The sidebar shows each program's total play time; the Program page shows the loaded program's total and when it will end ("Ending about 9:42 PM"); the projector's footer shows one quiet "Ending about 9:42 PM".
 
 **Architecture:** One pure module, `shared/program-time.ts`, does every sum (so main, the control window and the projector agree). Main adds two numbers to each `ProgramSummary` (for the sidebar) and one to the projector snapshot (`tailMs`); the renderers add the clock. The Program page computes its own numbers from the items it already holds, and gets the playing song's position from the program store (the player bar publishes it). No migration, no new channel.
 
@@ -89,7 +89,7 @@
 **Files:** Create `ProgramTimes.tsx`, `useNow.ts`; modify `program-store.ts`, `PlayerBar.tsx`, `ProgramList.tsx`; Test `program-times.test.tsx`, `program-store.test.ts`, `program-list.test.tsx`.
 
 **Interfaces:**
-- Produces: `useNow(intervalMs = 60_000): number` (re-renders each interval); store `positionMs: number` with `setPosition(ms: number): void`; `ProgramTimes` (no props) reads the program, player and position from the store and renders, centered and dimmed, "Total play time: M:SS" and "Ending on 9:42 PM" (plus " if no pauses" when the unplayed items contain a STOP), nothing when there are no songs left. Ending = `now + remaining + tailMs(items, player)`, where `remaining` is `max(durationMs − positionMs, 0)` for a playing, paused or stopped song (stopped counts the full duration), else 0.
+- Produces: `useNow(intervalMs = 60_000): number` (re-renders each interval); store `positionMs: number` with `setPosition(ms: number): void`; `ProgramTimes` (no props) reads the program, player and position from the store and renders, centered and dimmed, "Total play time: M:SS" and "Ending about 9:42 PM" (plus " if no pauses" when the unplayed items contain a STOP), nothing when there are no songs left. Ending = `now + remaining + tailMs(items, player)`, where `remaining` is `max(durationMs − positionMs, 0)` for a playing, paused or stopped song (stopped counts the full duration), else 0.
 - `PlayerBar` calls `setPosition(Math.floor(audio.positionMs / 1000) * 1000)` when the whole second changes.
 
 - [x] **Step 1: Write failing tests** (fake `Date` as the existing default-name tests do): `'shows the total and the time the program will end'`; `'while paused the ending time moves later as the clock runs'` (advance 3 minutes, no position change → later by 3 minutes); `'while playing it stays steady as the position advances'`; `'adds “if no pauses” when the program has a STOP'`; `'shows nothing when nothing is left to play'`; `'the store keeps the position the player bar reports'`. In `program-list.test.tsx`: the header has the times centered between the title group and the buttons (assert DOM order: title, times, buttons).
@@ -112,13 +112,13 @@
 
 ## Task 6: End-to-end, docs, commit
 
-- [x] **Step 1: E2E:** `'the sidebar and the Program page show the program’s times'`: add Hora, Kolo and Tfilati (the fixture MP3s' durations are tiny, so the test reads the text, not exact minutes); assert the sidebar entry contains "Total play time:" and the Program page header contains "Ending on" and the same total; end the program → the times are gone.
+- [x] **Step 1: E2E:** `'the sidebar and the Program page show the program’s times'`: add Hora, Kolo and Tfilati (the fixture MP3s' durations are tiny, so the test reads the text, not exact minutes); assert the sidebar entry contains "Total play time:" and the Program page header contains "Ending about" and the same total; end the program → the times are gone.
 - [x] **Step 2: Docs:**
   - 0.3.0 spec §2 row 3.9 → `Built (Plan 20)`.
-  - Main spec §6.1 (sidebar line), §6.2 (header: total and "Ending on", "if no pauses", ignores speed) and §8.2 (the projector's footer line).
+  - Main spec §6.1 (sidebar line), §6.2 (header: total and "Ending about", "if no pauses", ignores speed) and §8.2 (the projector's footer line).
   - AGENTS.md decision (2026-10-30): **Program times are computed by one shared module (`shared/program-time.ts`); STOPs are ignored and speed is ignored.** Why: main, the control window and the projector must agree; a STOP's length is unknowable, and an invented one would be a guess shown as fact. The projector gets `tailMs` in its snapshot and adds the clock itself, so it never reads the program and an end time that is a minute stale costs nothing. _Rejected:_ an assumed length per STOP (a setting for a guess); sending the projector a finished end time (stale while paused).
   - CHANGELOG Added: "Each program shows its total play time in the sidebar. The Program page shows the total and when the program will end, and the projector shows a quiet “Ending about 9:42 PM” in its footer. Songs that are missing from disk are left out, auto-continue seconds are included, and pauses at STOP markers are not (the Program page says so)."
-  - Hardware checklist step: play a program with a STOP; the Program page's “Ending on” stays steady while playing, moves later while paused, says “if no pauses”; the projector's footer shows the same time without that note; the header still fits at a narrow window (the times hide before anything overlaps).
+  - Hardware checklist step: play a program with a STOP; the Program page's “Ending about” stays steady while playing, moves later while paused, says “if no pauses”; the projector's footer shows the same time without that note; the header still fits at a narrow window (the times hide before anything overlaps).
 - [x] **Step 3:** Run `npx vitest run`, `npm run typecheck`, `npm run test:e2e` — expect all clean.
 - [x] **Step 4:** Commit `feat: show a program's total play time and when it will end`.
 
@@ -130,7 +130,7 @@
 
 ## Self-Review
 
-- **Spec coverage:** what counts, gaps around STOPs, missing/removed/no-duration → Task 1 and 2; sidebar line → Task 3; Program page total + Ending on + "if no pauses" + steady/paused behavior + clock refresh → Task 4; projector footer, no total → Task 5; speed ignored and STOPs ignored → Global Constraints and AGENTS.md; docs and e2e → Task 6.
+- **Spec coverage:** what counts, gaps around STOPs, missing/removed/no-duration → Task 1 and 2; sidebar line → Task 3; Program page total + Ending about + "if no pauses" + steady/paused behavior + clock refresh → Task 4; projector footer, no total → Task 5; speed ignored and STOPs ignored → Global Constraints and AGENTS.md; docs and e2e → Task 6.
 - **Types:** `PlayTime`, `AutoContinue`, `playTime`, `totalMs`, `tailMs`, `formatClock` (Task 1) are consumed by Tasks 2–5; `ProgramSummary.unplayedDurationMs/unplayedGaps` (Task 2) by Task 3; `positionMs`/`setPosition` and `useNow` (Task 4) by Tasks 4–5.
 - **Not testable in jsdom:** header fit at narrow widths and the footer's look, covered by the hardware checklist.
 - **Open for the maintainer:** none blocking.
