@@ -68,7 +68,7 @@ built on its own.
 | 3.8 | Select several program items and move them together | Program list | Built (Plan 17) |
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Planned |
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Planned |
-| 3.11 | End Program, then Start New Program | Program list, sidebar | Planned |
+| 3.11 | End Program, then Start New Program | Program list, sidebar | Built (Plan 18) |
 | 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned |
 | 3.13 | Reorder columns in the Music and Program lists | `LibraryTable`, settings | Built (Plan 12) |
 | 3.14 | Quick-set a field from the song's own tags | Song editor | **To investigate** |
@@ -734,7 +734,7 @@ migration and the "copy a file into the app's data folder" helper.
 7. ~~**§3.2, the choreographer.**~~ Decided 2026-10-19: `Dance (Choreographer) ♪ Song`.
 8. **§3.10, following the bottom.** Is it right that the control window's list follows new songs
    only while the organizer is at the bottom, or should it always jump to the newest?
-9. **§3.11, a playing song.** End Program lets the song that is playing finish and nothing
-   follows. Is that right, or should it ask first (or stop the music) when a song is playing?
+9. ~~**§3.11, a playing song.**~~ Decided 2026-10-31: End Program asks nothing; the song that is playing
+   finishes and nothing follows it.
 10. **§3.14, the quick-set.** Worth building? What counts as "not changed yet" (empty, equal to
     the current mapping's value, or equal to the sync baseline)? See the investigation list in §3.14.

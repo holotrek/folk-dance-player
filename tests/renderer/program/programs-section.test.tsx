@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { IDLE_PLAYER_STATE, type ProgramSummary } from '@shared/program'
 import Sidebar from '@renderer/components/Sidebar'
+import NewProgramPrompt from '@renderer/program/NewProgramPrompt'
 import { createFakeApi } from '../fake-api'
 import { renderWithLibrary } from '../library/render-library'
 
@@ -113,5 +114,35 @@ describe('Programs in the sidebar', () => {
     const confirm = await screen.findByRole('dialog', { name: 'Delete program?' })
     await userEvent.click(within(confirm).getByRole('button', { name: 'Delete' }))
     expect(fake.callsTo('programs:delete')).toEqual([[2]])
+  })
+
+  test('NewProgramPrompt, shared with the Program page, names, creates and loads a program', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 14, 12))
+    const onClose = vi.fn()
+    const fake = createFakeApi({
+      'programs:create': (name: string) => {
+        if (name === 'Taken') throw new Error('That name is taken.')
+        return 3
+      },
+      'programs:setCurrent': undefined,
+      'player:getState': { ...IDLE_PLAYER_STATE, programId: null },
+      'programs:list': []
+    })
+    renderWithLibrary(<NewProgramPrompt opened onClose={onClose} />, fake.api)
+    const dialog = await screen.findByRole('dialog', { name: 'New program' })
+    const name = within(dialog).getByRole('textbox')
+    expect(name).toHaveValue('Wed Oct 14')
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Taken')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+    expect(await within(dialog).findByText('That name is taken.')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Beginner night')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(fake.callsTo('programs:setCurrent')).toEqual([[3]]))
+    expect(fake.callsTo('programs:create').at(-1)).toEqual(['Beginner night'])
+    expect(onClose).toHaveBeenCalled()
   })
 })

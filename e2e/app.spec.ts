@@ -75,6 +75,33 @@ test('select two program items and drag them together', async () => {
   await expect(item('Hora')).toHaveAttribute('aria-selected', 'false')
 })
 
+test('end a program, start a new one, and load the first again', async () => {
+  const { page } = running
+  const program = page.getByRole('region', { name: 'Program' })
+  await drag(page, libraryRow('Hora'), program)
+  await drag(page, libraryRow('Kolo'), program)
+  await page.getByRole('button', { name: 'Rename program' }).click()
+  await page.getByRole('dialog', { name: 'Rename program' }).getByLabel('Name').fill('Tuesday')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByText('Program: Tuesday')).toBeVisible()
+
+  await page.getByRole('button', { name: 'End Program' }).click()
+  await expect(page.getByRole('button', { name: 'Start New Program' })).toBeVisible()
+  await expect(programItems()).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'End Program' })).toBeDisabled()
+
+  await page.getByRole('button', { name: 'Start New Program' }).click()
+  await page.getByRole('dialog').getByLabel('Name').fill('Wednesday')
+  await page.getByRole('dialog').getByRole('button', { name: 'Create' }).click()
+  await expect(page.getByText('Program: Wednesday')).toBeVisible()
+  await expect(page.getByRole('dialog')).toBeHidden() // its overlay would swallow the drag
+  await drag(page, libraryRow('Tfilati'), program)
+  await expect(programItems()).toHaveText([/Tfilati/])
+
+  await page.getByRole('group', { name: 'Programs' }).getByText('Tuesday').click()
+  await expect(programItems()).toHaveText([/Hora/, /Kolo/])
+})
+
 test('Edit details on a program item opens its song in the Music page editor', async () => {
   const { page } = running
   await drag(running.page, libraryRow('Kolo'), page.getByRole('region', { name: 'Program' }))
