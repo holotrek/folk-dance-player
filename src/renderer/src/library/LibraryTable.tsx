@@ -4,7 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
 import FavoriteToggle from './FavoriteToggle'
-import type { FavoriteTarget } from './favorite-targets'
+import type { RowTarget } from './row-targets'
 import { MOVABLE, moveColumn, nudgeColumn } from './column-order'
 import {
   carriesColumn,
@@ -31,7 +31,7 @@ interface Column {
 
 // The songs a row's star and "⋯" menu act on: every selected song when the row is one of them, else
 // just the row.
-function useTargets(row: LibraryRow): FavoriteTarget[] {
+function useTargets(row: LibraryRow): RowTarget[] {
   const selected = useLibrary((s) => s.selected)
   const rows = useLibrary((s) => s.rows)
   if (!selected.includes(row.songId)) return [row]

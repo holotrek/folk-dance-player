@@ -121,9 +121,23 @@
 - [ ] **Step 4:** Commit `feat: select several program items and move them together` (code, tests, CHANGELOG line and docs in one commit).
 - [ ] **Step 5:** Open the pull request after an independent review.
 
+## Task 5: Actions on a selection (added after the first build, 2026-10-30)
+
+Spec: §3.8 "Actions on a selection". Built after Tasks 1–4, test-first, in two commits.
+
+**Files:** Create `src/renderer/src/library/row-targets.ts`; modify `FavoriteToggle.tsx`, `SongMenu.tsx`, `LibraryTable.tsx`, `ProgramList.tsx`; Test `tests/renderer/library/favorites-selection.test.tsx` (new), `program-list.test.tsx`.
+
+**Interfaces:**
+- Produces: `RowTarget { fileId; isFavorite; danceId: number | null; hasNotesPdf }`, `favoriteIds(targets): number[]`, `pdfDanceIds(targets): number[]` (each once, in order). `FavoriteToggle` and `SongMenu` take optional `targets` (default: the row alone); `FavoriteItems` (in `SongMenu.tsx`) renders the Add/Remove items; `ItemMenu` takes `itemIds` and `targets`. `LibraryTable`'s `RowStar`/`RowMenu` compute the targets from the library selection; `ProgramList`'s `actOn(id)`/`favoriteTargets(id)` from the program selection.
+
+- [x] **Step 1:** Tests: star of a selected song applies to all selected, an unselected one acts alone, a mix follows the clicked star; the menu offers both favorites items for a mix and each applies to all; ✕ and Remove take out the whole selection (STOP markers included), ✕ on an unselected item only that item; Edit details hidden for several; Insert STOP goes before the first selected item; Open PDF opens every PDF among them once per dance and is absent when none has one; the per-item dance choice is hidden for several. Same star/menu/Edit-details/Open PDF tests for the library table.
+- [x] **Step 2:** Implement as above; run `npx vitest run`, `npm run typecheck`.
+- [x] **Step 3:** Docs: CHANGELOG line, AGENTS.md decision extended, main spec §6.2, 0.3.0 spec §3.8 and its Non-goals (Delete key after 0.3.0), hardware checklist step 35.
+- Not included: Delete/Backspace removing the selection (Delete removes no single item today; do both after 0.3.0); Holding (Plan 18 with §3.12).
+
 ## Self-Review
 
 - **Spec coverage:** click/shift/cmd selection, whole-selection drag, original order and kept selection, unselected-drag rule, drag-image count, pruning, click-on-empty clears, double-click unchanged, STOP movable, one reorder change notice, `aria-selected` and the role change, reducer/component/e2e tests → Tasks 1–4.
 - **Types:** `Selection`, `SelectMode`, `selectIn`, `pruneSelection`, `selectedInOrder` are defined in Task 1 and used by the store (Task 2, whose `selectItem(id, mode)` calls `selectIn`) and the list (Task 3).
-- **Not included (spec silent):** keyboard selection, Delete-to-remove for a selection, and ✕ removing the whole selection; each is a separate request.
+- **Not included:** keyboard selection and Delete-to-remove (a to-do after 0.3.0). ✕ removing the whole selection was added in Task 5.
 - **Open for the maintainer:** none blocking.

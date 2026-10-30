@@ -31,7 +31,12 @@ const row = (songId: number, isFavorite = false): LibraryRow => ({
 
 async function setup() {
   const fake = createFakeApi({
-    'library:list': [row(1), row(2, true), row(3)],
+    'library:list': [
+      { ...row(1), danceId: 11, hasNotesPdf: true },
+      { ...row(2, true), danceId: 12, hasNotesPdf: true },
+      row(3)
+    ],
+    'library:openNotesPdf': undefined,
     'playlists:list': [],
     'library:setFavorite': undefined
   })
@@ -77,4 +82,15 @@ test('Edit details is left out of the menu while several songs are selected', as
   await userEvent.click(screen.getByRole('button', { name: 'Options for Song 1' }))
   const menu = await screen.findByRole('menu', { name: 'Options for Song 1' })
   expect(within(menu).queryByRole('menuitem', { name: 'Edit details' })).toBeNull()
+})
+
+test('with several songs selected, Open PDF opens every PDF among them', async () => {
+  const { fake, rowOf } = await setup()
+  fireEvent.click(await rowOf(1))
+  fireEvent.click(await rowOf(2), { metaKey: true })
+  fireEvent.click(await rowOf(3), { metaKey: true })
+  await userEvent.click(screen.getByRole('button', { name: 'Options for Song 3' }))
+  const menu = await screen.findByRole('menu', { name: 'Options for Song 3' })
+  await userEvent.click(within(menu).getByRole('menuitem', { name: 'Open PDF' }))
+  expect(fake.callsTo('library:openNotesPdf')).toEqual([[11], [12]])
 })

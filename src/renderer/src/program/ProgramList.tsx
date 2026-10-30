@@ -19,7 +19,7 @@ import { moveBefore } from '../library/reorder'
 import { formatTime } from '../format-time'
 import { useEditSong } from '../navigation'
 import { FavoriteItems, openRowMenu } from '../library/SongMenu'
-import type { FavoriteTarget } from '../library/favorite-targets'
+import { pdfDanceIds, type RowTarget } from '../library/row-targets'
 import { selectedInOrder } from './selection'
 import { useProgram, useProgramStore } from './ProgramProvider'
 import classes from './ProgramList.module.css'
@@ -30,7 +30,7 @@ import classes from './ProgramList.module.css'
 function ItemMenu(props: {
   item: ProgramItem
   itemIds: number[] // the items Remove takes out: this one, or the whole selection it is in
-  targets: FavoriteTarget[] // the songs the favorites items act on
+  targets: RowTarget[] // the songs the favorites items act on
   onError: (message: string) => void
 }): React.JSX.Element {
   const api = useLibraryApi()
@@ -66,12 +66,18 @@ function ItemMenu(props: {
         {item.kind === 'track' && props.itemIds.length < 2 && (
           <Menu.Item onClick={() => editSong(item.songId)}>Edit details</Menu.Item>
         )}
-        {item.kind === 'track' && item.hasNotesPdf && item.danceId !== null && (
-          <Menu.Item onClick={run(() => api.invoke('library:openNotesPdf', item.danceId!))}>
+        {pdfDanceIds(props.targets).length > 0 && (
+          <Menu.Item
+            onClick={run(() =>
+              Promise.all(
+                pdfDanceIds(props.targets).map((id) => api.invoke('library:openNotesPdf', id))
+              )
+            )}
+          >
             Open PDF
           </Menu.Item>
         )}
-        {dances.length > 1 && item.kind === 'track' && (
+        {dances.length > 1 && item.kind === 'track' && props.itemIds.length < 2 && (
           <>
             <Menu.Label>Dance</Menu.Label>
             {dances.map((d) => (
@@ -86,8 +92,10 @@ function ItemMenu(props: {
             <Menu.Divider />
           </>
         )}
-        {item.kind === 'track' && <FavoriteItems targets={props.targets} />}
-        <Menu.Item onClick={run(() => api.invoke('programs:addStop', program!.id, item.id))}>
+        {props.targets.length > 0 && <FavoriteItems targets={props.targets} />}
+        <Menu.Item
+          onClick={run(() => api.invoke('programs:addStop', program!.id, props.itemIds[0]))}
+        >
           Insert STOP before
         </Menu.Item>
         <Menu.Item
@@ -181,10 +189,19 @@ export default function ProgramList(): React.JSX.Element {
           items.map((i) => i.id)
         )
       : [id]
-  const favoriteTargets = (id: number): FavoriteTarget[] => {
+  const favoriteTargets = (id: number): RowTarget[] => {
     const ids = new Set(actOn(id))
     return items.flatMap((i) =>
-      i.kind === 'track' && ids.has(i.id) ? [{ fileId: i.fileId, isFavorite: i.isFavorite }] : []
+      i.kind === 'track' && ids.has(i.id)
+        ? [
+            {
+              fileId: i.fileId,
+              isFavorite: i.isFavorite,
+              danceId: i.danceId,
+              hasNotesPdf: i.hasNotesPdf
+            }
+          ]
+        : []
     )
   }
 

@@ -531,6 +531,59 @@ describe('program list actions on a selection', () => {
     expect(within(menu).queryByRole('menuitem', { name: 'Edit details' })).toBeNull()
   })
 
+  test('with several selected, Insert STOP goes before the first of them', async () => {
+    const fake = setup({ programs: multi })
+    await screen.findByText('Hora')
+    select('Sârba', 'Kolo')
+    await menuItem('Sârba', 'Insert STOP before')
+    expect(fake.callsTo('programs:addStop')).toEqual([[5, 3]])
+  })
+
+  test('with several selected, Open PDF opens every PDF among them, once per dance', async () => {
+    const withPdf = (t: typeof hora) => ({ ...t, hasNotesPdf: true })
+    const fake = setup({
+      programs: {
+        ...multi,
+        items: [
+          item(1, withPdf(hora)),
+          item(3, withPdf(kolo)),
+          item(4, sarba),
+          item(5, withPdf(hora))
+        ]
+      }
+    })
+    await screen.findByText('Kolo')
+    fireEvent.click(rowFor('Sârba'))
+    for (const name of ['Kolo']) fireEvent.click(rowFor(name), { metaKey: true })
+    fireEvent.click(rows()[0], { metaKey: true })
+    await menuItem('Sârba', 'Open PDF')
+    expect(fake.callsTo('library:openNotesPdf')).toEqual([[2101], [2102]])
+  })
+
+  test('Open PDF is offered for a selection only when one of them has a PDF', async () => {
+    setup({ programs: multi })
+    await screen.findByText('Hora')
+    select('Hora', 'Kolo')
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Hora' }))
+    const menu = await screen.findByRole('menu', { name: 'Options for Hora' })
+    expect(within(menu).queryByRole('menuitem', { name: 'Open PDF' })).toBeNull()
+  })
+
+  test('the per-item dance choice is hidden while several are selected', async () => {
+    setup({ programs: multi })
+    await screen.findByText('Kolo')
+    select('Kolo')
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Kolo' }))
+    const single = await screen.findByRole('menu', { name: 'Options for Kolo' })
+    expect(await within(single).findByText('Dance')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('menu')).toBeNull())
+    select('Kolo', 'Hora')
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Kolo' }))
+    const menu = await screen.findByRole('menu', { name: 'Options for Kolo' })
+    expect(within(menu).queryByText('Dance')).toBeNull()
+  })
+
   test('✕ and the menu’s Remove take out every selected item, STOP markers too', async () => {
     const fake = setup({ programs: multi })
     await screen.findByText('Hora')

@@ -1,6 +1,6 @@
 import { ActionIcon } from '@mantine/core'
 import { StarIcon } from '../components/icons'
-import { favoriteIds, type FavoriteTarget } from './favorite-targets'
+import { favoriteIds, type RowTarget } from './row-targets'
 import { useLibraryApi } from './LibraryProvider'
 import classes from './FavoriteToggle.module.css'
 
@@ -11,7 +11,7 @@ export default function FavoriteToggle(props: {
   fileId: number
   label: string
   isFavorite: boolean
-  targets?: FavoriteTarget[]
+  targets?: Pick<RowTarget, 'fileId'>[]
 }): React.JSX.Element {
   const api = useLibraryApi()
   const { isFavorite } = props
@@ -29,7 +29,7 @@ export default function FavoriteToggle(props: {
         e.stopPropagation()
         void api.invoke(
           'library:setFavorite',
-          favoriteIds(props.targets ?? [{ fileId: props.fileId, isFavorite }]),
+          favoriteIds(props.targets ?? [{ fileId: props.fileId }]),
           !isFavorite
         )
       }}

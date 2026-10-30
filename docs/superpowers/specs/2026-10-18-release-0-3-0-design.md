@@ -322,6 +322,23 @@ the projector shows the chosen source; an image dance never calls the live view;
 - **Click and drag a selected item to move the whole selection.** The items land at the drop spot
   **in the order they were originally in**, and **stay selected**.
 
+**Actions on a selection (decided 2026-10-30, after the first build).** A row's star, its "⋯"
+menu and (in the program) ✕ act on the **whole selection when the row is part of it**, and on the
+row alone otherwise. This holds in the program list, the Music page's table and the Program page's
+library list. Holding has no selection until §3.12 and is unchanged.
+
+- **Star:** the clicked star's state sets the direction for every selected song: clicking an
+  unstarred star favorites all, clicking a starred one unfavorites all.
+- **Favorites in the menu:** "Add to favorites" shows when any selected song is not a favorite,
+  "Remove from favorites" when any is; a mixed selection shows both, and each applies to all.
+- **✕ and Remove (program):** remove every selected item, STOP markers included.
+- **Edit details:** hidden while more than one item is selected (there is no multi-edit).
+- **Insert STOP before:** goes before the **first** selected item.
+- **Open PDF:** shown when any selected item's dance has a PDF; it opens every available PDF,
+  once per dance, in program order.
+- **Per-item dance choice:** hidden while more than one item is selected.
+- Right-click and the "⋯" button do not change the selection.
+
 **How (today).** The drag payload for program items is already a list: `setDraggedItems(…,
 itemIds[])` and `getDraggedItems` (`library/drag.ts`), and `moveBefore(order, moving, before)`
 (`library/reorder.ts`) already moves several items and keeps their relative order. What is missing
