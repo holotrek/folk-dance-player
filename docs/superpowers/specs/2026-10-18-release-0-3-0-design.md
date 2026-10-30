@@ -61,7 +61,7 @@ built on its own.
 | 3.3 | Artist and Choreographer columns | Music table, Program page library | Built (Plan 11) |
 | 3.4 | Import mapping chosen per destination | Settings, import, Re-apply, sync | Built (Plan 13) |
 | 3.5 | "Same as song" for a dance's name | Song editor | Built (Plan 14) |
-| 3.6 | A PDF attached to a dance | Song editor, `dance_prefs` | Built (Plan 15, PR 5a) |
+| 3.6 | A PDF attached to a dance, opened from the editor or any row's menu | Song editor, row menus, `dance_prefs` | Built (Plan 15, PR 5a; Plan 16) |
 | 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Built (Plan 15, PR 5b) |
 | 3.8 | Select several program items and move them together | Program list | Planned |
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Planned |
@@ -262,6 +262,26 @@ names differ and checking it restores the song's name; renaming updates search (
 
 **Tests.** Attaching copies the file and records the name; Open resolves only the dance's own
 file; Remove deletes it; the merge rule; a missing file.
+
+**Open PDF from a row's menu (added after 5a).** Opening a dance's PDF should not need the song
+editor, so the right-click (⋯) menu of every entry that shows a dance offers **Open PDF** when that
+dance has one:
+
+- **Where:** library rows (Music page and the Program page's library list), Holding, and program
+  items. A STOP marker has no dance and no item.
+- **Which dance:** the one the entry shows (a library or Holding row's shown dance; a program item's
+  chosen dance). The renderer sends only the dance ID, to the existing `library:openNotesPdf`.
+- **How the row knows:** `LibraryRow` and the program `Track` carry `hasNotesPdf`, true when the
+  dance has a recorded PDF (`dance_prefs.notes_pdf_path IS NOT NULL`). It is a database fact only;
+  the row does not check the disk, which would cost a `stat` per row of a large library.
+- **A missing copy:** the item still shows; choosing it fails with "The PDF is missing", shown as a
+  notification (library and Holding menus) or the program list's error line. The song editor
+  remains the place to replace it.
+- **No schema change, no new channel.** The list queries read the flag with the columns they
+  already join.
+
+**Tests.** The flag in `listLibrary` and in program items; the menu item shown only with a PDF in
+the program list and in Holding, calling `library:openNotesPdf` with the dance ID.
 
 ### 3.7 An image as an alternative to the Canva slide
 

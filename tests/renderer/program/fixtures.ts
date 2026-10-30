@@ -16,6 +16,7 @@ export function track(fileId: number, title: string, extra: Partial<Track> = {})
     isRemoved: false,
     isFavorite: false,
     danceCount: 1,
+    hasNotesPdf: false,
     ...extra
   }
 }

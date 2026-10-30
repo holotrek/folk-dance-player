@@ -47,6 +47,7 @@ interface Row {
   danceType: string | null
   difficulty: number | null
   danceCount: number
+  hasNotesPdf: number
   choreographerCount: number
   playlistItemId: number | null
   playlistNumber: number | null
@@ -90,6 +91,7 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
          d.id AS danceId, d.name AS danceName, d.country, d.choreographer, dsp.teacher,
          d.dance_type AS danceType, dp.difficulty,
          (SELECT COUNT(*) FROM dance_songs c WHERE c.song_id = s.id) AS danceCount,
+         (dp.notes_pdf_path IS NOT NULL) AS hasNotesPdf,
          ${choreographerCountSql('s.id')} AS choreographerCount,
          ${playlist ? 'pi.id' : 'NULL'} AS playlistItemId,
          ${
@@ -113,8 +115,9 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
     )
     .all(...params) as unknown as Row[]
 
-  return rows.map(({ choreographerCount, isMissing, isFavorite, ...r }) => ({
+  return rows.map(({ choreographerCount, isMissing, isFavorite, hasNotesPdf, ...r }) => ({
     ...r,
+    hasNotesPdf: hasNotesPdf === 1,
     isMissing: isMissing === 1,
     isFavorite: isFavorite === 1,
     label: formatLabel(

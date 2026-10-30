@@ -49,6 +49,7 @@ export interface LibraryRow {
   danceType: string | null
   difficulty: number | null
   danceCount: number
+  hasNotesPdf: boolean // the shown dance has a PDF attached (it can be opened from the row's menu)
   label: string
   playlistItemId: number | null // set when listing a playlist
   playlistNumber: number | null // its place in the playlist's own order (1, 2, …), in a playlist
