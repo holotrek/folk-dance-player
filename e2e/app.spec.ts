@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { drag, dropInProgram, launch, workspace, type Running } from './app'
+import { drag, dropInHolding, dropInProgram, launch, workspace, type Running } from './app'
 
 // Spec §10.2's end-to-end tests. The file dialog is native, so music is imported through the
 // app's own import channel; everything after that goes through the windows.
@@ -131,6 +131,42 @@ test('the sidebar and the Program page show the program’s times', async () => 
 
   await page.getByRole('button', { name: 'End Program' }).click()
   await expect(program.getByText(/Ending about/)).toHaveCount(0)
+})
+
+test('songs move between the program and Holding, keeping their order', async () => {
+  const { page } = running
+  const held = () => page.getByRole('listbox', { name: 'Held songs' }).getByRole('option')
+  await dropInProgram(page, libraryRow('Hora'))
+  await dropInProgram(page, libraryRow('Kolo'))
+  await expect(programItems()).toHaveCount(2)
+
+  // Select both and drag the selection into Holding: it moves, in order.
+  await programItems().filter({ hasText: 'Hora' }).click()
+  await programItems()
+    .filter({ hasText: 'Kolo' })
+    .click({ modifiers: ['Shift'] })
+  await dropInHolding(page, programItems().filter({ hasText: 'Hora' }))
+  await expect(programItems()).toHaveCount(0)
+  await expect(held()).toHaveText([/Hora/, /Kolo/])
+
+  // Kolo comes back to the program; Hora stays held.
+  await dropInProgram(page, held().filter({ hasText: 'Kolo' }))
+  await expect(programItems()).toHaveText([/Kolo/])
+  await expect(held()).toHaveText([/Hora/])
+})
+
+test('the same song is held once for each dance, never twice for the same one', async () => {
+  const { invoke } = running
+  type Row = { fileId: number; title: string }
+  const rows = await invoke<Row[]>('library:list', {
+    search: '',
+    filter: { kind: 'all' },
+    sort: { column: 'title', direction: 'asc' }
+  })
+  const hora = rows.find((r) => r.title === 'Hora')!
+  await invoke('library:holdSongs', [hora.fileId], null)
+  await invoke('library:holdSongs', [hora.fileId], null)
+  expect(await invoke<unknown[]>('library:holding')).toHaveLength(1)
 })
 
 test('Edit details on a program item opens its song in the Music page editor', async () => {

@@ -14,6 +14,13 @@ import {
   updateDance,
   updateSong
 } from '../library/edit'
+import {
+  holdSongs,
+  listHolding,
+  moveHolding,
+  releaseHolding,
+  setHoldingDance
+} from '../library/holding'
 import { listLibrary } from '../library/list'
 import { getSongTags, getSuggestions, reapplyMapping } from '../library/mapping'
 import {
@@ -26,8 +33,7 @@ import {
   removeFromPlaylist,
   renamePlaylist,
   reorderPlaylist,
-  setFavorite,
-  setHolding
+  setFavorite
 } from '../library/playlists'
 import type { HandlerDeps } from './handlers'
 
@@ -101,9 +107,11 @@ export function libraryHandlers(
     }),
     'library:markDifferent': edit((a, b) => markDifferentDances(db, a, b)),
     'library:setFavorite': edit((fileIds, favorite) => setFavorite(db, fileIds, favorite)),
-    'library:setHolding': edit((fileIds, held, before) =>
-      setHolding(db, fileIds, held, before ?? null)
-    ),
+    'library:holding': () => listHolding(db),
+    'library:holdSongs': edit((fileIds, before) => holdSongs(db, fileIds, before)),
+    'library:moveHolding': edit((itemIds, before) => moveHolding(db, itemIds, before)),
+    'library:releaseHolding': edit((itemIds) => releaseHolding(db, itemIds)),
+    'library:setHoldingDance': edit((itemId, danceId) => setHoldingDance(db, itemId, danceId)),
     'library:songTags': (songIds) => getSongTags(db, songIds),
     'library:reapplyMapping': edit((songIds, mapping) => reapplyMapping(db, songIds, mapping)),
     'playlists:list': () => listPlaylists(db),

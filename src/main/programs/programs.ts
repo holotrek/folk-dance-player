@@ -22,11 +22,11 @@ function cleanName(value: string): string {
 }
 
 // Every change to a program or its items bumps updated_at, which orders the sidebar (spec §4).
-const touch = (db: DatabaseSync, programId: number): void => {
+export const touch = (db: DatabaseSync, programId: number): void => {
   db.prepare(`UPDATE programs SET updated_at = ${NOW} WHERE id = ?`).run(programId)
 }
 
-function requireProgram(db: DatabaseSync, programId: number): void {
+export function requireProgram(db: DatabaseSync, programId: number): void {
   if (!db.prepare('SELECT 1 FROM programs WHERE id = ?').get(programId)) {
     throw new ProgramError('That program no longer exists.')
   }
@@ -184,7 +184,12 @@ function renumber(db: DatabaseSync, programId: number, unplayed: number[]): void
 }
 
 // Places new item ids before `beforeItemId` (an unplayed item), or at the end when null.
-function place(db: DatabaseSync, programId: number, ids: number[], beforeItemId: number | null) {
+export function place(
+  db: DatabaseSync,
+  programId: number,
+  ids: number[],
+  beforeItemId: number | null
+) {
   const order = unplayedIds(db, programId).filter((id) => !ids.includes(id))
   const at = beforeItemId === null ? -1 : order.indexOf(beforeItemId)
   order.splice(at < 0 ? order.length : at, 0, ...ids)

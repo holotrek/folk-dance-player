@@ -171,6 +171,44 @@ describe('linking', () => {
 })
 
 describe('mergeDances', () => {
+  test('held pairs follow the merge, once per song, keeping their order', () => {
+    const a = addLibrarySong(db, { title: 'Song A', dance: { name: 'Kept' } })
+    const b = addLibrarySong(db, { title: 'Song B', dance: { name: 'Removed' } })
+    const removed = b.danceId!
+    link(db, a.danceId!, b.songId) // Song B is danced as both
+    link(db, removed, a.songId) // and so is Song A
+    const hold = db.prepare(
+      'INSERT INTO holding_items (file_id, dance_id, position) VALUES (?, ?, ?)'
+    )
+    hold.run(a.fileId, removed, 1) // A as the dance that goes
+    hold.run(b.fileId, a.danceId, 2) // B as the kept dance
+    hold.run(b.fileId, removed, 3) // B as both: after the merge only one row
+    hold.run(a.fileId, a.danceId, 4)
+    const c = addLibrarySong(db, { title: 'Song C', dance: { name: 'Other' } })
+    link(db, removed, c.songId)
+    hold.run(c.fileId, removed, 5) // held only as the dance that goes: it must not be lost
+    mergeDances(db, a.danceId!, removed)
+    const held = db
+      .prepare('SELECT file_id AS fileId, dance_id AS danceId FROM holding_items ORDER BY position')
+      .all()
+    // A's two rows would both be the kept dance: the one that already was stays, the other goes.
+    expect(held).toEqual([
+      { fileId: b.fileId, danceId: a.danceId },
+      { fileId: a.fileId, danceId: a.danceId },
+      { fileId: c.fileId, danceId: a.danceId }
+    ])
+  })
+
+  test('deleting a dance removes the pairs held with it', () => {
+    const a = addLibrarySong(db, { title: 'A', dance: { name: 'Gone' } })
+    db.prepare('INSERT INTO holding_items (file_id, dance_id, position) VALUES (?, ?, 1)').run(
+      a.fileId,
+      a.danceId
+    )
+    db.prepare('DELETE FROM dances WHERE id = ?').run(a.danceId)
+    expect(count('holding_items')).toBe(0)
+  })
+
   test('moves songs, teachers, defaults and history to the kept dance and fills its empty fields', () => {
     const a = addLibrarySong(db, { title: 'Lesnoto A', dance: { name: 'Lesnoto', teacher: 'T1' } })
     const b = addLibrarySong(db, {

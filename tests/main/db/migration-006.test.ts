@@ -12,7 +12,7 @@ describe('migration 006: dance attachments', () => {
     db.prepare("INSERT INTO dance_prefs (dance_id, difficulty, notes) VALUES (?, 3, 'W')").run(
       danceId
     )
-    expect(migrate(db, MIGRATIONS)).toEqual({ from: 5, to: 6 })
+    expect(migrate(db, MIGRATIONS.slice(0, 6))).toEqual({ from: 5, to: 6 })
     expect(getSchemaVersion(db)).toBe(6)
     expect(
       db

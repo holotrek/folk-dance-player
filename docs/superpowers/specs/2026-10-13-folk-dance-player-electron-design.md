@@ -61,7 +61,7 @@ not be made to work reliably. This rewrite moves to Electron, where that has bee
 | **Playlist** | A curated, reusable list used to organize the library ("Couple dances"). Can be imported from Apple Music. |
 | **Program** | The ordered dances for one session/day. Items are marked played rather than deleted. |
 | **STOP marker** | A program item that halts playback (for teaching). |
-| **Holding** | A per-file flag; held files appear in a panel above the library list on the Program page. |
+| **Holding** | Song-and-dance pairs in their own table (`holding_items`); held songs appear in a panel above the library list on the Program page. |
 | **Projector view** | The large-font audience display. |
 | **Projector mode** | The projector view on a display other than the control window's display. |
 | **Laptop mode** | The projector view covering the control window's own display. |
@@ -86,7 +86,8 @@ song_prefs       (personal)   song_id PK, default_dance_id
 dance_prefs      (personal)   dance_id PK, difficulty (1–5, nullable), notes,
                               canva_deck_id, canva_page_id, canva_page_index (last known position)
 dance_song_prefs (personal)   dance_song_id PK, teacher
-file_prefs       (personal)   file_id PK, is_favorite, in_holding, holding_position (order in holding)
+file_prefs       (personal)   file_id PK, is_favorite
+holding_items    (personal)   id PK, file_id, dance_id (held as; NULL for a song with no dance), position; unique per song-and-dance pair
 canva_decks      (local)      id, view_url UNIQUE, design_id, title, pages (JSON: ordered [{id, title}]),
                               synced_at, last_error
 slide_cache      (local)      deck_id, page_id, image_path, captured_at, last_error  PK (deck_id, page_id)
@@ -115,7 +116,7 @@ settings                      key, value (JSON)
 - **Default dance:** `song_prefs.default_dance_id` is your group's usual dance for a song (personal). When a song is added to a program, its default dance is used, and each program item can be switched to any other dance linked to that song. If the default is unlinked, the song falls back to its earliest-linked dance.
 - **Teacher** belongs to the pairing (`dance_song_prefs.teacher`). It records who taught *this dance to this tune* to your group, which is often not the choreographer.
 - **Personal dance fields:** difficulty, notes and the Canva slide are personal (`dance_prefs`). Notes are your group's own; a shareable description may come with a shared database later.
-- **Favorites and holding** stay on the recording (`file_prefs`).
+- **Favorites** stay on the recording (`file_prefs`); **holding** holds song-and-dance pairs (`holding_items`), so a song keeps the dance it was moved with.
 - **A dance with no songs is kept.** It may get music later.
 - **Unchanged from before:**
   - `files.content_hash` is a fast fingerprint: file size plus a hash of the first and last 1 MB, used to relink moved files (§5.4).
@@ -315,7 +316,7 @@ PROGRAMS                  [+]
   - **Times** (header): the same **Total play time**, and **Ending about 9:42 PM** (now, plus what is left of the song that is loaded, plus the rest of the program and its auto-continue gaps), centered between the title and the buttons when the panel is wide, on a centered line of their own when it is narrow. STOP markers add no time, so the ending time assumes no pauses and says "if no pauses" when the program has a STOP; the playback speed is ignored. Missing and removed songs are left out. The clock refreshes once a minute: the ending time stays steady while a song plays and moves later while paused.
   - **End Program** (header, after Add selected) unloads the program: the list and Previously played go empty, and the program, its order and its play log stay saved in the sidebar. It asks nothing; a song that is playing finishes and nothing follows it. With no program loaded the list shows **Start New Program**, which opens the sidebar's New program dialog (name, then Create).
   - **Reordering and selecting:** drag and drop. Click selects an item, shift-click a range, cmd/ctrl-click adds or removes one; dragging a selected item moves the whole selection together, in its original order, and it stays selected (dragging an unselected item moves only that one). A click in the empty space clears the selection. Double-clicking an item still does nothing. With a selection, an item's star, its menu's favorites choices, ✕ and Remove act on every selected item (a mixed selection offers both Add to and Remove from favorites; the clicked star's state sets the direction), and Edit details and the per-item dance choice are hidden while several are selected. Insert STOP before always goes before the item it was used on, and Open PDF opens every PDF among them (once per dance). The Music page's table and the Program page's library list behave the same for the star and the menu.
-  - **Adding:** drag songs in from the library, holding, playlists or previously played (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance; when an added song has more than one dance, a "Which dance?" dialog asks, with the default preselected (closing it keeps the defaults).
+  - **Adding:** drag songs in from the library, playlists or previously played (from Holding the songs *move* in, as the dance they are held as) (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance; when an added song has more than one dance, a "Which dance?" dialog asks, with the default preselected (closing it keeps the defaults).
   - **Each item's menu** ("⋯" or right-click) has its options.
     - **Edit details** (song items) opens the song in the Music page's editor (below).
     - **Choosing the dance:** each item shows its label (§4 "Labels"). An item whose song has several dances lists every linked dance by its label, with the current one checked, so dances with the same name are told apart by choreographer.
@@ -325,7 +326,11 @@ PROGRAMS                  [+]
   - **Dropping:** the whole Program panel accepts drops. Dropped on an item, songs go before it; anywhere else, at the end.
   - **The program's name** is shown above the list, with a ✎ button to rename it.
   - **Double-clicking a program item does nothing.** The program's intent is "play in this order"; to play an item now, drag it to the top.
-- **Holding panel:** files with `in_holding`, above the library list, in the order they were placed (`holding_position`). Drag and drop works as in the program: the whole panel takes drops; dropped on a held song, songs go before it, and anywhere else at the end; held songs dragged within the panel move. ✕ releases one, and held songs can be dragged into the program.
+- **Holding panel:** song-and-dance pairs, above the library list, in the order they were placed. Each row shows the dance it is held as, like a program item; the same song can be held once for each of its dances, never twice for the same one.
+  - **Drag and drop works as in the program:** the whole panel takes drops; dropped on a held row, songs go before it, and anywhere else at the end. Songs dragged in from the library, a playlist or Previously played are held as their default dance, and a song with several dances asks which one (as adding to the program does); a pair already held moves to the new spot.
+  - **Moves with the program:** program items dragged into Holding *move* there (keeping their dance; STOP markers stay; a pair already held just leaves the program), and held rows dragged into the program move there as the dance they are held as. Held rows dragged within the panel reorder.
+  - **Selection** works as in the program (click, shift-click, cmd/ctrl-click; empty space clears): dragging a selected row drags the selection, and the star, the menu's favorites and Open PDF, ✕ and Release act on all of it. Edit details and the menu's dance choice are for one row. The menu changes the dance a row is held as (not to one already held).
+  - Missing and removed songs stay in Holding, greyed (removed ones with a badge). ✕ releases.
 - **Song menus:** every song row in the library list (on both pages) and in Holding has a "⋯" menu, shown on hover (and on the selected library row), or by right-clicking the row: **Edit details** and **Add to / Remove from favorites**. **Edit details** (also in a program item's menu) switches to the Music page with that song selected alone, scrolled into view, and its editor open. If the current filter or search hides the song, the list goes back to All Music without the search.
 - **Library list:** one row per song, showing its default dance's name, country, teacher, artist and choreographer. As the list narrows, columns disappear completely in this order: Artist, Teacher, Choreographer, Country, Time. Songs with more than one dance show a small "+N dances" badge, whose tooltip lists the dances by their labels. Searchable by song title, dance name, teacher, choreographer and country (`library_fts`, §4). Search-box text always goes through `toFtsQuery()`, so accents don't matter and punctuation like "4-Wall" can't break the query. The list is filtered by the sidebar selection, and the search carries over between the Program and Music pages.
 

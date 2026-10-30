@@ -7,13 +7,17 @@ import NamePrompt from '../components/NamePrompt'
 import FavoriteToggle from '../library/FavoriteToggle'
 import ProgramTimes from './ProgramTimes'
 import NewProgramPrompt from './NewProgramPrompt'
+import { chooseDances } from './dance-choices'
 import DanceChoiceDialog, { type DanceChoice } from './DanceChoiceDialog'
 import { errorMessage } from '../ipc-error'
 import {
   carriesFiles,
+  carriesHolding,
   carriesItems,
   getDraggedFiles,
+  getDraggedHolding,
   getDraggedItems,
+  setDragCountImage,
   setDraggedItems
 } from '../library/drag'
 import { useLibraryApi, useLibraryStore } from '../library/LibraryProvider'
@@ -139,16 +143,15 @@ export default function ProgramList(): React.JSX.Element {
       const id = await programStore.getState().ensureProgram()
       const added = new Set(await api.invoke('programs:addTracks', id, fileIds, before))
       const detail = await api.invoke('programs:get', id)
-      const several = (detail?.items ?? []).filter(
-        (i): i is DanceChoice['item'] => i.kind === 'track' && added.has(i.id) && i.danceCount > 1
+      setChoices(
+        await chooseDances(
+          api,
+          (detail?.items ?? []).filter(
+            (i): i is Extract<ProgramItem, { kind: 'track' }> =>
+              i.kind === 'track' && added.has(i.id)
+          )
+        )
       )
-      const found = await Promise.all(
-        several.map(async (item) => ({
-          item,
-          dances: (await api.invoke('library:song', item.songId))?.dances ?? []
-        }))
-      )
-      setChoices(found.filter((c) => c.dances.length > 1))
     })
 
   const drop = (e: React.DragEvent, before: number | null): void => {
@@ -161,6 +164,14 @@ export default function ProgramList(): React.JSX.Element {
     } else if (carriesFiles(e.dataTransfer)) {
       e.preventDefault()
       addFiles(getDraggedFiles(e.dataTransfer), before)
+    } else if (carriesHolding(e.dataTransfer)) {
+      // Held songs move into the program (as the dance they are held as) and leave Holding.
+      e.preventDefault()
+      const held = getDraggedHolding(e.dataTransfer)
+      act(async () => {
+        const id = await programStore.getState().ensureProgram()
+        await api.invoke('programs:moveFromHolding', id, held, before)
+      })
     }
   }
 
@@ -171,15 +182,9 @@ export default function ProgramList(): React.JSX.Element {
       programStore.getState().selection,
       items.map((i) => i.id)
     )
-    setDraggedItems(e.dataTransfer, ids)
-    if (ids.length > 1) {
-      const image = document.createElement('div')
-      image.className = classes.dragImage
-      image.textContent = `${ids.length} items`
-      document.body.appendChild(image)
-      e.dataTransfer.setDragImage?.(image, 0, 0)
-      setTimeout(() => image.remove(), 0)
-    }
+    const hasSongs = items.some((i) => i.kind === 'track' && ids.includes(i.id))
+    setDraggedItems(e.dataTransfer, ids, hasSongs)
+    if (ids.length > 1) setDragCountImage(e.dataTransfer, ids.length, classes.dragImage)
   }
 
   // What a row's star, menu and ✕ act on: the whole selection when the row is in it, else the row.
@@ -214,7 +219,13 @@ export default function ProgramList(): React.JSX.Element {
   }
 
   const over = (e: React.DragEvent, target: number | 'end'): void => {
-    if (!carriesItems(e.dataTransfer) && !carriesFiles(e.dataTransfer)) return
+    if (
+      !carriesItems(e.dataTransfer) &&
+      !carriesFiles(e.dataTransfer) &&
+      !carriesHolding(e.dataTransfer)
+    ) {
+      return
+    }
     e.preventDefault()
     setDropTarget(target)
   }

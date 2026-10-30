@@ -145,35 +145,3 @@ export function setFavorite(db: DatabaseSync, fileIds: number[], favorite: boole
     for (const fileId of fileIds) upsert.run(fileId, favorite ? 1 : 0)
   })
 }
-
-// Holding (spec §3, §6.2): a per-file flag; held songs appear in the Program page's holding
-// panel, in the order they were placed. Holding songs places them before `beforeFileId` (a held
-// song) or at the end; songs already held move there, which is how the panel reorders.
-export function setHolding(
-  db: DatabaseSync,
-  fileIds: number[],
-  held: boolean,
-  beforeFileId: number | null = null
-): void {
-  inTransaction(db, () => {
-    const upsert = db.prepare(
-      `INSERT INTO file_prefs (file_id, in_holding, holding_position) VALUES (?, ?, NULL)
-       ON CONFLICT (file_id) DO UPDATE SET in_holding = excluded.in_holding,
-         holding_position = CASE WHEN excluded.in_holding = 1 THEN holding_position END`
-    )
-    const moving = [...new Set(fileIds)]
-    for (const fileId of moving) upsert.run(fileId, held ? 1 : 0)
-    if (!held) return
-    const order = db
-      .prepare(
-        'SELECT file_id AS id FROM file_prefs WHERE in_holding = 1 ORDER BY holding_position, file_id'
-      )
-      .all()
-      .map((r) => r.id as number)
-      .filter((id) => !moving.includes(id))
-    const at = beforeFileId === null ? -1 : order.indexOf(beforeFileId)
-    order.splice(at < 0 ? order.length : at, 0, ...moving)
-    const place = db.prepare('UPDATE file_prefs SET holding_position = ? WHERE file_id = ?')
-    order.forEach((id, i) => place.run(i + 1, id))
-  })
-}

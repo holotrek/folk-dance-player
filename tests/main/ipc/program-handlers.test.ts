@@ -113,6 +113,24 @@ describe('program handlers', () => {
     expect(await h['player:getState']()).toMatchObject({ status: 'idle', current: null })
   })
 
+  test('a move between the program and Holding announces both lists, and next up follows', async () => {
+    const { h, counts, songs } = setup()
+    const p = await h['programs:create']('Set')
+    await h['programs:addTracks'](p, [songs.hora.fileId, songs.kolo.fileId], null)
+    await h['programs:setCurrent'](p)
+    const before = { ...counts }
+    const items = (await h['programs:get'](p))!.items.map((i) => i.id)
+    await h['programs:moveToHolding'](p, [items[0]], null)
+    expect(counts.programs - before.programs).toBe(1)
+    expect(counts.library - before.library).toBeGreaterThanOrEqual(1)
+    expect((await h['player:getState']()).nextUp).toMatchObject({ title: 'Kolo' })
+    expect((await h['library:holding']()).map((r) => r.title)).toEqual(['Hora'])
+    const [held] = (await h['library:holding']()).map((r) => r.id)
+    await h['programs:moveFromHolding'](p, [held], items[1])
+    expect((await h['player:getState']()).nextUp).toMatchObject({ title: 'Hora' })
+    expect(await h['library:holding']()).toEqual([])
+  })
+
   test('deleting the current program unloads it', async () => {
     const { h, settings } = setup()
     const p = await h['programs:create']('Set')
@@ -159,22 +177,14 @@ describe('program handlers', () => {
     expect((await h['player:getState']()).autoContinue).toEqual({ enabled: false, seconds: 8 })
   })
 
-  test('holding is set per file and announced as a library change', async () => {
+  test('holding a song is announced as a library change, and the list keeps the order', async () => {
     const { h, counts, songs } = setup()
-    await h['library:setHolding']([songs.kolo.fileId], true)
-    const held = await h['library:list']({
-      search: '',
-      filter: { kind: 'holding' },
-      sort: { column: 'title', direction: 'asc' }
-    })
-    expect(held.map((r) => r.title)).toEqual(['Kolo'])
+    const [kolo] = await h['library:holdSongs']([songs.kolo.fileId], null)
+    expect((await h['library:holding']()).map((r) => r.title)).toEqual(['Kolo'])
     expect(counts.library).toBe(1)
-    await h['library:setHolding']([songs.hora.fileId], true, songs.kolo.fileId)
-    const ordered = await h['library:list']({
-      search: '',
-      filter: { kind: 'holding' },
-      sort: { column: 'title', direction: 'desc' }
-    })
-    expect(ordered.map((r) => r.title)).toEqual(['Hora', 'Kolo'])
+    await h['library:holdSongs']([songs.hora.fileId], kolo)
+    expect((await h['library:holding']()).map((r) => r.title)).toEqual(['Hora', 'Kolo'])
+    await h['library:releaseHolding']([kolo])
+    expect((await h['library:holding']()).map((r) => r.title)).toEqual(['Hora'])
   })
 })
