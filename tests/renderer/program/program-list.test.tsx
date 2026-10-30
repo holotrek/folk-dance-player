@@ -539,6 +539,20 @@ describe('program list actions on a selection', () => {
     expect(fake.callsTo('programs:addStop')).toEqual([[5, 3]])
   })
 
+  test('with a non-consecutive selection, Insert STOP goes before the start of the run you used', async () => {
+    const fake = setup({ programs: multi })
+    await screen.findByText('Hora')
+    select('Hora', 'Kolo', 'Sârba') // items 1, 3 and 4; item 2 (the STOP) is between
+    await menuItem('Sârba', 'Insert STOP before')
+    await menuItem('Kolo', 'Insert STOP before')
+    await menuItem('Hora', 'Insert STOP before')
+    expect(fake.callsTo('programs:addStop')).toEqual([
+      [5, 3],
+      [5, 3],
+      [5, 1]
+    ])
+  })
+
   test('with several selected, Open PDF opens every PDF among them, once per dance', async () => {
     const withPdf = (t: typeof hora) => ({ ...t, hasNotesPdf: true })
     const fake = setup({

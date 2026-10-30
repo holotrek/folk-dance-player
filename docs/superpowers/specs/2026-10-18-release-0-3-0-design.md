@@ -333,7 +333,10 @@ library list. Holding has no selection until §3.12 and is unchanged.
   "Remove from favorites" when any is; a mixed selection shows both, and each applies to all.
 - **✕ and Remove (program):** remove every selected item, STOP markers included.
 - **Edit details:** hidden while more than one item is selected (there is no multi-edit).
-- **Insert STOP before:** goes before the **first** selected item.
+- **Insert STOP before:** goes before the first item of the **unbroken run of selected items that
+  contains the row you used**. With songs 1, 3 and 4 selected, the menu on 3 or 4 puts the STOP
+  between 2 and 3, and the menu on 1 puts it before 1. A consecutive selection is one run, so it
+  is the same rule: before its first item. An unselected row gets the STOP before itself.
 - **Open PDF:** shown when any selected item's dance has a PDF; it opens every available PDF,
   once per dance, in program order.
 - **Per-item dance choice:** hidden while more than one item is selected.

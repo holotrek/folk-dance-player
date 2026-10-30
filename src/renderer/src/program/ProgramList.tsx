@@ -20,7 +20,7 @@ import { formatTime } from '../format-time'
 import { useEditSong } from '../navigation'
 import { FavoriteItems, openRowMenu } from '../library/SongMenu'
 import { pdfDanceIds, type RowTarget } from '../library/row-targets'
-import { selectedInOrder } from './selection'
+import { runStart, selectedInOrder } from './selection'
 import { useProgram, useProgramStore } from './ProgramProvider'
 import classes from './ProgramList.module.css'
 
@@ -30,6 +30,7 @@ import classes from './ProgramList.module.css'
 function ItemMenu(props: {
   item: ProgramItem
   itemIds: number[] // the items Remove takes out: this one, or the whole selection it is in
+  stopBefore: number // the item "Insert STOP before" goes above (see `runStart`)
   targets: RowTarget[] // the songs the favorites items act on
   onError: (message: string) => void
 }): React.JSX.Element {
@@ -94,7 +95,7 @@ function ItemMenu(props: {
         )}
         {props.targets.length > 0 && <FavoriteItems targets={props.targets} />}
         <Menu.Item
-          onClick={run(() => api.invoke('programs:addStop', program!.id, props.itemIds[0]))}
+          onClick={run(() => api.invoke('programs:addStop', program!.id, props.stopBefore))}
         >
           Insert STOP before
         </Menu.Item>
@@ -362,6 +363,11 @@ export default function ProgramList(): React.JSX.Element {
             <ItemMenu
               item={item}
               itemIds={actOn(item.id)}
+              stopBefore={runStart(
+                selection,
+                items.map((i) => i.id),
+                item.id
+              )}
               targets={favoriteTargets(item.id)}
               onError={setError}
             />
