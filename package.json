@@ -29,7 +29,7 @@
     "@mantine/core": "9.7.2",
     "@mantine/hooks": "9.7.2",
     "@mantine/notifications": "9.7.2",
-    "@tanstack/react-virtual": "3.14.13",
+    "@tanstack/react-virtual": "3.14.20",
     "zustand": "5.0.15"
   },
   "devDependencies": {
