@@ -367,6 +367,15 @@ describe('program list selection', () => {
     expect(selected()).toEqual([rowFor('Hora')])
   })
 
+  test('choosing an item in a row’s menu does not clear the selection', async () => {
+    setup()
+    await screen.findByText('Hora')
+    fireEvent.click(rowFor('Hora'))
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Kolo' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add to favorites' }))
+    expect(selected()).toEqual([rowFor('Hora')])
+  })
+
   test('clicking empty space in the list clears the selection', async () => {
     setup()
     await screen.findByText('Hora')

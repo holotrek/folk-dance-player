@@ -252,7 +252,9 @@ export default function ProgramList(): React.JSX.Element {
         aria-multiselectable="true"
         aria-label="Program items"
         onClick={(e) => {
-          if (!(e.target as HTMLElement).closest('[role=option]')) {
+          // Clicks in a row's portaled menu bubble here through React but are not in the list.
+          const target = e.target as HTMLElement
+          if (e.currentTarget.contains(target) && !target.closest('[role=option]')) {
             programStore.getState().clearSelection()
           }
         }}
