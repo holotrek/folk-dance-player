@@ -27,6 +27,26 @@
   overflow: hidden;
 }
 
+/* Oldest first, anchored to the bottom: the newest song sits just above Now Playing, and when
+   there are more than fit, the oldest fall off the top. The projector can't be scrolled. */
+.played {
+  display: flex;
+  flex-direction: column;
+}
+
+.played .list {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.slideRow .played .list {
+  margin-top: auto;
+}
+
 .middle {
   flex: 0 0 auto;
 }

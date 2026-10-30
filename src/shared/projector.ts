@@ -71,7 +71,7 @@ export interface ProjectorSnapshot {
   hasProgram: boolean
   middle: ProjectorMiddle | null
   upcoming: UpcomingRow[]
-  played: ProjectorEntry[] // newest first
+  played: ProjectorEntry[] // oldest first, so the newest is last
 }
 
 export const EMPTY_SNAPSHOT: ProjectorSnapshot = {

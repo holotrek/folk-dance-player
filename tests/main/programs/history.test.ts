@@ -12,7 +12,7 @@ beforeEach(() => {
 })
 
 describe('play log', () => {
-  test('lists a program’s plays newest first, each as the dance it was played as', () => {
+  test('lists a program’s plays oldest first, each as the dance it was played as', () => {
     const hora = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
     const other = addDance(db, { name: 'Hora Mare' })
     link(db, other, hora.songId)
@@ -22,9 +22,21 @@ describe('play log', () => {
     logPlay(db, { fileId: hora.fileId, danceId: other, programId: p, kind: 'preview' })
     logPlay(db, { fileId: hora.fileId, danceId: null, programId: elsewhere, kind: 'program' })
     expect(listPlayed(db, p).map((e) => [e.kind, e.track?.label])).toEqual([
-      ['preview', 'Hora Mare ♪ Hora'],
-      ['program', 'Hora']
+      ['program', 'Hora'],
+      ['preview', 'Hora Mare ♪ Hora']
     ])
+  })
+
+  test('plays with the same time keep the order they were logged in', () => {
+    const hora = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    const kolo = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    const sirba = addLibrarySong(db, { title: 'Sârba', dance: { name: 'Sârba' } })
+    const p = createProgram(db, 'Set')
+    for (const song of [hora, kolo, sirba]) {
+      logPlay(db, { fileId: song.fileId, danceId: song.danceId, programId: p, kind: 'program' })
+    }
+    db.prepare("UPDATE play_log SET played_at = '2026-10-14T20:00:00.000Z'").run()
+    expect(listPlayed(db, p).map((e) => e.track?.title)).toEqual(['Hora', 'Kolo', 'Sârba'])
   })
 
   test('a play whose file was removed is listed without a track', () => {

@@ -20,7 +20,7 @@ export interface ProgramState {
   programs: ProgramSummary[] // the sidebar list, filtered by `search`
   search: string
   program: ProgramDetail | null // the current (loaded) program, unplayed items only
-  played: PlayedEntry[] // its play log, newest first
+  played: PlayedEntry[] // its play log, oldest first
   player: PlayerState
   selection: Selection // selected program items; UI state, pruned on every refresh
   selectItem(id: number, mode: SelectMode): void

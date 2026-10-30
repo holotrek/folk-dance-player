@@ -310,7 +310,7 @@ PROGRAMS                  [+]
   - When nothing is playing, the bar shows what's next ("Next up: …", "Starting in N…", or "Next: … in N…").
   - Previews and replays are marked as such.
   - A warning (a skipped missing file, a file that can't be played) appears under the bar until dismissed. It is never shown on the projector.
-- **Previously played:** the play log for the current program, newest first. It scrolls.
+- **Previously played:** the play log for the current program, oldest first, so the newest is last. It scrolls and stays at the bottom: new songs scroll into view while you are at (or within two rows of) the bottom, and are not forced on you if you scrolled up to look at an earlier one.
 - **Program list:** only **unplayed** items, in order. Played items stay in storage (`played_at`) but are not shown here.
   - **End Program** (header, after Add selected) unloads the program: the list and Previously played go empty, and the program, its order and its play log stay saved in the sidebar. It asks nothing; a song that is playing finishes and nothing follows it. With no program loaded the list shows **Start New Program**, which opens the sidebar's New program dialog (name, then Create).
   - **Reordering and selecting:** drag and drop. Click selects an item, shift-click a range, cmd/ctrl-click adds or removes one; dragging a selected item moves the whole selection together, in its original order, and it stays selected (dragging an unselected item moves only that one). A click in the empty space clears the selection. Double-clicking an item still does nothing. With a selection, an item's star, its menu's favorites choices, ✕ and Remove act on every selected item (a mixed selection offers both Add to and Remove from favorites; the clicked star's state sets the direction), and Edit details and the per-item dance choice are hidden while several are selected. Insert STOP before always goes before the item it was used on, and Open PDF opens every PDF among them (once per dance). The Music page's table and the Program page's library list behave the same for the star and the menu.
@@ -477,6 +477,8 @@ With a slide:
 │  Kendime                             Turkey │
 └─────────────────────────────────────────────┘
 ```
+
+Previously played reads oldest to newest and is anchored to the bottom of its area, so the most recent song is just above Now Playing and, when there are more than fit, the oldest fall off the top (the projector can't be scrolled).
 
 Without a slide, previously played takes the full width of the top row and includes country:
 

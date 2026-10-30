@@ -132,7 +132,7 @@ describe('program handlers', () => {
     expect(state).toMatchObject({ status: 'playing', current: { track: { title: 'Hora' } } })
     await h['player:ended'](state.current!.playId)
     expect((await h['player:getState']()).current?.track.title).toBe('Kolo')
-    expect((await h['programs:played'](p)).map((e) => e.track?.title)).toEqual(['Kolo', 'Hora'])
+    expect((await h['programs:played'](p)).map((e) => e.track?.title)).toEqual(['Hora', 'Kolo'])
   })
 
   test('◀◀ restarts the current song through the player', async () => {

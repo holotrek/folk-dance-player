@@ -38,7 +38,7 @@ export interface ProgramDetail {
 
 export type PlayKind = 'program' | 'preview' | 'replay'
 
-// One play_log row for the "Previously played" list, newest first.
+// One play_log row for the "Previously played" list, oldest first.
 export interface PlayedEntry {
   logId: number
   kind: PlayKind

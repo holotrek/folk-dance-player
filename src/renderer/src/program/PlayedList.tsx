@@ -1,23 +1,26 @@
 import { Badge, Text, Title } from '@mantine/core'
 import { setDraggedFiles } from '../library/drag'
 import { useLibraryApi } from '../library/LibraryProvider'
+import { useFollowBottom } from './useFollowBottom'
 import { useProgram } from './ProgramProvider'
 import classes from './ProgramList.module.css'
 
 const clock = (iso: string): string =>
   new Date(iso).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 
-// Spec §6.2 "Previously played": the loaded program's play log, newest first. Double-click
+// Spec §6.2 "Previously played": the loaded program's play log, oldest first. Double-click
 // replays an entry (spec §7.1); entries can be dragged back into the program.
 export default function PlayedList(): React.JSX.Element {
   const api = useLibraryApi()
   const played = useProgram((s) => s.played)
+  const programId = useProgram((s) => s.player.programId)
+  const list = useFollowBottom(played.length, programId)
   return (
     <section className={classes.panel} aria-label="Previously played">
       <Title order={5} mb="xs">
         Previously played
       </Title>
-      <div className={classes.list} role="list" aria-label="Played songs">
+      <div ref={list} className={classes.list} role="list" aria-label="Played songs">
         {played.length === 0 && (
           <Text size="sm" c="dimmed" p="sm">
             Nothing played yet

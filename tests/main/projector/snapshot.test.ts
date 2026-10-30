@@ -154,13 +154,13 @@ describe('projector snapshot', () => {
     expect(snap.upcoming).toEqual([])
   })
 
-  test('previously played lists previews and replays too, newest first; removed songs are left out', () => {
+  test('previously played keeps the log’s order (oldest first), with previews and replays; removed songs are left out', () => {
     const snap = buildProjectorSnapshot(
       state(),
       [],
-      [played(3, kolo, 'preview'), played(2, null), played(1, hora, 'replay')]
+      [played(1, hora, 'replay'), played(2, null), played(3, kolo, 'preview')]
     )
-    expect(snap.played.map((e) => e.parts.dance)).toEqual(['Kolo', 'Hora Mare'])
+    expect(snap.played.map((e) => e.parts.dance)).toEqual(['Hora Mare', 'Kolo'])
   })
 
   test('the middle dance carries its slide, when it has one', () => {

@@ -102,6 +102,27 @@ test('end a program, start a new one, and load the first again', async () => {
   await expect(programItems()).toHaveText([/Hora/, /Kolo/])
 })
 
+test('Previously played reads oldest to newest, and the projector snapshot agrees', async () => {
+  const { page, invoke } = running
+  const program = page.getByRole('region', { name: 'Program' })
+  await drag(page, libraryRow('Hora'), program)
+  await drag(page, libraryRow('Kolo'), program)
+  await page.getByRole('button', { name: 'Play', exact: true }).click()
+  await expect(page.getByTestId('player-title')).toHaveText('Hora')
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page.getByTestId('player-title')).toHaveText('Kolo')
+  const played = page.getByRole('list', { name: 'Played songs' }).getByRole('listitem')
+  await expect(played).toHaveText([/Hora/, /Kolo/])
+  type Snapshot = { played: { parts: { dance: string } }[] }
+  // The song playing now is the middle entry, so the snapshot lists only what came before it.
+  await expect
+    .poll(async () =>
+      (await invoke<Snapshot>('projector:getSnapshot')).played.map((e) => e.parts.dance)
+    )
+    .toEqual(['Hora'])
+  await page.getByRole('button', { name: 'Stop', exact: true }).click()
+})
+
 test('Edit details on a program item opens its song in the Music page editor', async () => {
   const { page } = running
   await drag(running.page, libraryRow('Kolo'), page.getByRole('region', { name: 'Program' }))

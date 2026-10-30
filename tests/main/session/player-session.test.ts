@@ -244,8 +244,8 @@ describe('operator commands', () => {
     // A, interrupted by the preview, is next up again.
     expect(state()).toMatchObject({ status: 'idle', nextUp: { title: 'A' } })
     expect(log()).toEqual([
-      ['preview', 'C'],
-      ['program', 'A']
+      ['program', 'A'],
+      ['preview', 'C']
     ])
   })
 

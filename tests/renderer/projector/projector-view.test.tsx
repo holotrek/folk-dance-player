@@ -29,7 +29,7 @@ const playing: ProjectorSnapshot = {
     { kind: 'teaching' },
     { kind: 'dance', entry: hora }
   ],
-  played: [misirlou, hora]
+  played: [hora, misirlou]
 }
 
 const region = (name: string) => screen.getByRole('region', { name })
@@ -71,13 +71,20 @@ describe('projector view (spec §8.2)', () => {
     expect(rows[1].querySelectorAll('svg')).toHaveLength(2) // ⌄ arrows pointing at the dance
   })
 
-  test('previously played is listed newest first with countries; a missing country is left blank', () => {
+  test('previously played is listed oldest first, the newest last, with countries; a missing country is left blank', () => {
     render(<ProjectorView snapshot={playing} progress={null} />)
     const rows = within(region('Previously played')).getAllByRole('listitem')
     expect(rows.map((r) => r.textContent)).toEqual([
-      'Misirlou',
-      'Hora Mare♪ Hora de la MunteRomania'
+      'Hora Mare♪ Hora de la MunteRomania',
+      'Misirlou'
     ])
+  })
+
+  test('the newest previously played song is last, in the section just above Now Playing', () => {
+    render(<ProjectorView snapshot={playing} progress={null} />)
+    expect(region('Previously played').nextElementSibling).toBe(region('Now playing'))
+    const rows = within(region('Previously played')).getAllByRole('listitem')
+    expect(rows.at(-1)).toHaveTextContent('Misirlou')
   })
 
   test('a paused or stopped song says so', () => {
@@ -158,6 +165,14 @@ describe('projector view (spec §8.2)', () => {
       const top = screen.getByTestId('slide-row')
       expect(within(top).getByRole('region', { name: 'Previously played' })).toBeInTheDocument()
       expect(within(region('Now playing')).getByText('♪ Pusteno Ludo')).toBeInTheDocument()
+    })
+
+    test('beside the slide, previously played still reads oldest to newest', () => {
+      render(
+        <ProjectorView snapshot={{ ...withSlide, played: [hora, misirlou] }} progress={null} />
+      )
+      const rows = within(region('Previously played')).getAllByRole('listitem')
+      expect(rows.map((r) => r.textContent)).toEqual(['Hora Mare', 'Misirlou'])
     })
 
     test('beside the slide, previously played shows titles only (the column is narrow)', () => {
