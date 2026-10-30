@@ -19,6 +19,9 @@ updates:
       dev-tools:
         dependency-type: development
         update-types: [minor, patch]
+      # @mantine/notifications requires the exact @mantine/core version, so they move together.
+      mantine:
+        patterns: ['@mantine/*']
     open-pull-requests-limit: 5
 
   - package-ecosystem: github-actions
