@@ -17,6 +17,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Development builds (`npm run dev`, `npm start`) now keep their library in a separate `Folk Dance Player (dev)` folder, so trying unreleased code can no longer upgrade your real library past what the installed app can open.
 - The import mapping now asks, for Artist, Teacher and Choreographer, which tag fills each (the Artist tag, the Album Artist tag, or neither). Your saved choices are converted automatically; if both tags were sent to one field, the Artist tag now fills it and the Album Artist tag no longer does.
 - Dances are named before their song everywhere, as `Dance ♪ Song`.
 - The Music page has an **Artist** column, and the Program page's library list shows **Artist** and **Choreographer**. As that list gets narrower, columns disappear in this order: Artist, Teacher, Choreographer, Country, Time.
