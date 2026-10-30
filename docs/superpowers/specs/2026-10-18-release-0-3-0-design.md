@@ -69,7 +69,7 @@ built on its own.
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Built (Plan 20) |
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Built (Plan 19) |
 | 3.11 | End Program, then Start New Program | Program list, sidebar | Built (Plan 18) |
-| 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned |
+| 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned (Plan 21) |
 | 3.13 | Reorder columns in the Music and Program lists | `LibraryTable`, settings | Built (Plan 12) |
 | 3.14 | Quick-set a field from the song's own tags | Song editor | **To investigate** |
 
@@ -576,6 +576,15 @@ one dance and applies the answer with `programs:setItemDance`.
   they cannot be dragged; the playing song is unaffected.
 - **With several items selected** (§3.8), dragging a selected item moves the whole selection, in
   the order they had, so §3.12 lands after §3.8 or with it. Without §3.8 it handles the one item.
+
+**Decided while planning (2026-10-30).** Holding gets its **own multi-selection**, like the Program
+(§3.8): click, shift-click, cmd/ctrl-click; dragging a selected row moves the whole selection; the
+star, the menu's favorites, Open PDF, ✕ (Release) act on all of it; Edit details and the dance
+choice are hidden for several. Holding rows are `Track`s with an ID, read by `library:holding`, so
+they render like program items. **Missing and removed songs stay in Holding**, greyed with the
+"removed" badge (the old list hid removed ones). A drag of program items sets a "has songs" flag
+type on the drag, because a drag-over can see only the types, not the data; that is how Holding
+refuses a drag of only STOP markers.
 
 **Tests.** The migration (existing held songs move over in order as their default dance; a song
 with no dance; deleting a dance removes its held pairs); the unique pair (the same song with two
