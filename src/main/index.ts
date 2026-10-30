@@ -67,16 +67,17 @@ import { trackPath } from './programs/tracks'
 import { PlayerSession } from './session/player-session'
 import { createSessionPorts } from './session/session-ports'
 import { guardNavigation } from './navigation'
+import { userDataOverride } from './user-data'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
 
-// A separate library for end-to-end tests and smoke runs, so they never touch the real one.
-if (process.env['FDP_USER_DATA']) app.setPath('userData', process.env['FDP_USER_DATA'])
+// A separate library for end-to-end tests, smoke runs and development builds, so they never
+// touch the real one.
+const userData = userDataOverride(process.env, app.isPackaged, app.getPath('appData'))
+if (userData) app.setPath('userData', userData)
 
-// The app log (spec §10.1): ~/Library/Logs/Folk Dance Player, or beside a test library.
-app.setAppLogsPath(
-  process.env['FDP_USER_DATA'] ? join(process.env['FDP_USER_DATA'], 'logs') : undefined
-)
+// The app log (spec §10.1): ~/Library/Logs/Folk Dance Player, or beside a separate library.
+app.setAppLogsPath(userData ? join(userData, 'logs') : undefined)
 const log = createLogger({ dir: app.getPath('logs') })
 // Logged rather than shown: a side failure must never stop the music (spec §10.1).
 process.on('uncaughtException', (err) => log.error('Uncaught exception', err))

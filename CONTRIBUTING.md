@@ -16,6 +16,7 @@ npm run dev
 **Gotchas:**
 
 - **VS Code's terminal sets `ELECTRON_RUN_AS_NODE=1`.** That makes Electron run as plain Node, so `npm run dev` and `npm start` unset it. Do the same in any new script that launches Electron.
+- **`npm run dev` and `npm start` use their own library**, `~/Library/Application Support/Folk Dance Player (dev)`, never your real one (a development build can upgrade a library past what an installed release can open). It starts empty; to use real data, copy `folk-dance-player.sqlite` into that folder. `FDP_USER_DATA=<folder>` picks another folder.
 - **The Electron binary is downloaded by `postinstall`** (`install-electron`). Electron 44 has no install script of its own, and electron-vite fails with "Electron uninstall" without the binary. If that happens, run `npx install-electron`.
 - **The packaged app needs Xcode's command line tools** (`xcode-select --install`): `npm run dist` compiles the Music library helper in `native/music-library/` with `swiftc`.
 - **File dialogs can't be driven by end-to-end tests:** set `FDP_PICK_ATTACHMENT=<a file>` and the PDF (and slide image) pickers return it without opening a dialog.
