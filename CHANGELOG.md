@@ -11,6 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - Select several items in the program (click, shift-click for a range, cmd/ctrl-click to add or remove one) and drag them together; they land in the order they had and stay selected.
+- With several songs selected (program, Music page, Program page's library list), the star, **Add to / Remove from favorites** and, in the program, ✕ and **Remove** act on all of them. A mixed selection offers both favorites choices; **Edit details** is hidden while more than one is selected.
 - Give a dance a slide **image** instead of, or as well as, a Canva slide (song editor → **Upload image…**). When it has both, choose which one the projector shows. An image slide works offline.
 - Attach a PDF (its written notes, for example) to a dance in the song editor; **Open** shows it in your PDF viewer. The PDF is copied into the app's data folder, so moving the original doesn't matter. Attachments aren't part of the startup backups.
 - A song, program item or held song whose dance has a PDF now offers **Open PDF** in its right-click (⋯) menu.

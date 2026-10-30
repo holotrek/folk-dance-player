@@ -43,6 +43,8 @@ built on its own.
 - No new way to import music, no Windows work, and no change to Apple Music sync.
 - Keyboard shortcuts for program selection (select all, delete) and dragging program items to
   playlists are not part of multi-select (§3.7). They are natural follow-ups.
+- **After 0.3.0 (to do):** Delete (and Backspace) removing the selected program items. Delete does
+  not remove a single item today either, so multi-select does not add it; do both together.
 
 ### Anti-goals
 

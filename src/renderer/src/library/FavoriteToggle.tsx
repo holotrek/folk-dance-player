@@ -1,14 +1,17 @@
 import { ActionIcon } from '@mantine/core'
 import { StarIcon } from '../components/icons'
+import { favoriteIds, type FavoriteTarget } from './favorite-targets'
 import { useLibraryApi } from './LibraryProvider'
 import classes from './FavoriteToggle.module.css'
 
 // The star at the left of a song's row (library, holding, program): adds it to favorites or removes
-// it. Clicks stay here, so they never select the row or start a preview.
+// it. Clicks stay here, so they never select the row or start a preview. In a selection it acts on
+// every selected song, in the direction this row's star points (`targets`).
 export default function FavoriteToggle(props: {
   fileId: number
   label: string
   isFavorite: boolean
+  targets?: FavoriteTarget[]
 }): React.JSX.Element {
   const api = useLibraryApi()
   const { isFavorite } = props
@@ -24,7 +27,11 @@ export default function FavoriteToggle(props: {
       title={isFavorite ? 'Remove from favorites' : 'Add to favorites'}
       onClick={(e) => {
         e.stopPropagation()
-        void api.invoke('library:setFavorite', [props.fileId], !isFavorite)
+        void api.invoke(
+          'library:setFavorite',
+          favoriteIds(props.targets ?? [{ fileId: props.fileId, isFavorite }]),
+          !isFavorite
+        )
       }}
       onDoubleClick={(e) => e.stopPropagation()}
     >

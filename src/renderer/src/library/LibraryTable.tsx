@@ -4,6 +4,7 @@ import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
 import FavoriteToggle from './FavoriteToggle'
+import type { FavoriteTarget } from './favorite-targets'
 import { MOVABLE, moveColumn, nudgeColumn } from './column-order'
 import {
   carriesColumn,
@@ -28,6 +29,42 @@ interface Column {
   render: (row: LibraryRow) => React.ReactNode
 }
 
+// The songs a row's star and "⋯" menu act on: every selected song when the row is one of them, else
+// just the row.
+function useTargets(row: LibraryRow): FavoriteTarget[] {
+  const selected = useLibrary((s) => s.selected)
+  const rows = useLibrary((s) => s.rows)
+  if (!selected.includes(row.songId)) return [row]
+  const chosen = new Set(selected)
+  return rows.filter((r) => chosen.has(r.songId))
+}
+
+function RowStar({ row }: { row: LibraryRow }): React.JSX.Element {
+  return (
+    <FavoriteToggle
+      fileId={row.fileId}
+      label={row.label}
+      isFavorite={row.isFavorite}
+      targets={useTargets(row)}
+    />
+  )
+}
+
+function RowMenu({ row }: { row: LibraryRow }): React.JSX.Element {
+  return (
+    <SongMenu
+      songId={row.songId}
+      fileId={row.fileId}
+      danceId={row.danceId}
+      hasNotesPdf={row.hasNotesPdf}
+      label={row.label}
+      isFavorite={row.isFavorite}
+      targets={useTargets(row)}
+      className={classes.options}
+    />
+  )
+}
+
 // A text cell: truncates with an ellipsis, and shows its full text on hover.
 const text = (value: string | null): React.ReactNode =>
   value ? <span title={value}>{value}</span> : null
@@ -44,7 +81,7 @@ const ALL_COLUMNS: Column[] = [
           ⚠
         </Text>
       ) : (
-        <FavoriteToggle fileId={r.fileId} label={r.label} isFavorite={r.isFavorite} />
+        <RowStar row={r} />
       )
   },
   {
@@ -151,17 +188,7 @@ const MENU_COLUMN: Column = {
   sort: null,
   label: '',
   width: '28px',
-  render: (r) => (
-    <SongMenu
-      songId={r.songId}
-      fileId={r.fileId}
-      danceId={r.danceId}
-      hasNotesPdf={r.hasNotesPdf}
-      label={r.label}
-      isFavorite={r.isFavorite}
-      className={classes.options}
-    />
-  )
+  render: (r) => <RowMenu row={r} />
 }
 
 // The movable columns are ordered by the organizer (0.3.0 spec §3.13); everything else is fixed.

@@ -2,6 +2,7 @@ import { ActionIcon, Menu } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { errorMessage } from '../ipc-error'
 import { useEditSong } from '../navigation'
+import { favoriteIds, type FavoriteTarget } from './favorite-targets'
 import { useLibraryApi } from './LibraryProvider'
 
 // A row's right-click opens its "⋯" menu (the button carries `data-options`).
@@ -21,6 +22,7 @@ export default function SongMenu(props: {
   hasNotesPdf: boolean
   label: string
   isFavorite: boolean
+  targets?: FavoriteTarget[] // the songs the favorites items act on; this song alone by default
   className?: string
 }): React.JSX.Element {
   const api = useLibraryApi()
@@ -43,7 +45,9 @@ export default function SongMenu(props: {
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown>
-        <Menu.Item onClick={() => editSong(props.songId)}>Edit details</Menu.Item>
+        {(props.targets?.length ?? 1) < 2 && (
+          <Menu.Item onClick={() => editSong(props.songId)}>Edit details</Menu.Item>
+        )}
         {props.hasNotesPdf && props.danceId !== null && (
           <Menu.Item
             onClick={() =>
@@ -55,12 +59,28 @@ export default function SongMenu(props: {
             Open PDF
           </Menu.Item>
         )}
-        <Menu.Item
-          onClick={() => void api.invoke('library:setFavorite', [props.fileId], !props.isFavorite)}
-        >
-          {props.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-        </Menu.Item>
+        <FavoriteItems
+          targets={props.targets ?? [{ fileId: props.fileId, isFavorite: props.isFavorite }]}
+        />
       </Menu.Dropdown>
     </Menu>
+  )
+}
+
+// "Add to favorites" and/or "Remove from favorites": both for a mixed selection, each applying to
+// all the songs.
+export function FavoriteItems(props: { targets: FavoriteTarget[] }): React.JSX.Element {
+  const api = useLibraryApi()
+  const ids = favoriteIds(props.targets)
+  const set = (favorite: boolean) => () => void api.invoke('library:setFavorite', ids, favorite)
+  return (
+    <>
+      {props.targets.some((t) => !t.isFavorite) && (
+        <Menu.Item onClick={set(true)}>Add to favorites</Menu.Item>
+      )}
+      {props.targets.some((t) => t.isFavorite) && (
+        <Menu.Item onClick={set(false)}>Remove from favorites</Menu.Item>
+      )}
+    </>
   )
 }
