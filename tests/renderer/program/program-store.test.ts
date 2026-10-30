@@ -133,4 +133,11 @@ describe('program store', () => {
       expect(store.getState().selection).toEqual(EMPTY_SELECTION)
     })
   })
+
+  test('keeps the position the player bar reports', () => {
+    setup()
+    expect(store.getState().positionMs).toBe(0)
+    store.getState().setPosition(61_000)
+    expect(store.getState().positionMs).toBe(61_000)
+  })
 })

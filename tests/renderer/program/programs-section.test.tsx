@@ -8,8 +8,22 @@ import { createFakeApi } from '../fake-api'
 import { renderWithLibrary } from '../library/render-library'
 
 const programs: ProgramSummary[] = [
-  { id: 1, name: 'Tue Oct 14', updatedAt: '2026-10-14T20:00:00Z', unplayedCount: 12 },
-  { id: 2, name: 'Beginner night', updatedAt: '2026-10-07T20:00:00Z', unplayedCount: 1 }
+  {
+    id: 1,
+    name: 'Tue Oct 14',
+    updatedAt: '2026-10-14T20:00:00Z',
+    unplayedCount: 12,
+    unplayedDurationMs: 2_400_000,
+    unplayedGaps: 11
+  },
+  {
+    id: 2,
+    name: 'Beginner night',
+    updatedAt: '2026-10-07T20:00:00Z',
+    unplayedCount: 1,
+    unplayedDurationMs: 185_000,
+    unplayedGaps: 0
+  }
 ]
 
 afterEach(() => vi.useRealTimers())
@@ -45,6 +59,40 @@ describe('Programs in the sidebar', () => {
       )
     )
     expect(within(group()).getByText('Beginner night').closest('[aria-current]')).toBeNull()
+  })
+
+  test('under the song count, each program shows its total play time, with the auto-continue gaps', async () => {
+    setup()
+    expect(await within(group()).findByText('Total play time: 40:55')).toBeInTheDocument() // 40:00 + 11 × 5 s
+    expect(within(group()).getByText('Total play time: 3:05')).toBeInTheDocument()
+  })
+
+  test('the total leaves the gaps out when auto-continue is off', async () => {
+    setup({
+      'player:getState': {
+        ...IDLE_PLAYER_STATE,
+        programId: 1,
+        autoContinue: { enabled: false, seconds: 5 }
+      }
+    })
+    expect(await within(group()).findByText('Total play time: 40:00')).toBeInTheDocument()
+  })
+
+  test('a program with nothing left to play shows no total', async () => {
+    setup({
+      'programs:list': [
+        {
+          id: 3,
+          name: 'Done',
+          updatedAt: '2026-10-14T20:00:00Z',
+          unplayedCount: 0,
+          unplayedDurationMs: 0,
+          unplayedGaps: 0
+        }
+      ]
+    })
+    expect(await within(group()).findByText('Done')).toBeInTheDocument()
+    expect(within(group()).queryByText(/Total play time/)).toBeNull()
   })
 
   test('clicking a program loads it', async () => {

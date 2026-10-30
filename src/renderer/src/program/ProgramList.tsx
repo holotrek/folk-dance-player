@@ -5,6 +5,7 @@ import type { ProgramItem } from '@shared/program'
 import { PauseIcon } from '../components/icons'
 import NamePrompt from '../components/NamePrompt'
 import FavoriteToggle from '../library/FavoriteToggle'
+import ProgramTimes from './ProgramTimes'
 import NewProgramPrompt from './NewProgramPrompt'
 import DanceChoiceDialog, { type DanceChoice } from './DanceChoiceDialog'
 import { errorMessage } from '../ipc-error'
@@ -233,8 +234,8 @@ export default function ProgramList(): React.JSX.Element {
       onDragLeave={() => setDropTarget(null)}
       onDrop={(e) => drop(e, null)}
     >
-      <Group justify="space-between" mb="xs" wrap="nowrap">
-        <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+      <div className={classes.header}>
+        <Group gap={6} wrap="nowrap" className={classes.headerTitle}>
           <Title order={5} style={{ whiteSpace: 'nowrap' }}>
             {program ? `Program: ${program.name}` : 'Program'}
           </Title>
@@ -249,7 +250,10 @@ export default function ProgramList(): React.JSX.Element {
             </ActionIcon>
           )}
         </Group>
-        <Group gap={6} wrap="nowrap">
+        <div className={classes.times}>
+          <ProgramTimes />
+        </div>
+        <Group gap={6} wrap="nowrap" className={classes.headerButtons}>
           <Button
             size="compact-sm"
             variant="default"
@@ -278,7 +282,7 @@ export default function ProgramList(): React.JSX.Element {
             End Program
           </Button>
         </Group>
-      </Group>
+      </div>
       {error && (
         <Text c="red" size="sm" role="alert" mb="xs">
           {error}

@@ -18,7 +18,7 @@ import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 import { NextIcon, PauseIcon, PlayIcon, RestartIcon, StopIcon } from '../components/icons'
 import { formatTime } from '../format-time'
 import { useLibraryApi } from '../library/LibraryProvider'
-import { useProgram } from './ProgramProvider'
+import { useProgram, useProgramStore } from './ProgramProvider'
 import { useAudio } from './useAudio'
 import { useProjectorStatus } from './useProjectorStatus'
 import classes from './PlayerBar.module.css'
@@ -131,6 +131,10 @@ export default function PlayerBar(): React.JSX.Element {
   const api = useLibraryApi()
   const player = useProgram((s) => s.player)
   const audio = useAudio(api, player)
+  const store = useProgramStore()
+  // The Program page's ending time reads the position, to the second.
+  const second = Math.floor(audio.positionMs / 1000)
+  useEffect(() => store.getState().setPosition(second * 1000), [store, second])
   const projector = useProjectorStatus(api)
   const autoShow = useAutoShow(api)
   const [seeking, setSeeking] = useState<number | null>(null)

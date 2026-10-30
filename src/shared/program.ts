@@ -7,6 +7,8 @@ export interface ProgramSummary {
   name: string
   updatedAt: string
   unplayedCount: number // unplayed songs (not STOP markers)
+  unplayedDurationMs: number // their time (program-time.ts: missing and removed songs left out)
+  unplayedGaps: number // auto-continue gaps among them (none across a STOP)
 }
 
 // A song with the dance shown for it, as programs, the play log and the player show it.

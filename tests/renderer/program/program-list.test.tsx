@@ -328,6 +328,18 @@ describe('program list', () => {
   })
 })
 
+describe('the header’s times', () => {
+  test('sit between the title and the buttons', async () => {
+    setup()
+    const title = await screen.findByText('Program: Tue Oct 14')
+    const times = await screen.findByText(/Total play time/)
+    const buttons = screen.getByRole('button', { name: 'End Program' })
+    expect(title.compareDocumentPosition(times) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(times.compareDocumentPosition(buttons) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText(/^Ending on /)).toBeInTheDocument()
+  })
+})
+
 describe('End Program and Start New Program', () => {
   const endButton = () => screen.getByRole('button', { name: 'End Program' })
 

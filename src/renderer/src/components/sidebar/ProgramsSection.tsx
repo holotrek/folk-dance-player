@@ -3,6 +3,7 @@ import { ActionIcon, Group, Menu, NavLink, ScrollArea, Text } from '@mantine/cor
 import SearchInput from '../SearchInput'
 import { useDebouncedValue } from '@mantine/hooks'
 import type { ProgramSummary } from '@shared/program'
+import { formatTotal, totalMs, type AutoContinue } from '@shared/program-time'
 import { useLibraryApi } from '../../library/LibraryProvider'
 import NewProgramPrompt from '../../program/NewProgramPrompt'
 import { useProgram } from '../../program/ProgramProvider'
@@ -17,6 +18,7 @@ const songs = (n: number): string => `${n} ${n === 1 ? 'song' : 'songs'} to play
 function ProgramEntry(props: {
   program: ProgramSummary
   current: boolean
+  autoContinue: AutoContinue // its gaps are part of the total play time
   onLoad: () => void
   onRename: () => void
   onDelete: () => void
@@ -34,7 +36,24 @@ function ProgramEntry(props: {
     >
       <NavLink
         label={p.name}
-        description={songs(p.unplayedCount)}
+        description={
+          <>
+            <Text span inherit display="block">
+              {songs(p.unplayedCount)}
+            </Text>
+            {p.unplayedCount > 0 && (
+              <Text span inherit display="block">
+                Total play time:{' '}
+                {formatTotal(
+                  totalMs(
+                    { durationMs: p.unplayedDurationMs, gaps: p.unplayedGaps },
+                    props.autoContinue
+                  )
+                )}
+              </Text>
+            )}
+          </>
+        }
         active={props.current}
         aria-current={props.current ? 'page' : undefined}
         onClick={props.onLoad}
@@ -71,6 +90,7 @@ export default function ProgramsSection(): React.JSX.Element {
   const api = useLibraryApi()
   const programs = useProgram((s) => s.programs)
   const currentId = useProgram((s) => s.player.programId)
+  const autoContinue = useProgram((s) => s.player.autoContinue)
   const setSearch = useProgram((s) => s.setSearch)
   const load = useProgram((s) => s.load)
   const [text, setText] = useState('')
@@ -122,6 +142,7 @@ export default function ProgramsSection(): React.JSX.Element {
               key={p.id}
               program={p}
               current={p.id === currentId}
+              autoContinue={autoContinue}
               onLoad={() => choose(p)}
               onRename={() => setRenaming(p)}
               onDelete={() => setDeleting(p)}

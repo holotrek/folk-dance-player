@@ -1,5 +1,6 @@
 import type { DatabaseSync } from 'node:sqlite'
 import type { ProgramDetail, ProgramItem, ProgramSummary } from '@shared/program'
+import { playTime, type TimedItem } from '@shared/program-time'
 import { inTransaction } from '../db/transaction'
 import { shownPairingSql } from '../library/list'
 import { TRACK_COLUMNS, toTrack, trackJoins, type TrackRow } from './tracks'
@@ -34,7 +35,7 @@ function requireProgram(db: DatabaseSync, programId: number): void {
 // Spec §6.1: newest edit first, filtered by name as you type.
 export function listPrograms(db: DatabaseSync, search = ''): ProgramSummary[] {
   const text = search.trim().toLowerCase()
-  return db
+  const summaries = db
     .prepare(
       `SELECT p.id, p.name, p.updated_at AS updatedAt,
          (SELECT COUNT(*) FROM program_items i
@@ -43,7 +44,41 @@ export function listPrograms(db: DatabaseSync, search = ''): ProgramSummary[] {
        WHERE ? = '' OR instr(lower(p.name), ?) > 0
        ORDER BY p.updated_at DESC, p.id DESC`
     )
-    .all(text, text) as unknown as ProgramSummary[]
+    .all(text, text) as unknown as Omit<ProgramSummary, 'unplayedDurationMs' | 'unplayedGaps'>[]
+  const items = new Map<number, TimedItem[]>()
+  const unplayed = db
+    .prepare(
+      `SELECT i.program_id AS programId, i.kind, f.duration_ms AS durationMs,
+         COALESCE(f.is_missing, 0) AS isMissing, (f.removed_at IS NOT NULL) AS isRemoved
+       FROM program_items i LEFT JOIN files f ON f.id = i.file_id
+       WHERE i.played_at IS NULL
+       ORDER BY i.program_id, i.position`
+    )
+    .all() as unknown as {
+    programId: number
+    kind: 'track' | 'stop'
+    durationMs: number | null
+    isMissing: number
+    isRemoved: number
+  }[]
+  for (const row of unplayed) {
+    const list = items.get(row.programId) ?? []
+    list.push(
+      row.kind === 'stop'
+        ? { kind: 'stop' }
+        : {
+            kind: 'track',
+            durationMs: row.durationMs,
+            isMissing: row.isMissing === 1,
+            isRemoved: row.isRemoved === 1
+          }
+    )
+    items.set(row.programId, list)
+  }
+  return summaries.map((s) => {
+    const time = playTime(items.get(s.id) ?? [])
+    return { ...s, unplayedDurationMs: time.durationMs, unplayedGaps: time.gaps }
+  })
 }
 
 export function createProgram(db: DatabaseSync, name: string): number {

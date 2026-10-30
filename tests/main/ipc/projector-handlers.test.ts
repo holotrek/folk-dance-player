@@ -46,7 +46,13 @@ function setup(withProjector = true) {
           },
           displays: () => [{ id: 2, label: 'Epson', primary: false, internal: false }],
           displayChoiceChanged: () => void calls.push(['displayChoiceChanged']),
-          snapshot: () => ({ hasProgram: true, middle: null, upcoming: [], played: [] }),
+          snapshot: () => ({
+            hasProgram: true,
+            middle: null,
+            upcoming: [],
+            played: [],
+            tailMs: null
+          }),
           progress: (p) => void calls.push(['progress', p])
         }
       : undefined
@@ -96,7 +102,8 @@ describe('projector handlers', () => {
       hasProgram: false,
       middle: null,
       upcoming: [],
-      played: []
+      played: [],
+      tailMs: null
     })
   })
 })

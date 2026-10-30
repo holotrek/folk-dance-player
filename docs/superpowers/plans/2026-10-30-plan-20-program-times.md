@@ -57,10 +57,10 @@
   ```
   `playTime` takes unplayed items in order. Counted songs are tracks with `!isMissing && !isRemoved`, adding `durationMs ?? 0`. A gap is counted before a counted song when a song precedes it with no STOP in between; with `afterSong` true (a song is playing now) the first counted song also has a gap before it unless a STOP comes before it. `totalMs` is `durationMs + (enabled ? gaps * seconds * 1000 : 0)`. `tailMs` is what remains after the current song: status `playing`/`paused`/`stopped` → `totalMs(playTime(items, true))`; `countdown` → `totalMs(playTime(items, false)) + secondsLeft * 1000`; anything else → `totalMs(playTime(items, false))`.
 
-- [ ] **Step 1: Write failing tests** (items built with small helpers): `'adds up unplayed songs and counts a gap between neighbours'` (three 3:00 songs → 9:00 and 2 gaps; with 5 s and auto-continue on, total 9:10; off → 9:00); `'a STOP between two songs removes the gap there, two STOPs act as one'`; `'a missing or removed song is left out, and its neighbours still have a gap between them'`; `'a song with no duration counts as zero'`; `'afterSong adds the gap before the first song unless a STOP comes first'`; `'tailMs: playing adds the gap after the current song; a countdown adds the seconds left once; idle adds neither'`; `'formatClock gives the short local time with no date'` (fake timezone-independent: compare against `new Date(ms).toLocaleTimeString([], …)`).
-- [ ] **Step 2:** Run `npx vitest run tests/shared/program-time.test.ts` — expect FAIL (module missing).
-- [ ] **Step 3:** Implement the four functions as specified.
-- [ ] **Step 4:** Run the same test — expect PASS.
+- [x] **Step 1: Write failing tests** (items built with small helpers): `'adds up unplayed songs and counts a gap between neighbours'` (three 3:00 songs → 9:00 and 2 gaps; with 5 s and auto-continue on, total 9:10; off → 9:00); `'a STOP between two songs removes the gap there, two STOPs act as one'`; `'a missing or removed song is left out, and its neighbours still have a gap between them'`; `'a song with no duration counts as zero'`; `'afterSong adds the gap before the first song unless a STOP comes first'`; `'tailMs: playing adds the gap after the current song; a countdown adds the seconds left once; idle adds neither'`; `'formatClock gives the short local time with no date'` (fake timezone-independent: compare against `new Date(ms).toLocaleTimeString([], …)`).
+- [x] **Step 2:** Run `npx vitest run tests/shared/program-time.test.ts` — expect FAIL (module missing).
+- [x] **Step 3:** Implement the four functions as specified.
+- [x] **Step 4:** Run the same test — expect PASS.
 
 ## Task 2: Main supplies the numbers
 
@@ -70,19 +70,19 @@
 - Consumes: Task 1.
 - Produces: `ProgramSummary.unplayedDurationMs: number` and `unplayedGaps: number`; `ProjectorSnapshot.tailMs: number | null` (null while nothing is shown; `EMPTY_SNAPSHOT.tailMs` is null).
 
-- [ ] **Step 1: Write failing tests:** `'a program’s summary carries the unplayed songs’ time and gaps'` (STOP in the middle, a missing file, a played song, a song with no duration); `'the snapshot carries the time that remains after the middle song'` for both `now` (gap after the playing song included) and `next` (countdown seconds included); `'no tail without a program or with nothing to show'`.
-- [ ] **Step 2:** Run `npx vitest run tests/main` — expect FAIL.
-- [ ] **Step 3:** Implement. `listPrograms` keeps its query for the existing columns and gets the items' kind, `duration_ms`, `is_missing` and `removed_at IS NOT NULL` for the listed programs in one extra query ordered by program and position, folded with `playTime` (unplayed items only). `buildProjectorSnapshot` sets `tailMs: tailMs(unplayed, player)` when there is a middle entry, else null.
-- [ ] **Step 4:** Run `npx vitest run` and `npm run typecheck` — expect PASS and clean (fixtures gain the new fields).
+- [x] **Step 1: Write failing tests:** `'a program’s summary carries the unplayed songs’ time and gaps'` (STOP in the middle, a missing file, a played song, a song with no duration); `'the snapshot carries the time that remains after the middle song'` for both `now` (gap after the playing song included) and `next` (countdown seconds included); `'no tail without a program or with nothing to show'`.
+- [x] **Step 2:** Run `npx vitest run tests/main` — expect FAIL.
+- [x] **Step 3:** Implement. `listPrograms` keeps its query for the existing columns and gets the items' kind, `duration_ms`, `is_missing` and `removed_at IS NOT NULL` for the listed programs in one extra query ordered by program and position, folded with `playTime` (unplayed items only). `buildProjectorSnapshot` sets `tailMs: tailMs(unplayed, player)` when there is a middle entry, else null.
+- [x] **Step 4:** Run `npx vitest run` and `npm run typecheck` — expect PASS and clean (fixtures gain the new fields).
 
 ## Task 3: The sidebar line
 
 **Files:** Modify `ProgramsSection.tsx`; Test `programs-section.test.tsx`.
 
-- [ ] **Step 1: Write the failing test** `'under the song count, each program shows its total play time'`: two programs with `unplayedDurationMs`/`unplayedGaps`, the player's `autoContinue` `{ enabled: true, seconds: 5 }` → "Total play time: 12:30" (gaps added); with auto-continue disabled the gaps are not; a program with nothing to play shows no line.
-- [ ] **Step 2:** Run it — expect FAIL.
-- [ ] **Step 3:** Implement: the entry's description becomes two lines (the song count, then "Total play time: M:SS") using `totalMs({ durationMs, gaps }, player.autoContinue)` and `formatTime`.
-- [ ] **Step 4:** Run `npx vitest run tests/renderer/program` — expect PASS.
+- [x] **Step 1: Write the failing test** `'under the song count, each program shows its total play time'`: two programs with `unplayedDurationMs`/`unplayedGaps`, the player's `autoContinue` `{ enabled: true, seconds: 5 }` → "Total play time: 12:30" (gaps added); with auto-continue disabled the gaps are not; a program with nothing to play shows no line.
+- [x] **Step 2:** Run it — expect FAIL.
+- [x] **Step 3:** Implement: the entry's description becomes two lines (the song count, then "Total play time: M:SS") using `totalMs({ durationMs, gaps }, player.autoContinue)` and `formatTime`.
+- [x] **Step 4:** Run `npx vitest run tests/renderer/program` — expect PASS.
 
 ## Task 4: The Program page header
 
@@ -92,10 +92,10 @@
 - Produces: `useNow(intervalMs = 60_000): number` (re-renders each interval); store `positionMs: number` with `setPosition(ms: number): void`; `ProgramTimes` (no props) reads the program, player and position from the store and renders, centered and dimmed, "Total play time: M:SS" and "Ending on 9:42 PM" (plus " if no pauses" when the unplayed items contain a STOP), nothing when there are no songs left. Ending = `now + remaining + tailMs(items, player)`, where `remaining` is `max(durationMs − positionMs, 0)` for a playing, paused or stopped song (stopped counts the full duration), else 0.
 - `PlayerBar` calls `setPosition(Math.floor(audio.positionMs / 1000) * 1000)` when the whole second changes.
 
-- [ ] **Step 1: Write failing tests** (fake `Date` as the existing default-name tests do): `'shows the total and the time the program will end'`; `'while paused the ending time moves later as the clock runs'` (advance 3 minutes, no position change → later by 3 minutes); `'while playing it stays steady as the position advances'`; `'adds “if no pauses” when the program has a STOP'`; `'shows nothing when nothing is left to play'`; `'the store keeps the position the player bar reports'`. In `program-list.test.tsx`: the header has the times centered between the title group and the buttons (assert DOM order: title, times, buttons).
-- [ ] **Step 2:** Run `npx vitest run tests/renderer/program` — expect FAIL.
-- [ ] **Step 3:** Implement. The header becomes three slots: the title group, `ProgramTimes` (`flex: 1`, centered, with horizontal margin), the buttons; the times collapse (`display: none`) when the panel is too narrow, by a container query in `ProgramList.module.css` (tuned by eye).
-- [ ] **Step 4:** Run `npx vitest run` and `npm run typecheck` — expect PASS and clean.
+- [x] **Step 1: Write failing tests** (fake `Date` as the existing default-name tests do): `'shows the total and the time the program will end'`; `'while paused the ending time moves later as the clock runs'` (advance 3 minutes, no position change → later by 3 minutes); `'while playing it stays steady as the position advances'`; `'adds “if no pauses” when the program has a STOP'`; `'shows nothing when nothing is left to play'`; `'the store keeps the position the player bar reports'`. In `program-list.test.tsx`: the header has the times centered between the title group and the buttons (assert DOM order: title, times, buttons).
+- [x] **Step 2:** Run `npx vitest run tests/renderer/program` — expect FAIL.
+- [x] **Step 3:** Implement. The header becomes three slots: the title group, `ProgramTimes` (`flex: 1`, centered, with horizontal margin), the buttons; the times collapse (`display: none`) when the panel is too narrow, by a container query in `ProgramList.module.css` (tuned by eye).
+- [x] **Step 4:** Run `npx vitest run` and `npm run typecheck` — expect PASS and clean.
 
 ## Task 5: The projector's footer
 
@@ -105,22 +105,28 @@
 - Consumes: `snapshot.tailMs`, the `progress` prop, `useNow`.
 - Produces: `<footer aria-label="Ending time">Ending about 9:42 PM</footer>` at the bottom of the screen, small and dim, shown when `snapshot.tailMs !== null` and there is a `middle` entry. Ending = `now + remaining + tailMs`, `remaining` as in Task 4 but from `progress` (`durationMs − positionMs`, only while `middle.kind === 'now'` and the progress is for this play; paused counts as in Task 4).
 
-- [ ] **Step 1: Write failing tests:** `'shows when the program will end'` (fake clock, a `now` snapshot with `tailMs` and progress); `'while paused the time moves later as the clock runs'`; `'shows nothing without a program or when nothing is playing or next'`; `'never shows the total or "if no pauses"'`.
-- [ ] **Step 2:** Run `npx vitest run tests/renderer/projector` — expect FAIL.
-- [ ] **Step 3:** Implement; `.screen` keeps its flex column and the footer sits after the upcoming list (`flex: 0 0 auto`), font about `2.2vh`, color `#7a7a7a`.
-- [ ] **Step 4:** Run `npx vitest run` and `npm run typecheck` — expect PASS and clean.
+- [x] **Step 1: Write failing tests:** `'shows when the program will end'` (fake clock, a `now` snapshot with `tailMs` and progress); `'while paused the time moves later as the clock runs'`; `'shows nothing without a program or when nothing is playing or next'`; `'never shows the total or "if no pauses"'`.
+- [x] **Step 2:** Run `npx vitest run tests/renderer/projector` — expect FAIL.
+- [x] **Step 3:** Implement; `.screen` keeps its flex column and the footer sits after the upcoming list (`flex: 0 0 auto`), font about `2.2vh`, color `#7a7a7a`.
+- [x] **Step 4:** Run `npx vitest run` and `npm run typecheck` — expect PASS and clean.
 
 ## Task 6: End-to-end, docs, commit
 
-- [ ] **Step 1: E2E:** `'the sidebar and the Program page show the program’s times'`: add Hora, Kolo and Tfilati (the fixture MP3s' durations are tiny, so the test reads the text, not exact minutes); assert the sidebar entry contains "Total play time:" and the Program page header contains "Ending on" and the same total; end the program → the times are gone.
-- [ ] **Step 2: Docs:**
+- [x] **Step 1: E2E:** `'the sidebar and the Program page show the program’s times'`: add Hora, Kolo and Tfilati (the fixture MP3s' durations are tiny, so the test reads the text, not exact minutes); assert the sidebar entry contains "Total play time:" and the Program page header contains "Ending on" and the same total; end the program → the times are gone.
+- [x] **Step 2: Docs:**
   - 0.3.0 spec §2 row 3.9 → `Built (Plan 20)`.
   - Main spec §6.1 (sidebar line), §6.2 (header: total and "Ending on", "if no pauses", ignores speed) and §8.2 (the projector's footer line).
   - AGENTS.md decision (2026-10-30): **Program times are computed by one shared module (`shared/program-time.ts`); STOPs are ignored and speed is ignored.** Why: main, the control window and the projector must agree; a STOP's length is unknowable, and an invented one would be a guess shown as fact. The projector gets `tailMs` in its snapshot and adds the clock itself, so it never reads the program and an end time that is a minute stale costs nothing. _Rejected:_ an assumed length per STOP (a setting for a guess); sending the projector a finished end time (stale while paused).
   - CHANGELOG Added: "Each program shows its total play time in the sidebar. The Program page shows the total and when the program will end, and the projector shows a quiet “Ending about 9:42 PM” in its footer. Songs that are missing from disk are left out, auto-continue seconds are included, and pauses at STOP markers are not (the Program page says so)."
   - Hardware checklist step: play a program with a STOP; the Program page's “Ending on” stays steady while playing, moves later while paused, says “if no pauses”; the projector's footer shows the same time without that note; the header still fits at a narrow window (the times hide before anything overlaps).
-- [ ] **Step 3:** Run `npx vitest run`, `npm run typecheck`, `npm run test:e2e` — expect all clean.
-- [ ] **Step 4:** Commit `feat: show a program's total play time and when it will end`.
+- [x] **Step 3:** Run `npx vitest run`, `npm run typecheck`, `npm run test:e2e` — expect all clean.
+- [x] **Step 4:** Commit `feat: show a program's total play time and when it will end`.
+
+## Rulings made while building
+
+- **`formatTotal`** (in `program-time.ts`) gives `M:SS` / `H:MM:SS`; the existing `formatTime` has no hour format and stays for song lengths.
+- **Header layout:** the Program column is too narrow for the times between the title and three buttons at the usual window size, so they take a centered line of their own below, and sit between them only in a wide panel (container query at 900 px) instead of being hidden.
+- **Input type:** `playTime` takes a structural `TimedItem` (a `ProgramItem` fits), so main can fold a light SQL result without building full items.
 
 ## Self-Review
 

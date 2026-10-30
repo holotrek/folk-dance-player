@@ -123,6 +123,21 @@ test('Previously played reads oldest to newest, and the projector snapshot agree
   await page.getByRole('button', { name: 'Stop', exact: true }).click()
 })
 
+test('the sidebar and the Program page show the program’s times', async () => {
+  const { page } = running
+  const program = page.getByRole('region', { name: 'Program' })
+  await drag(page, libraryRow('Hora'), program)
+  await drag(page, libraryRow('Kolo'), program)
+  await expect(programItems()).toHaveCount(2)
+  const sidebar = page.getByRole('group', { name: 'Programs' })
+  await expect(sidebar.getByText(/Total play time: \d+:\d\d/)).toBeVisible()
+  await expect(program.getByText(/Total play time: \d+:\d\d/)).toBeVisible()
+  await expect(program.getByText(/^Ending on /)).toBeVisible()
+
+  await page.getByRole('button', { name: 'End Program' }).click()
+  await expect(program.getByText(/Ending on/)).toHaveCount(0)
+})
+
 test('Edit details on a program item opens its song in the Music page editor', async () => {
   const { page } = running
   await drag(running.page, libraryRow('Kolo'), page.getByRole('region', { name: 'Program' }))

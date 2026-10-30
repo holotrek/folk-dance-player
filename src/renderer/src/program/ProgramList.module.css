@@ -1,4 +1,5 @@
 .panel {
+  container-type: inline-size;
   display: flex;
   flex-direction: column;
   min-height: 0;
@@ -122,4 +123,45 @@
   background: var(--mantine-primary-color-filled);
   color: var(--mantine-color-white);
   font-size: var(--mantine-font-size-sm);
+}
+
+/* The header: title, buttons, and the times (0.3.0 spec §3.9). In a narrow panel the times take a
+   centered line of their own below; once there is room they sit centered between the title and the
+   buttons. The breakpoint is tuned by eye; recheck it when a header button is added. */
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--mantine-spacing-xs);
+  margin-bottom: var(--mantine-spacing-xs);
+}
+
+.headerTitle {
+  order: 1;
+  min-width: 0;
+}
+
+.headerButtons {
+  order: 2;
+}
+
+.times {
+  order: 3;
+  flex: 1 0 100%;
+  display: flex;
+  justify-content: center;
+}
+
+@container (min-width: 900px) {
+  .times {
+    order: 2;
+    flex: 1 1 0;
+    min-width: 0;
+    margin-inline: var(--mantine-spacing-md);
+  }
+
+  .headerButtons {
+    order: 3;
+  }
 }

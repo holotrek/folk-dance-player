@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Each program shows its **total play time** in the sidebar. The Program page shows the total and when the program will **end**, and the projector shows a quiet “Ending about 9:42 PM” in its footer. Auto-continue seconds are included, songs missing from disk are left out, and pauses at STOP markers are not counted (the Program page says so).
 - **Previously played** now reads oldest to newest, so previous, now playing and up next read down the screen as one list. The Program page's list stays at the newest song unless you scroll up, and the projector shows the most recent song just above Now Playing.
 - **End Program** (in the Program page's header) clears the program and Previously played from the screen. The program stays saved in the sidebar, with what was played. With no program loaded, **Start New Program** asks for a name and starts one.
 - Select several items in the program (click, shift-click for a range, cmd/ctrl-click to add or remove one) and drag them together; they land in the order they had and stay selected.

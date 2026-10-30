@@ -66,7 +66,7 @@ built on its own.
 | 3.6 | A PDF attached to a dance, opened from the editor or any row's menu | Song editor, row menus, `dance_prefs` | Built (Plan 15, PR 5a; Plan 16) |
 | 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Built (Plan 15, PR 5b) |
 | 3.8 | Select several program items and move them together | Program list | Built (Plan 17) |
-| 3.9 | Program total time and ending time | Sidebar, Program page, projector | Planned (Plan 20) |
+| 3.9 | Program total time and ending time | Sidebar, Program page, projector | Built (Plan 20) |
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Built (Plan 19) |
 | 3.11 | End Program, then Start New Program | Program list, sidebar | Built (Plan 18) |
 | 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Planned |

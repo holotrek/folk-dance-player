@@ -6,8 +6,10 @@ import {
   type ProjectorProgress,
   type ProjectorSnapshot
 } from '@shared/projector'
+import { formatClock } from '@shared/program-time'
 import { ChevronDownIcon } from '../components/icons'
 import Logo from '../components/Logo'
+import { useNow } from '../program/useNow'
 import classes from './ProjectorView.module.css'
 
 // The large part of a label: the dance, and the choreographer when the label needs it (spec §4).
@@ -79,6 +81,7 @@ export default function ProjectorView({
 }): React.JSX.Element {
   const { middle, upcoming, played } = snapshot
   const size = useWindowSize()
+  const now = useNow()
   // Nothing to show (no program, or one with nothing left, played or playing): the logo, never
   // a blank screen.
   if (!middle && upcoming.length === 0 && played.length === 0) {
@@ -98,6 +101,14 @@ export default function ProjectorView({
         : `Next in ${middle.countdown.secondsLeft}…`
       : 'Up next'
   const slide = middle?.slide
+  // When the program will end: what is left of the song that is playing (from its progress; a
+  // paused song's stays put while the clock runs on), then the rest of the program (0.3.0 §3.9).
+  const left =
+    middle?.kind === 'now' && progress?.playId === middle.playId && progress.durationMs !== null
+      ? Math.max(progress.durationMs - progress.positionMs, 0)
+      : 0
+  const endsAt =
+    snapshot.hasProgram && middle && snapshot.tailMs !== null ? now + left + snapshot.tailMs : null
   const box = slide ? slideBox(size.width, size.height) : null
   const playedList = played.length > 0 && (
     <section className={classes.played} aria-label="Previously played">
@@ -173,6 +184,11 @@ export default function ProjectorView({
             )}
           </ul>
         </section>
+      )}
+      {endsAt !== null && (
+        <footer className={classes.ending} aria-label="Ending time">
+          Ending about {formatClock(endsAt)}
+        </footer>
       )}
     </div>
   )

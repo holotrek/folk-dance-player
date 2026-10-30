@@ -22,6 +22,8 @@ export interface ProgramState {
   program: ProgramDetail | null // the current (loaded) program, unplayed items only
   played: PlayedEntry[] // its play log, oldest first
   player: PlayerState
+  positionMs: number // how far into the playing song (the player bar reports it, to the second)
+  setPosition(ms: number): void
   selection: Selection // selected program items; UI state, pruned on every refresh
   selectItem(id: number, mode: SelectMode): void
   clearSelection(): void
@@ -45,6 +47,8 @@ export function createProgramStore(api: RendererApi): ProgramStore {
     program: null,
     played: [],
     player: IDLE_PLAYER_STATE,
+    positionMs: 0,
+    setPosition: (ms) => set({ positionMs: ms }),
     selection: EMPTY_SELECTION,
 
     selectItem(id, mode) {
