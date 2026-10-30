@@ -30,7 +30,7 @@ test.afterEach(async () => {
 const libraryRow = (title: string) =>
   running.page.getByRole('table', { name: 'Songs' }).getByRole('row').filter({ hasText: title })
 const programItems = () =>
-  running.page.getByRole('list', { name: 'Program items' }).getByRole('listitem')
+  running.page.getByRole('listbox', { name: 'Program items' }).getByRole('option')
 
 test('import a folder, then search', async () => {
   const { page } = running
@@ -56,6 +56,23 @@ test('drag songs into a program, then reorder them', async () => {
     programItems().filter({ hasText: 'Hora' })
   )
   await expect(programItems()).toHaveText([/Kolo/, /Hora/])
+})
+
+test('select two program items and drag them together', async () => {
+  const { page } = running
+  const program = page.getByRole('region', { name: 'Program' })
+  for (const title of ['Hora', 'Kolo', 'Tfilati']) {
+    await drag(page, libraryRow(title), program)
+    await expect(programItems()).toHaveCount(['Hora', 'Kolo', 'Tfilati'].indexOf(title) + 1)
+  }
+  const item = (title: string) => programItems().filter({ hasText: title })
+  await item('Kolo').click()
+  await item('Tfilati').click({ modifiers: ['Shift'] })
+  await drag(page, item('Kolo'), item('Hora'))
+  await expect(programItems()).toHaveText([/Kolo/, /Tfilati/, /Hora/])
+  await expect(item('Kolo')).toHaveAttribute('aria-selected', 'true')
+  await expect(item('Tfilati')).toHaveAttribute('aria-selected', 'true')
+  await expect(item('Hora')).toHaveAttribute('aria-selected', 'false')
 })
 
 test('Edit details on a program item opens its song in the Music page editor', async () => {

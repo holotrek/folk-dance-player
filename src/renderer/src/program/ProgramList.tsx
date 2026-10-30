@@ -19,6 +19,7 @@ import { moveBefore } from '../library/reorder'
 import { formatTime } from '../format-time'
 import { useEditSong } from '../navigation'
 import { openRowMenu } from '../library/SongMenu'
+import { selectedInOrder } from './selection'
 import { useProgram, useProgramStore } from './ProgramProvider'
 import classes from './ProgramList.module.css'
 
@@ -116,7 +117,9 @@ export default function ProgramList(): React.JSX.Element {
   const [renaming, setRenaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [choices, setChoices] = useState<DanceChoice[]>([])
+  const selection = useProgram((s) => s.selection)
   const items = program?.items ?? []
+  const chosen = new Set(selection.ids)
 
   const act = (action: () => Promise<unknown>): void =>
     void action()
@@ -153,6 +156,31 @@ export default function ProgramList(): React.JSX.Element {
       e.preventDefault()
       addFiles(getDraggedFiles(e.dataTransfer), before)
     }
+  }
+
+  // An unselected item becomes the whole selection when dragged; a selected one drags them all.
+  const startDrag = (e: React.DragEvent, id: number): void => {
+    if (!chosen.has(id)) programStore.getState().selectItem(id, 'single')
+    const ids = selectedInOrder(
+      programStore.getState().selection,
+      items.map((i) => i.id)
+    )
+    setDraggedItems(e.dataTransfer, ids)
+    if (ids.length > 1) {
+      const image = document.createElement('div')
+      image.className = classes.dragImage
+      image.textContent = `${ids.length} items`
+      document.body.appendChild(image)
+      e.dataTransfer.setDragImage?.(image, 0, 0)
+      setTimeout(() => image.remove(), 0)
+    }
+  }
+
+  const click = (e: React.MouseEvent, id: number): void => {
+    if ((e.target as HTMLElement).closest('button')) return // a row's star, ✕ or ⋯
+    programStore
+      .getState()
+      .selectItem(id, e.shiftKey ? 'range' : e.metaKey || e.ctrlKey ? 'toggle' : 'single')
   }
 
   const over = (e: React.DragEvent, target: number | 'end'): void => {
@@ -218,11 +246,22 @@ export default function ProgramList(): React.JSX.Element {
           {error}
         </Text>
       )}
-      <div className={classes.list} role="list" aria-label="Program items">
+      <div
+        className={classes.list}
+        role="listbox"
+        aria-multiselectable="true"
+        aria-label="Program items"
+        onClick={(e) => {
+          if (!(e.target as HTMLElement).closest('[role=option]')) {
+            programStore.getState().clearSelection()
+          }
+        }}
+      >
         {items.map((item, i) => (
           <div
             key={item.id}
-            role="listitem"
+            role="option"
+            aria-selected={chosen.has(item.id)}
             className={[
               classes.row,
               i === 0 ? classes.next : '',
@@ -231,7 +270,8 @@ export default function ProgramList(): React.JSX.Element {
             ].join(' ')}
             data-removed={item.kind === 'track' && item.isRemoved ? 'true' : undefined}
             draggable
-            onDragStart={(e) => setDraggedItems(e.dataTransfer, [item.id])}
+            onClick={(e) => click(e, item.id)}
+            onDragStart={(e) => startDrag(e, item.id)}
             onDragOver={(e) => {
               e.stopPropagation()
               over(e, item.id)

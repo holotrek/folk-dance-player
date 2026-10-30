@@ -312,7 +312,7 @@ PROGRAMS                  [+]
   - A warning (a skipped missing file, a file that can't be played) appears under the bar until dismissed. It is never shown on the projector.
 - **Previously played:** the play log for the current program, newest first. It scrolls.
 - **Program list:** only **unplayed** items, in order. Played items stay in storage (`played_at`) but are not shown here.
-  - **Reordering:** drag and drop.
+  - **Reordering and selecting:** drag and drop. Click selects an item, shift-click a range, cmd/ctrl-click adds or removes one; dragging a selected item moves the whole selection together, in its original order, and it stays selected (dragging an unselected item moves only that one). A click in the empty space clears the selection. Double-clicking an item still does nothing.
   - **Adding:** drag songs in from the library, holding, playlists or previously played (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance; when an added song has more than one dance, a "Which dance?" dialog asks, with the default preselected (closing it keeps the defaults).
   - **Each item's menu** ("⋯" or right-click) has its options.
     - **Edit details** (song items) opens the song in the Music page's editor (below).

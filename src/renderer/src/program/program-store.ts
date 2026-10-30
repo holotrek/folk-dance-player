@@ -8,6 +8,13 @@ import {
   type ProgramSummary
 } from '@shared/program'
 import { defaultProgramName } from './program-name'
+import {
+  EMPTY_SELECTION,
+  pruneSelection,
+  selectIn,
+  type SelectMode,
+  type Selection
+} from './selection'
 
 export interface ProgramState {
   programs: ProgramSummary[] // the sidebar list, filtered by `search`
@@ -15,6 +22,9 @@ export interface ProgramState {
   program: ProgramDetail | null // the current (loaded) program, unplayed items only
   played: PlayedEntry[] // its play log, newest first
   player: PlayerState
+  selection: Selection // selected program items; UI state, pruned on every refresh
+  selectItem(id: number, mode: SelectMode): void
+  clearSelection(): void
   refresh(): Promise<void>
   setSearch(search: string): Promise<void>
   load(programId: number | null): Promise<void>
@@ -35,6 +45,23 @@ export function createProgramStore(api: RendererApi): ProgramStore {
     program: null,
     played: [],
     player: IDLE_PLAYER_STATE,
+    selection: EMPTY_SELECTION,
+
+    selectItem(id, mode) {
+      const { program, selection } = get()
+      if (program) {
+        set({
+          selection: selectIn(
+            selection,
+            program.items.map((i) => i.id),
+            id,
+            mode
+          )
+        })
+      }
+    },
+
+    clearSelection: () => set({ selection: EMPTY_SELECTION }),
 
     async refresh() {
       const request = ++latest
@@ -45,7 +72,12 @@ export function createProgramStore(api: RendererApi): ProgramStore {
         programId === null ? [] : api.invoke('programs:played', programId)
       ])
       if (request !== latest) return // a newer refresh already started
-      set({ programs, program, played })
+      set((s) => ({
+        programs,
+        program,
+        played,
+        selection: pruneSelection(s.selection, program?.items.map((i) => i.id) ?? [])
+      }))
     },
 
     async setSearch(search) {

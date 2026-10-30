@@ -91,8 +91,8 @@ function setup(
 }
 
 const rows = () =>
-  within(screen.getByRole('list', { name: 'Program items' })).getAllByRole('listitem')
-const rowFor = (text: string) => screen.getByText(text).closest('[role=listitem]') as HTMLElement
+  within(screen.getByRole('listbox', { name: 'Program items' })).getAllByRole('option')
+const rowFor = (text: string) => screen.getByText(text).closest('[role=option]') as HTMLElement
 const files = (ids: number[]) => ({
   dataTransfer: {
     types: [FILES_MIME],
@@ -153,7 +153,7 @@ describe('program list', () => {
 
   test('a STOP marker is drawn with an icon, not an emoji', async () => {
     setup()
-    const stopRow = (await screen.findByText('STOP / TEACHING')).closest('[role=listitem]')!
+    const stopRow = (await screen.findByText('STOP / TEACHING')).closest('[role=option]')!
     expect(stopRow.querySelector('svg')).not.toBeNull()
     expect(stopRow.textContent).not.toContain('⏸')
   })
@@ -204,7 +204,7 @@ describe('program list', () => {
 
     const stopRow = screen
       .getByRole('button', { name: 'Options for STOP / TEACHING' })
-      .closest('[role=listitem]') as HTMLElement
+      .closest('[role=option]') as HTMLElement
     await userEvent.pointer({ keys: '[MouseRight]', target: stopRow })
     await userEvent.click(
       within(await menu('STOP / TEACHING')).getByRole('menuitem', { name: 'Remove' })
@@ -325,5 +325,116 @@ describe('program list', () => {
     expect(
       fake.calls.filter(([c]) => String(c).startsWith('player:') && c !== 'player:getState')
     ).toEqual([])
+  })
+})
+
+describe('program list selection', () => {
+  const selected = () => rows().filter((r) => r.getAttribute('aria-selected') === 'true')
+  const names = () => selected().map((r) => r.textContent)
+  const dragStart = (row: HTMLElement) => {
+    const dataTransfer = { setData: vi.fn(), setDragImage: vi.fn(), effectAllowed: '' }
+    fireEvent.dragStart(row, { dataTransfer })
+    return dataTransfer
+  }
+
+  test('clicking an item selects it; clicking another replaces the selection', async () => {
+    setup()
+    await screen.findByText('Hora')
+    fireEvent.click(rowFor('Hora'))
+    expect(selected()).toEqual([rowFor('Hora')])
+    fireEvent.click(rowFor('Kolo'))
+    expect(selected()).toEqual([rowFor('Kolo')])
+  })
+
+  test('cmd-click adds and removes; shift-click selects the range', async () => {
+    setup()
+    await screen.findByText('Hora')
+    fireEvent.click(rowFor('Hora'))
+    fireEvent.click(rowFor('Kolo'), { metaKey: true })
+    expect(selected()).toEqual([rowFor('Hora'), rowFor('Kolo')])
+    fireEvent.click(rowFor('Hora'), { metaKey: true })
+    expect(selected()).toEqual([rowFor('Kolo')])
+    fireEvent.click(rowFor('Hora'))
+    fireEvent.click(rowFor('Kolo'), { shiftKey: true })
+    expect(selected()).toHaveLength(3)
+  })
+
+  test('clicking a row’s ⋯ button does not change the selection', async () => {
+    setup()
+    await screen.findByText('Hora')
+    fireEvent.click(rowFor('Hora'))
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Kolo' }))
+    expect(selected()).toEqual([rowFor('Hora')])
+  })
+
+  test('clicking empty space in the list clears the selection', async () => {
+    setup()
+    await screen.findByText('Hora')
+    fireEvent.click(rowFor('Hora'))
+    fireEvent.click(screen.getByRole('listbox', { name: 'Program items' }))
+    expect(names()).toEqual([])
+  })
+
+  test('double-clicking an item does nothing', async () => {
+    const fake = setup()
+    await screen.findByText('Hora')
+    fireEvent.doubleClick(rowFor('Hora'))
+    expect(fake.calls.filter((c) => String(c[0]).startsWith('player:'))).toEqual(
+      fake.calls.filter((c) => c[0] === 'player:getState')
+    )
+  })
+
+  test('dragging a selected item carries the whole selection in program order', async () => {
+    setup()
+    await screen.findByText('Hora')
+    fireEvent.click(rowFor('Kolo'))
+    fireEvent.click(rowFor('Hora'), { metaKey: true })
+    const transfer = dragStart(rowFor('Kolo'))
+    expect(transfer.setData).toHaveBeenCalledWith(ITEMS_MIME, '[1,3]')
+    expect(transfer.setDragImage).toHaveBeenCalledTimes(1)
+  })
+
+  test('dragging an unselected item selects only it and carries only it', async () => {
+    setup()
+    await screen.findByText('Hora')
+    fireEvent.click(rowFor('Hora'))
+    const transfer = dragStart(rowFor('Kolo'))
+    expect(transfer.setData).toHaveBeenCalledWith(ITEMS_MIME, '[3]')
+    expect(transfer.setDragImage).not.toHaveBeenCalled()
+    expect(selected()).toEqual([rowFor('Kolo')])
+  })
+
+  test('dropping a selection moves its items together in their original order', async () => {
+    const fake = setup()
+    await screen.findByText('Hora')
+    fireEvent.drop(screen.getByText('STOP / TEACHING'), items([3, 1]))
+    await waitFor(() => expect(fake.callsTo('programs:reorder')).toEqual([[5, [1, 3, 2]]]))
+  })
+
+  test('dropping a selection onto one of its own items changes nothing', async () => {
+    const fake = setup()
+    await screen.findByText('Hora')
+    fireEvent.drop(rowFor('Kolo'), items([1, 3]))
+    expect(fake.callsTo('programs:reorder')).toEqual([])
+  })
+
+  test('the selection survives a reorder', async () => {
+    let order = [1, 2, 3]
+    const fake = setup({
+      programsGet: () => ({
+        ...program,
+        items: order.map((id) => program.items.find((i) => i.id === id)!)
+      })
+    })
+    await screen.findByText('Hora')
+    fireEvent.click(rowFor('Hora'))
+    fireEvent.click(rowFor('Kolo'), { metaKey: true })
+    order = [2, 1, 3]
+    fake.emit('programs:changed', null)
+    await waitFor(() => expect(rows()[0].textContent).toContain('STOP'))
+    expect(selected().map((r) => r.textContent)).toEqual([
+      expect.stringContaining('Hora'),
+      expect.stringContaining('Kolo')
+    ])
   })
 })

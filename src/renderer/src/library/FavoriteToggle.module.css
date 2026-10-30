@@ -5,6 +5,7 @@
 
 [role='row']:hover .unstarred,
 [role='listitem']:hover .unstarred,
+[role='option']:hover .unstarred,
 .unstarred:focus-visible {
   opacity: 1;
 }
