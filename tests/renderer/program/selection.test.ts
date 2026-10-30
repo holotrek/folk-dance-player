@@ -2,7 +2,6 @@ import { describe, expect, test } from 'vitest'
 import {
   EMPTY_SELECTION,
   pruneSelection,
-  runStart,
   selectedInOrder,
   selectIn,
   type Selection
@@ -39,14 +38,5 @@ describe('program selection', () => {
 
   test('selectedInOrder returns the selected ids in program order', () => {
     expect(selectedInOrder(sel([4, 1], 1), order)).toEqual([1, 4])
-  })
-
-  test('runStart is the first item of the unbroken selected run containing the item', () => {
-    const picked = sel([1, 3, 4], 1)
-    expect(runStart(picked, order, 1)).toBe(1)
-    expect(runStart(picked, order, 3)).toBe(3)
-    expect(runStart(picked, order, 4)).toBe(3)
-    expect(runStart(sel([2, 3, 4], 2), order, 4)).toBe(2) // a consecutive selection: its first item
-    expect(runStart(picked, order, 5)).toBe(5) // not selected: the item itself
   })
 })

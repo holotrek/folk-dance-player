@@ -34,14 +34,3 @@ export function selectedInOrder(sel: Selection, order: number[]): number[] {
   const chosen = new Set(sel.ids)
   return order.filter((id) => chosen.has(id))
 }
-
-// The first item of the unbroken run of selected items that contains `id` (`id` itself when it is
-// not selected): where "Insert STOP before" puts a STOP for that row. A consecutive selection is
-// one run, so it is its first item.
-export function runStart(sel: Selection, order: number[], id: number): number {
-  const chosen = new Set(sel.ids)
-  let at = order.indexOf(id)
-  if (at < 0 || !chosen.has(id)) return id
-  while (at > 0 && chosen.has(order[at - 1])) at--
-  return order[at]
-}
