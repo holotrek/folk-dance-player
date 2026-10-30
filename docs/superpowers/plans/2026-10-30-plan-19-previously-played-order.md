@@ -10,13 +10,13 @@
 
 **Ships in the same pull request as Plans 18 and 20.**
 
-**Spec:** `docs/superpowers/specs/2026-10-18-release-0-3-0-design.md` §3.10 (open question 8 decided 2026-10-31: follow the bottom only while the organizer is at it). Main spec §6.2 and §8.2 are updated by this plan.
+**Spec:** `docs/superpowers/specs/2026-10-18-release-0-3-0-design.md` §3.10 (open question 8 decided 2026-10-30: follow the bottom only while the organizer is at it). Main spec §6.2 and §8.2 are updated by this plan.
 
 ## Global Constraints
 
 - Test-first (Vitest); conventional-commit messages; a `CHANGELOG.md` line under `Unreleased` in the same commit as the user-facing change.
 - Order is `ORDER BY l.played_at ASC, l.id ASC` (spec §3.10); `ProjectorSnapshot.played` is documented "oldest first".
-- The control window follows new entries only while at, or within **two rows (64 px)** of, the bottom (spec §3.10, decided 2026-10-31); it also scrolls to the end when it mounts and when a program loads.
+- The control window follows new entries only while at, or within **two rows (64 px)** of, the bottom (spec §3.10, decided 2026-10-30); it also scrolls to the end when it mounts and when a program loads.
 - The projector never scrolls with script; the list is anchored to its bottom edge, and the oldest entries fall off the top when there are too many. With a Canva slide (`titleOnly`) the narrow column keeps the same anchoring.
 - Double-click to replay and dragging an entry back into the program are unchanged.
 - Custom CSS only in co-located `*.module.css` files. Commit trailer: `Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>`.

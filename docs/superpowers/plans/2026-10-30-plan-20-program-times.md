@@ -10,14 +10,14 @@
 
 **Ships in the same pull request as Plans 18 and 19.** The Program page's header was arranged by Plan 18 (End Program); this plan adds the centered times to it.
 
-**Spec:** `docs/superpowers/specs/2026-10-18-release-0-3-0-design.md` §3.9 (open questions 2 and 3 decided 2026-10-31). Main spec §6.1, §6.2 and §8.2 are updated by this plan.
+**Spec:** `docs/superpowers/specs/2026-10-18-release-0-3-0-design.md` §3.9 (open questions 2 and 3 decided 2026-10-30). Main spec §6.1, §6.2 and §8.2 are updated by this plan.
 
 ## Global Constraints
 
 - Test-first (Vitest); conventional-commit messages; a `CHANGELOG.md` line under `Unreleased` in the same commit as the user-facing change.
 - **What counts (spec §3.9):** unplayed track items only. A song with no known duration counts as 0; songs whose file is missing or that are removed are left out (playback skips them). Auto-continue seconds are added **once for each gap between two songs with no STOP between them**; a STOP adds nothing. With auto-continue off, no gaps are added.
-- **STOP markers are ignored** by the ending time (decided 2026-10-31): the Program page shows "if no pauses" beside it when the unplayed items contain a STOP; the projector never says so.
-- **Projector:** one line, "Ending about 9:42 PM", in the footer; never the total (decided 2026-10-31). The projector stays read-only and never reads the program.
+- **STOP markers are ignored** by the ending time (decided 2026-10-30): the Program page shows "if no pauses" beside it when the unplayed items contain a STOP; the projector never says so.
+- **Projector:** one line, "Ending about 9:42 PM", in the footer; never the total (decided 2026-10-30). The projector stays read-only and never reads the program.
 - The first version ignores the playback speed.
 - Formats: totals with the existing `formatTime` (`M:SS`, or `H:MM:SS` from an hour); clock times as the system's short time (`toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })`, for example "9:42 PM").
 - The clock refreshes once a minute and whenever the program, the player or the position changes.
@@ -116,7 +116,7 @@
 - [ ] **Step 2: Docs:**
   - 0.3.0 spec §2 row 3.9 → `Built (Plan 20)`.
   - Main spec §6.1 (sidebar line), §6.2 (header: total and "Ending on", "if no pauses", ignores speed) and §8.2 (the projector's footer line).
-  - AGENTS.md decision (2026-10-31): **Program times are computed by one shared module (`shared/program-time.ts`); STOPs are ignored and speed is ignored.** Why: main, the control window and the projector must agree; a STOP's length is unknowable, and an invented one would be a guess shown as fact. The projector gets `tailMs` in its snapshot and adds the clock itself, so it never reads the program and an end time that is a minute stale costs nothing. _Rejected:_ an assumed length per STOP (a setting for a guess); sending the projector a finished end time (stale while paused).
+  - AGENTS.md decision (2026-10-30): **Program times are computed by one shared module (`shared/program-time.ts`); STOPs are ignored and speed is ignored.** Why: main, the control window and the projector must agree; a STOP's length is unknowable, and an invented one would be a guess shown as fact. The projector gets `tailMs` in its snapshot and adds the clock itself, so it never reads the program and an end time that is a minute stale costs nothing. _Rejected:_ an assumed length per STOP (a setting for a guess); sending the projector a finished end time (stale while paused).
   - CHANGELOG Added: "Each program shows its total play time in the sidebar. The Program page shows the total and when the program will end, and the projector shows a quiet “Ending about 9:42 PM” in its footer. Songs that are missing from disk are left out, auto-continue seconds are included, and pauses at STOP markers are not (the Program page says so)."
   - Hardware checklist step: play a program with a STOP; the Program page's “Ending on” stays steady while playing, moves later while paused, says “if no pauses”; the projector's footer shows the same time without that note; the header still fits at a narrow window (the times hide before anything overlaps).
 - [ ] **Step 3:** Run `npx vitest run`, `npm run typecheck`, `npm run test:e2e` — expect all clean.

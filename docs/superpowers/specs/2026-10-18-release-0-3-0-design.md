@@ -379,7 +379,7 @@ items disappear); component tests with modifier keys; the end-to-end drag helper
 - **Program page:** the same total, plus **"Ending on X:XX"** (the current time plus the time
   that remains), **centered** in the program panel's header, with room between it and both the
   title on the left and the buttons on the right.
-- The projector shows one quiet "Ending about 9:42 PM" line in its footer (decided 2026-10-31); never the total.
+- The projector shows one quiet "Ending about 9:42 PM" line in its footer (decided 2026-10-30); never the total.
 
 **Design.**
 
@@ -387,7 +387,7 @@ items disappear); component tests with modifier keys; the end-to-end drag helper
   no known duration counts as zero. Songs whose files are missing or removed are skipped by
   playback, so they are left out. Auto-continue seconds are added **once for each gap between two
   consecutive songs with no STOP between them**, because auto-continue halts at a STOP.
-  A STOP marker adds nothing, so the ending time assumes no pauses; the Program page says "if no pauses" beside it when the program has a STOP (decided 2026-10-31).
+  A STOP marker adds nothing, so the ending time assumes no pauses; the Program page says "if no pauses" beside it when the program has a STOP (decided 2026-10-30).
 - **Where it is computed.** Total time is a sum over the program's items, so main supplies it:
   `ProgramSummary` (used by the sidebar) gains `unplayedDurationMs` and `unplayedGaps`; the renderer
   adds `gaps × seconds` using the `autoContinue` setting. `ProgramDetail` gets the same two numbers
@@ -722,15 +722,15 @@ migration and the "copy a file into the app's data folder" helper.
 1. ~~**§3.5, derived or stored?**~~ Built derived (no schema change), with the box kept after a
    rename and re-checking restoring the song's name (2026-10-19). Only unchecking while the
    names are still equal is session-only; a stored flag would change that.
-2. ~~**§3.9, STOP markers.**~~ Decided 2026-10-31: STOPs are ignored; the ending time assumes no pauses and the Program page says so when the program has a STOP.
-3. ~~**§3.9, the projector.**~~ Decided 2026-10-31: one quiet "Ending about 9:42 PM" line in the projector's footer; no total.
+2. ~~**§3.9, STOP markers.**~~ Decided 2026-10-30: STOPs are ignored; the ending time assumes no pauses and the Program page says so when the program has a STOP.
+3. ~~**§3.9, the projector.**~~ Decided 2026-10-30: one quiet "Ending about 9:42 PM" line in the projector's footer; no total.
 4. ~~**§3.7, the default.**~~ Built with the Canva slide as the default until the toggle is used (2026-10-20).
 5. **§3.6, the PDF.** Is opening it in the system's PDF viewer acceptable, or should it open in an
    app window? Is one PDF per dance enough?
 6. ~~**§3.4, old settings.**~~ Decided 2026-10-19: where an old mapping sent both tags to one field, the Artist tag keeps it.
 7. ~~**§3.2, the choreographer.**~~ Decided 2026-10-19: `Dance (Choreographer) ♪ Song`.
-8. ~~**§3.10, following the bottom.**~~ Decided 2026-10-31: the control window's list follows new songs only while the organizer is at (or within a row or two of) the bottom.
-9. ~~**§3.11, a playing song.**~~ Decided 2026-10-31: End Program asks nothing; the song that is playing
+8. ~~**§3.10, following the bottom.**~~ Decided 2026-10-30: the control window's list follows new songs only while the organizer is at (or within a row or two of) the bottom.
+9. ~~**§3.11, a playing song.**~~ Decided 2026-10-30: End Program asks nothing; the song that is playing
    finishes and nothing follows it.
 10. **§3.14, the quick-set.** Worth building? What counts as "not changed yet" (empty, equal to
     the current mapping's value, or equal to the sync baseline)? See the investigation list in §3.14.
