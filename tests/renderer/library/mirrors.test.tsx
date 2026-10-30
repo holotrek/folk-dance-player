@@ -42,6 +42,14 @@ const dropFiles = (target: HTMLElement, fileIds: number[]) =>
     }
   })
 
+// Week 3 sits inside IFD2026. Clicking it while IFD2026 is still opening (its collapse measures a
+// height of 0 in jsdom) leaves Week 3's own collapse stuck hidden, so wait until it is shown.
+async function openWeek3(group: HTMLElement, user: ReturnType<typeof userEvent.setup>) {
+  const week = await within(group).findByText('Week 3')
+  await waitFor(() => expect(week).toBeVisible())
+  await user.click(week)
+}
+
 describe('the library store', () => {
   test('refresh loads Music folders with the playlists', async () => {
     const fake = createFakeApi({ 'playlists:folders': folders })
@@ -65,7 +73,7 @@ describe('Music folders and mirrors in the sidebar', () => {
     const mine = within(group).getByText('Mine')
     expect(loose.compareDocumentPosition(mine) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     await user.click(within(group).getByText('IFD2026'))
-    await user.click(await within(group).findByText('Week 3'))
+    await openWeek3(group, user)
     await waitFor(() => expect(within(group).getByText('Monday')).toBeVisible(), { timeout: 5000 })
     await waitFor(() =>
       expect(fake.settings['playlistFolders.open']).toEqual([
@@ -73,6 +81,20 @@ describe('Music folders and mirrors in the sidebar', () => {
         'FFFFFFFFFFFFFFF2'
       ])
     )
+  })
+
+  test('a folder opened before the saved open folders arrive stays open, and quick clicks both count', async () => {
+    let arrive: () => void = () => undefined
+    const { fake, user } = renderSidebar({
+      'settings:getAll': () =>
+        new Promise((resolve) => (arrive = () => resolve({ ...DEFAULT_SETTINGS })))
+    })
+    const group = await screen.findByRole('group', { name: 'Playlists' })
+    await user.click(await within(group).findByText('IFD2026'))
+    await openWeek3(group, user)
+    arrive() // the saved (empty) list answers late; it must not undo the clicks
+    await waitFor(() => expect(within(group).getByText('Monday')).toBeVisible())
+    expect(fake.settings['playlistFolders.open']).toEqual(['FFFFFFFFFFFFFFF1', 'FFFFFFFFFFFFFFF2'])
   })
 
   test('a folder remembered open starts open', async () => {

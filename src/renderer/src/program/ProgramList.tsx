@@ -18,7 +18,9 @@ import { useLibraryApi, useLibraryStore } from '../library/LibraryProvider'
 import { moveBefore } from '../library/reorder'
 import { formatTime } from '../format-time'
 import { useEditSong } from '../navigation'
-import { openRowMenu } from '../library/SongMenu'
+import { FavoriteItems, openRowMenu } from '../library/SongMenu'
+import { pdfDanceIds, type RowTarget } from '../library/row-targets'
+import { selectedInOrder } from './selection'
 import { useProgram, useProgramStore } from './ProgramProvider'
 import classes from './ProgramList.module.css'
 
@@ -27,6 +29,8 @@ import classes from './ProgramList.module.css'
 // before it, remove.
 function ItemMenu(props: {
   item: ProgramItem
+  itemIds: number[] // the items Remove takes out: this one, or the whole selection it is in
+  targets: RowTarget[] // the songs the favorites items act on
   onError: (message: string) => void
 }): React.JSX.Element {
   const api = useLibraryApi()
@@ -59,15 +63,21 @@ function ItemMenu(props: {
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown>
-        {item.kind === 'track' && (
+        {item.kind === 'track' && props.itemIds.length < 2 && (
           <Menu.Item onClick={() => editSong(item.songId)}>Edit details</Menu.Item>
         )}
-        {item.kind === 'track' && item.hasNotesPdf && item.danceId !== null && (
-          <Menu.Item onClick={run(() => api.invoke('library:openNotesPdf', item.danceId!))}>
+        {pdfDanceIds(props.targets).length > 0 && (
+          <Menu.Item
+            onClick={run(() =>
+              Promise.all(
+                pdfDanceIds(props.targets).map((id) => api.invoke('library:openNotesPdf', id))
+              )
+            )}
+          >
             Open PDF
           </Menu.Item>
         )}
-        {dances.length > 1 && item.kind === 'track' && (
+        {dances.length > 1 && item.kind === 'track' && props.itemIds.length < 2 && (
           <>
             <Menu.Label>Dance</Menu.Label>
             {dances.map((d) => (
@@ -82,19 +92,13 @@ function ItemMenu(props: {
             <Menu.Divider />
           </>
         )}
-        {item.kind === 'track' && (
-          <Menu.Item
-            onClick={run(() => api.invoke('library:setFavorite', [item.fileId], !item.isFavorite))}
-          >
-            {item.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-          </Menu.Item>
-        )}
+        {props.targets.length > 0 && <FavoriteItems targets={props.targets} />}
         <Menu.Item onClick={run(() => api.invoke('programs:addStop', program!.id, item.id))}>
           Insert STOP before
         </Menu.Item>
         <Menu.Item
           color="red"
-          onClick={run(() => api.invoke('programs:removeItems', program!.id, [item.id]))}
+          onClick={run(() => api.invoke('programs:removeItems', program!.id, props.itemIds))}
         >
           Remove
         </Menu.Item>
@@ -116,7 +120,9 @@ export default function ProgramList(): React.JSX.Element {
   const [renaming, setRenaming] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [choices, setChoices] = useState<DanceChoice[]>([])
+  const selection = useProgram((s) => s.selection)
   const items = program?.items ?? []
+  const chosen = new Set(selection.ids)
 
   const act = (action: () => Promise<unknown>): void =>
     void action()
@@ -153,6 +159,55 @@ export default function ProgramList(): React.JSX.Element {
       e.preventDefault()
       addFiles(getDraggedFiles(e.dataTransfer), before)
     }
+  }
+
+  // An unselected item becomes the whole selection when dragged; a selected one drags them all.
+  const startDrag = (e: React.DragEvent, id: number): void => {
+    if (!chosen.has(id)) programStore.getState().selectItem(id, 'single')
+    const ids = selectedInOrder(
+      programStore.getState().selection,
+      items.map((i) => i.id)
+    )
+    setDraggedItems(e.dataTransfer, ids)
+    if (ids.length > 1) {
+      const image = document.createElement('div')
+      image.className = classes.dragImage
+      image.textContent = `${ids.length} items`
+      document.body.appendChild(image)
+      e.dataTransfer.setDragImage?.(image, 0, 0)
+      setTimeout(() => image.remove(), 0)
+    }
+  }
+
+  // What a row's star, menu and ✕ act on: the whole selection when the row is in it, else the row.
+  const actOn = (id: number): number[] =>
+    chosen.has(id)
+      ? selectedInOrder(
+          selection,
+          items.map((i) => i.id)
+        )
+      : [id]
+  const favoriteTargets = (id: number): RowTarget[] => {
+    const ids = new Set(actOn(id))
+    return items.flatMap((i) =>
+      i.kind === 'track' && ids.has(i.id)
+        ? [
+            {
+              fileId: i.fileId,
+              isFavorite: i.isFavorite,
+              danceId: i.danceId,
+              hasNotesPdf: i.hasNotesPdf
+            }
+          ]
+        : []
+    )
+  }
+
+  const click = (e: React.MouseEvent, id: number): void => {
+    if ((e.target as HTMLElement).closest('button')) return // a row's star, ✕ or ⋯
+    programStore
+      .getState()
+      .selectItem(id, e.shiftKey ? 'range' : e.metaKey || e.ctrlKey ? 'toggle' : 'single')
   }
 
   const over = (e: React.DragEvent, target: number | 'end'): void => {
@@ -218,11 +273,24 @@ export default function ProgramList(): React.JSX.Element {
           {error}
         </Text>
       )}
-      <div className={classes.list} role="list" aria-label="Program items">
+      <div
+        className={classes.list}
+        role="listbox"
+        aria-multiselectable="true"
+        aria-label="Program items"
+        onClick={(e) => {
+          // Clicks in a row's portaled menu bubble here through React but are not in the list.
+          const target = e.target as HTMLElement
+          if (e.currentTarget.contains(target) && !target.closest('[role=option]')) {
+            programStore.getState().clearSelection()
+          }
+        }}
+      >
         {items.map((item, i) => (
           <div
             key={item.id}
-            role="listitem"
+            role="option"
+            aria-selected={chosen.has(item.id)}
             className={[
               classes.row,
               i === 0 ? classes.next : '',
@@ -231,7 +299,8 @@ export default function ProgramList(): React.JSX.Element {
             ].join(' ')}
             data-removed={item.kind === 'track' && item.isRemoved ? 'true' : undefined}
             draggable
-            onDragStart={(e) => setDraggedItems(e.dataTransfer, [item.id])}
+            onClick={(e) => click(e, item.id)}
+            onDragStart={(e) => startDrag(e, item.id)}
             onDragOver={(e) => {
               e.stopPropagation()
               over(e, item.id)
@@ -254,6 +323,7 @@ export default function ProgramList(): React.JSX.Element {
                   fileId={item.fileId}
                   label={item.label}
                   isFavorite={item.isFavorite}
+                  targets={favoriteTargets(item.id)}
                 />
                 {item.isMissing && (
                   <Text span c="red" aria-label="File missing" title="The file can't be found">
@@ -281,11 +351,18 @@ export default function ProgramList(): React.JSX.Element {
               className={classes.remove}
               aria-label={`Remove ${item.kind === 'stop' ? 'STOP / TEACHING' : item.label}`}
               title="Remove from the program"
-              onClick={() => act(() => api.invoke('programs:removeItems', program!.id, [item.id]))}
+              onClick={() =>
+                act(() => api.invoke('programs:removeItems', program!.id, actOn(item.id)))
+              }
             >
               ✕
             </ActionIcon>
-            <ItemMenu item={item} onError={setError} />
+            <ItemMenu
+              item={item}
+              itemIds={actOn(item.id)}
+              targets={favoriteTargets(item.id)}
+              onError={setError}
+            />
           </div>
         ))}
         <div className={classes.end}>

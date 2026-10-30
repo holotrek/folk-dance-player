@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { IDLE_PLAYER_STATE, type ProgramDetail } from '@shared/program'
 import { defaultProgramName } from '@renderer/program/program-name'
+import { EMPTY_SELECTION } from '@renderer/program/selection'
 import { createProgramStore, type ProgramStore } from '@renderer/program/program-store'
 import { createFakeApi } from '../fake-api'
 
@@ -8,8 +9,10 @@ const detail: ProgramDetail = { id: 5, name: 'Set', items: [{ id: 1, kind: 'stop
 const summaries = [{ id: 5, name: 'Set', updatedAt: '2026-10-14T00:00:00Z', unplayedCount: 0 }]
 
 let store: ProgramStore
+let current: ProgramDetail = detail // what programs:get answers
 let stop: () => void = () => undefined
 afterEach(() => {
+  current = detail
   stop()
   vi.useRealTimers()
 })
@@ -18,7 +21,7 @@ function setup(programId: number | null = 5) {
   const fake = createFakeApi({
     'player:getState': { ...IDLE_PLAYER_STATE, programId },
     'programs:list': summaries,
-    'programs:get': detail,
+    'programs:get': () => current,
     'programs:played': [],
     'programs:create': 9,
     'programs:setCurrent': undefined
@@ -84,5 +87,50 @@ describe('program store', () => {
 
   test('a program’s default name is its date', () => {
     expect(defaultProgramName(new Date(2026, 9, 13))).toBe('Tue Oct 13')
+  })
+  describe('selection', () => {
+    const three: ProgramDetail = {
+      id: 5,
+      name: 'Set',
+      items: [1, 2, 3].map((id) => ({ id, kind: 'stop' as const }))
+    }
+    const loaded = async () => {
+      current = three
+      const fake = setup()
+      stop = store.getState().watch()
+      await vi.waitFor(() => expect(store.getState().program).toEqual(three))
+      return fake
+    }
+
+    test('selecting items follows the loaded program’s order', async () => {
+      await loaded()
+      store.getState().selectItem(1, 'single')
+      store.getState().selectItem(3, 'range')
+      expect(store.getState().selection.ids).toEqual([1, 2, 3])
+    })
+
+    test('an item that leaves the program leaves the selection', async () => {
+      const fake = await loaded()
+      store.getState().selectItem(1, 'single')
+      store.getState().selectItem(3, 'toggle')
+      current = { ...three, items: three.items.slice(0, 2) }
+      fake.emit('programs:changed', null)
+      await vi.waitFor(() => expect(store.getState().selection.ids).toEqual([1]))
+    })
+
+    test('loading a program with no matching items clears the selection', async () => {
+      const fake = await loaded()
+      store.getState().selectItem(2, 'single')
+      current = { id: 6, name: 'Other', items: [{ id: 9, kind: 'stop' }] }
+      fake.emit('programs:changed', null)
+      await vi.waitFor(() => expect(store.getState().selection).toEqual(EMPTY_SELECTION))
+    })
+
+    test('clearSelection empties it', async () => {
+      await loaded()
+      store.getState().selectItem(2, 'single')
+      store.getState().clearSelection()
+      expect(store.getState().selection).toEqual(EMPTY_SELECTION)
+    })
   })
 })

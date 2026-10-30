@@ -30,6 +30,10 @@
   background: var(--mantine-color-default-hover);
 }
 
+.row[aria-selected='true'] {
+  background: var(--mantine-primary-color-light);
+}
+
 .next {
   font-weight: 600;
 }
@@ -74,6 +78,8 @@
   opacity: 0;
 }
 
+.row[aria-selected='true'] .options,
+.row[aria-selected='true'] .remove,
 .row:hover .options,
 .row:hover .remove,
 .options[aria-expanded='true'],
@@ -105,4 +111,15 @@
 /* A song removed from the library (sync spec §6.4), still in the program or its history. */
 .row[data-removed='true'] {
   opacity: 0.55;
+}
+
+/* The drag image of several items: drawn off-screen, then removed. */
+.dragImage {
+  position: absolute;
+  top: -1000px;
+  padding: 4px 10px;
+  border-radius: var(--mantine-radius-md);
+  background: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-white);
+  font-size: var(--mantine-font-size-sm);
 }

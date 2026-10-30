@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { NavLink } from '@mantine/core'
 import type { PlaylistFolder } from '@shared/apple-sync'
 import type { RendererApi } from '@shared/contract'
@@ -32,22 +32,30 @@ export function buildTree(
   return { folders: top, playlists: loose }
 }
 
-// Which folders are open, by persistent ID, saved in the playlistFolders.open setting.
+// Which folders are open, by persistent ID, saved in the playlistFolders.open setting. The saved
+// list is read once; if a folder was toggled before it arrived, the toggles win. `latest` is the
+// current set, so two quick clicks both count.
 export function useOpenFolders(api: RendererApi): [Set<string>, (id: string) => void] {
   const [open, setOpen] = useState<Set<string>>(new Set())
+  const latest = useRef<Set<string>>(open)
+  const toggled = useRef(false)
   useEffect(() => {
     let live = true
     void api.invoke('settings:getAll').then((s) => {
-      if (live) setOpen(new Set(s['playlistFolders.open']))
+      if (!live || toggled.current) return
+      latest.current = new Set(s['playlistFolders.open'])
+      setOpen(latest.current)
     })
     return () => {
       live = false
     }
   }, [api])
   const toggle = (id: string): void => {
-    const next = new Set(open)
+    toggled.current = true
+    const next = new Set(latest.current)
     if (next.has(id)) next.delete(id)
     else next.add(id)
+    latest.current = next
     setOpen(next)
     void api.invoke('settings:set', 'playlistFolders.open', [...next])
   }

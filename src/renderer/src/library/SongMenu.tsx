@@ -2,6 +2,7 @@ import { ActionIcon, Menu } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { errorMessage } from '../ipc-error'
 import { useEditSong } from '../navigation'
+import { favoriteIds, pdfDanceIds, type RowTarget } from './row-targets'
 import { useLibraryApi } from './LibraryProvider'
 
 // A row's right-click opens its "⋯" menu (the button carries `data-options`).
@@ -21,10 +22,20 @@ export default function SongMenu(props: {
   hasNotesPdf: boolean
   label: string
   isFavorite: boolean
+  targets?: RowTarget[] // the songs the favorites items act on; this song alone by default
   className?: string
 }): React.JSX.Element {
   const api = useLibraryApi()
   const editSong = useEditSong()
+  const targets = props.targets ?? [
+    {
+      fileId: props.fileId,
+      isFavorite: props.isFavorite,
+      danceId: props.danceId,
+      hasNotesPdf: props.hasNotesPdf
+    }
+  ]
+  const pdfs = pdfDanceIds(targets)
   return (
     <Menu position="right-start" withinPortal>
       <Menu.Target>
@@ -43,24 +54,42 @@ export default function SongMenu(props: {
         </ActionIcon>
       </Menu.Target>
       <Menu.Dropdown>
-        <Menu.Item onClick={() => editSong(props.songId)}>Edit details</Menu.Item>
-        {props.hasNotesPdf && props.danceId !== null && (
+        {targets.length < 2 && (
+          <Menu.Item onClick={() => editSong(props.songId)}>Edit details</Menu.Item>
+        )}
+        {pdfs.length > 0 && (
           <Menu.Item
-            onClick={() =>
-              void api
-                .invoke('library:openNotesPdf', props.danceId!)
-                .catch((err) => notifications.show({ color: 'red', message: errorMessage(err) }))
-            }
+            onClick={() => {
+              for (const danceId of pdfs) {
+                void api
+                  .invoke('library:openNotesPdf', danceId)
+                  .catch((err) => notifications.show({ color: 'red', message: errorMessage(err) }))
+              }
+            }}
           >
             Open PDF
           </Menu.Item>
         )}
-        <Menu.Item
-          onClick={() => void api.invoke('library:setFavorite', [props.fileId], !props.isFavorite)}
-        >
-          {props.isFavorite ? 'Remove from favorites' : 'Add to favorites'}
-        </Menu.Item>
+        <FavoriteItems targets={targets} />
       </Menu.Dropdown>
     </Menu>
+  )
+}
+
+// "Add to favorites" and/or "Remove from favorites": both for a mixed selection, each applying to
+// all the songs.
+export function FavoriteItems(props: { targets: RowTarget[] }): React.JSX.Element {
+  const api = useLibraryApi()
+  const ids = favoriteIds(props.targets)
+  const set = (favorite: boolean) => () => void api.invoke('library:setFavorite', ids, favorite)
+  return (
+    <>
+      {props.targets.some((t) => !t.isFavorite) && (
+        <Menu.Item onClick={set(true)}>Add to favorites</Menu.Item>
+      )}
+      {props.targets.some((t) => t.isFavorite) && (
+        <Menu.Item onClick={set(false)}>Remove from favorites</Menu.Item>
+      )}
+    </>
   )
 }

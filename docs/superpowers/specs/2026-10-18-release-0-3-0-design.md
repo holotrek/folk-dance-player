@@ -43,6 +43,8 @@ built on its own.
 - No new way to import music, no Windows work, and no change to Apple Music sync.
 - Keyboard shortcuts for program selection (select all, delete) and dragging program items to
   playlists are not part of multi-select (§3.7). They are natural follow-ups.
+- **After 0.3.0 (to do):** Delete (and Backspace) removing the selected program items. Delete does
+  not remove a single item today either, so multi-select does not add it; do both together.
 
 ### Anti-goals
 
@@ -63,7 +65,7 @@ built on its own.
 | 3.5 | "Same as song" for a dance's name | Song editor | Built (Plan 14) |
 | 3.6 | A PDF attached to a dance, opened from the editor or any row's menu | Song editor, row menus, `dance_prefs` | Built (Plan 15, PR 5a; Plan 16) |
 | 3.7 | An image as an alternative to the Canva slide | Song editor, projector | Built (Plan 15, PR 5b) |
-| 3.8 | Select several program items and move them together | Program list | Planned |
+| 3.8 | Select several program items and move them together | Program list | Built (Plan 17) |
 | 3.9 | Program total time and ending time | Sidebar, Program page, projector | Planned |
 | 3.10 | Previously played reads oldest to newest and stays at the bottom | Program page, projector, `history.ts` | Planned |
 | 3.11 | End Program, then Start New Program | Program list, sidebar | Planned |
@@ -319,6 +321,25 @@ the projector shows the chosen source; an image dance never calls the live view;
   **cmd/ctrl-click** adds or removes one.
 - **Click and drag a selected item to move the whole selection.** The items land at the drop spot
   **in the order they were originally in**, and **stay selected**.
+
+**Actions on a selection (decided 2026-10-30, after the first build).** A row's star, its "⋯"
+menu and (in the program) ✕ act on the **whole selection when the row is part of it**, and on the
+row alone otherwise. This holds in the program list, the Music page's table and the Program page's
+library list. Holding has no selection until §3.12 and is unchanged.
+
+- **Star:** the clicked star's state sets the direction for every selected song: clicking an
+  unstarred star favorites all, clicking a starred one unfavorites all.
+- **Favorites in the menu:** "Add to favorites" shows when any selected song is not a favorite,
+  "Remove from favorites" when any is; a mixed selection shows both, and each applies to all.
+- **✕ and Remove (program):** remove every selected item, STOP markers included.
+- **Edit details:** hidden while more than one item is selected (there is no multi-edit).
+- **Insert STOP before:** always goes before the item the menu was used on, whatever is
+  selected. (A smarter rule for non-consecutive selections, putting it before the start of the
+  selected run, was built and then dropped as confusing: 2026-10-30.)
+- **Open PDF:** shown when any selected item's dance has a PDF; it opens every available PDF,
+  once per dance, in program order.
+- **Per-item dance choice:** hidden while more than one item is selected.
+- Right-click and the "⋯" button do not change the selection.
 
 **How (today).** The drag payload for program items is already a list: `setDraggedItems(…,
 itemIds[])` and `getDraggedItems` (`library/drag.ts`), and `moveBefore(order, moving, before)`

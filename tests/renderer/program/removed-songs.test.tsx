@@ -20,8 +20,8 @@ describe('removed songs in program history', () => {
     })
     renderWithLibrary(<ProgramList />, fake.api)
     await screen.findByText('Sârba')
-    const rows = within(screen.getByRole('list', { name: 'Program items' })).getAllByRole(
-      'listitem'
+    const rows = within(screen.getByRole('listbox', { name: 'Program items' })).getAllByRole(
+      'option'
     )
     expect(rows[1]).toHaveAttribute('data-removed', 'true')
     expect(within(rows[1]).getByText('removed')).toBeInTheDocument()
