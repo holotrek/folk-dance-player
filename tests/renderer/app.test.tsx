@@ -19,6 +19,7 @@ function setup(extra: Record<string, unknown> = {}) {
   const fake = createFakeApi({
     'player:getState': playing(hora),
     'player:pause': undefined,
+    'library:holding': [], // the Program page's Holding panel
     'app:getInfo': { version: '0.1.0', dbPath: '/data/fdp.sqlite', schemaVersion: 2 },
     ...extra
   })

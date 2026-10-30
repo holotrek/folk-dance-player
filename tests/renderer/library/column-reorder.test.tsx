@@ -19,6 +19,7 @@ const playlists: PlaylistSummary[] = [
 function setup(page: 'music' | 'program', settings: Partial<Settings> = {}) {
   const fake = createFakeApi({
     'library:list': [],
+    'library:holding': [],
     'library:stats': { fileCount: 0 },
     'library:song': null,
     'playlists:list': playlists,
