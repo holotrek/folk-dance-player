@@ -20,7 +20,7 @@ export function logPlay(db: DatabaseSync, entry: PlayLogEntry): number {
 
 type PlayedRow = { logId: number; kind: PlayKind; playedAt: string } & Partial<TrackRow>
 
-// "Previously played" for a program (spec §6.2): its play log, newest first, each with the
+// "Previously played" for a program (spec §6.2): its play log, oldest first, each with the
 // dance it was played as.
 export function listPlayed(db: DatabaseSync, programId: number): PlayedEntry[] {
   const rows = db
@@ -31,7 +31,7 @@ export function listPlayed(db: DatabaseSync, programId: number): PlayedEntry[] {
        LEFT JOIN songs s ON s.file_id = f.id
        ${trackJoins('l.dance_id')}
        WHERE l.program_id = ?
-       ORDER BY l.played_at DESC, l.id DESC`
+       ORDER BY l.played_at ASC, l.id ASC`
     )
     .all(programId) as unknown as PlayedRow[]
   return rows.map(({ logId, kind, playedAt, ...track }) => ({

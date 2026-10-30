@@ -71,14 +71,18 @@ export interface ProjectorSnapshot {
   hasProgram: boolean
   middle: ProjectorMiddle | null
   upcoming: UpcomingRow[]
-  played: ProjectorEntry[] // newest first
+  played: ProjectorEntry[] // oldest first, so the newest is last
+  // The time that remains after the middle song (program-time.ts), for the footer's ending time;
+  // null while there is nothing to show.
+  tailMs: number | null
 }
 
 export const EMPTY_SNAPSHOT: ProjectorSnapshot = {
   hasProgram: false,
   middle: null,
   upcoming: [],
-  played: []
+  played: [],
+  tailMs: null
 }
 
 // The red elapsed-time line, sent separately (about 4 times a second) from the snapshot.

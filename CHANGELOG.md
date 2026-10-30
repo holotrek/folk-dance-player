@@ -10,6 +10,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Each program shows its **total play time** in the sidebar. The Program page shows the total and when the program will **end**, and the projector shows a quiet “Ending about 9:42 PM” in its footer. Auto-continue seconds are included, songs missing from disk are left out, and pauses at STOP markers are not counted (the Program page says so).
+- **Previously played** now reads oldest to newest, so previous, now playing and up next read down the screen as one list. The Program page's list stays at the newest song unless you scroll up, and the projector shows the most recent song just above Now Playing.
+- **End Program** (in the Program page's header) clears the program and Previously played from the screen. The program stays saved in the sidebar, with what was played. With no program loaded, **Start New Program** asks for a name and starts one.
 - Select several items in the program (click, shift-click for a range, cmd/ctrl-click to add or remove one) and drag them together; they land in the order they had and stay selected.
 - With several songs selected (program, Music page, Program page's library list), the star, **Add to / Remove from favorites** and, in the program, ✕ and **Remove** act on all of them. A mixed selection offers both favorites choices; **Open PDF** opens every PDF among them; **Edit details** and the per-item dance choice are hidden while more than one is selected.
 - Give a dance a slide **image** instead of, or as well as, a Canva slide (song editor → **Upload image…**). When it has both, choose which one the projector shows. An image slide works offline.

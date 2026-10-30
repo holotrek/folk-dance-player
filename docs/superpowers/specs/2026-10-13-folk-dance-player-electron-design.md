@@ -273,7 +273,7 @@ PROGRAMS                  [+]
 - **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
 - **With Apple Music sync on** (sync spec §6.2, §6.3): LIBRARY gains **Removed from Apple Music (N)** while songs wait for review (Keep, Remove, Keep all, Remove all). PLAYLISTS shows Music's folders as collapsible groups and Music's playlists as read-only mirrors, marked with a note icon, before the local playlists. A mirror's only option is **Duplicate as my playlist**; dropping songs on it says "Edit this playlist in Music."
 - **Programs** are loaded only from the sidebar; there is no dropdown.
-  - Each entry shows how many songs are left to play.
+  - Each entry shows how many songs are left to play, and under it the **total play time** of those songs (`M:SS`, or `H:MM:SS` from an hour up), with the auto-continue seconds added once for each gap between two songs with no STOP between them.
   - Loading another program while a song plays or counts down asks first ("Load another program?"), because the next song will come from it.
   - The search box filters by name as you type.
   - `[+]` asks for a name, prefilled with today's date ("Tue Oct 14"), creates the program and loads it.
@@ -310,8 +310,10 @@ PROGRAMS                  [+]
   - When nothing is playing, the bar shows what's next ("Next up: …", "Starting in N…", or "Next: … in N…").
   - Previews and replays are marked as such.
   - A warning (a skipped missing file, a file that can't be played) appears under the bar until dismissed. It is never shown on the projector.
-- **Previously played:** the play log for the current program, newest first. It scrolls.
+- **Previously played:** the play log for the current program, oldest first, so the newest is last. It scrolls and stays at the bottom: new songs scroll into view while you are at (or within two rows of) the bottom, and are not forced on you if you scrolled up to look at an earlier one.
 - **Program list:** only **unplayed** items, in order. Played items stay in storage (`played_at`) but are not shown here.
+  - **Times** (header): the same **Total play time**, and **Ending about 9:42 PM** (now, plus what is left of the song that is loaded, plus the rest of the program and its auto-continue gaps), centered between the title and the buttons when the panel is wide, on a centered line of their own when it is narrow. STOP markers add no time, so the ending time assumes no pauses and says "if no pauses" when the program has a STOP; the playback speed is ignored. Missing and removed songs are left out. The clock refreshes once a minute: the ending time stays steady while a song plays and moves later while paused.
+  - **End Program** (header, after Add selected) unloads the program: the list and Previously played go empty, and the program, its order and its play log stay saved in the sidebar. It asks nothing; a song that is playing finishes and nothing follows it. With no program loaded the list shows **Start New Program**, which opens the sidebar's New program dialog (name, then Create).
   - **Reordering and selecting:** drag and drop. Click selects an item, shift-click a range, cmd/ctrl-click adds or removes one; dragging a selected item moves the whole selection together, in its original order, and it stays selected (dragging an unselected item moves only that one). A click in the empty space clears the selection. Double-clicking an item still does nothing. With a selection, an item's star, its menu's favorites choices, ✕ and Remove act on every selected item (a mixed selection offers both Add to and Remove from favorites; the clicked star's state sets the direction), and Edit details and the per-item dance choice are hidden while several are selected. Insert STOP before always goes before the item it was used on, and Open PDF opens every PDF among them (once per dance). The Music page's table and the Program page's library list behave the same for the star and the menu.
   - **Adding:** drag songs in from the library, holding, playlists or previously played (dropped on an item, they go before it; below the list, at the end), or use the ➕ button (adds the selected library songs at the end). Each item takes the song's default dance; when an added song has more than one dance, a "Which dance?" dialog asks, with the default preselected (closing it keeps the defaults).
   - **Each item's menu** ("⋯" or right-click) has its options.
@@ -476,6 +478,8 @@ With a slide:
 │  Kendime                             Turkey │
 └─────────────────────────────────────────────┘
 ```
+
+The projector's footer has one quiet line, "Ending about 9:42 PM" (the same time; never the total, and without the pauses note). Previously played reads oldest to newest and is anchored to the bottom of its area, so the most recent song is just above Now Playing and, when there are more than fit, the oldest fall off the top (the projector can't be scrolled).
 
 Without a slide, previously played takes the full width of the top row and includes country:
 

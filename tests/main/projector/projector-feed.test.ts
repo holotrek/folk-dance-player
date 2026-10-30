@@ -170,7 +170,13 @@ describe('projector feed', () => {
 
   test('with no program loaded, the snapshot is empty', () => {
     const { feed } = setup()
-    expect(feed.snapshot()).toEqual({ hasProgram: false, middle: null, upcoming: [], played: [] })
+    expect(feed.snapshot()).toEqual({
+      hasProgram: false,
+      middle: null,
+      upcoming: [],
+      played: [],
+      tailMs: null
+    })
   })
 })
 

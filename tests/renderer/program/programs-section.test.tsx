@@ -3,12 +3,27 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import { IDLE_PLAYER_STATE, type ProgramSummary } from '@shared/program'
 import Sidebar from '@renderer/components/Sidebar'
+import NewProgramPrompt from '@renderer/program/NewProgramPrompt'
 import { createFakeApi } from '../fake-api'
 import { renderWithLibrary } from '../library/render-library'
 
 const programs: ProgramSummary[] = [
-  { id: 1, name: 'Tue Oct 14', updatedAt: '2026-10-14T20:00:00Z', unplayedCount: 12 },
-  { id: 2, name: 'Beginner night', updatedAt: '2026-10-07T20:00:00Z', unplayedCount: 1 }
+  {
+    id: 1,
+    name: 'Tue Oct 14',
+    updatedAt: '2026-10-14T20:00:00Z',
+    unplayedCount: 12,
+    unplayedDurationMs: 2_400_000,
+    unplayedGaps: 11
+  },
+  {
+    id: 2,
+    name: 'Beginner night',
+    updatedAt: '2026-10-07T20:00:00Z',
+    unplayedCount: 1,
+    unplayedDurationMs: 185_000,
+    unplayedGaps: 0
+  }
 ]
 
 afterEach(() => vi.useRealTimers())
@@ -44,6 +59,40 @@ describe('Programs in the sidebar', () => {
       )
     )
     expect(within(group()).getByText('Beginner night').closest('[aria-current]')).toBeNull()
+  })
+
+  test('under the song count, each program shows its total play time, with the auto-continue gaps', async () => {
+    setup()
+    expect(await within(group()).findByText('Total play time: 40:55')).toBeInTheDocument() // 40:00 + 11 × 5 s
+    expect(within(group()).getByText('Total play time: 3:05')).toBeInTheDocument()
+  })
+
+  test('the total leaves the gaps out when auto-continue is off', async () => {
+    setup({
+      'player:getState': {
+        ...IDLE_PLAYER_STATE,
+        programId: 1,
+        autoContinue: { enabled: false, seconds: 5 }
+      }
+    })
+    expect(await within(group()).findByText('Total play time: 40:00')).toBeInTheDocument()
+  })
+
+  test('a program with nothing left to play shows no total', async () => {
+    setup({
+      'programs:list': [
+        {
+          id: 3,
+          name: 'Done',
+          updatedAt: '2026-10-14T20:00:00Z',
+          unplayedCount: 0,
+          unplayedDurationMs: 0,
+          unplayedGaps: 0
+        }
+      ]
+    })
+    expect(await within(group()).findByText('Done')).toBeInTheDocument()
+    expect(within(group()).queryByText(/Total play time/)).toBeNull()
   })
 
   test('clicking a program loads it', async () => {
@@ -113,5 +162,35 @@ describe('Programs in the sidebar', () => {
     const confirm = await screen.findByRole('dialog', { name: 'Delete program?' })
     await userEvent.click(within(confirm).getByRole('button', { name: 'Delete' }))
     expect(fake.callsTo('programs:delete')).toEqual([[2]])
+  })
+
+  test('NewProgramPrompt, shared with the Program page, names, creates and loads a program', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 14, 12))
+    const onClose = vi.fn()
+    const fake = createFakeApi({
+      'programs:create': (name: string) => {
+        if (name === 'Taken') throw new Error('That name is taken.')
+        return 3
+      },
+      'programs:setCurrent': undefined,
+      'player:getState': { ...IDLE_PLAYER_STATE, programId: null },
+      'programs:list': []
+    })
+    renderWithLibrary(<NewProgramPrompt opened onClose={onClose} />, fake.api)
+    const dialog = await screen.findByRole('dialog', { name: 'New program' })
+    const name = within(dialog).getByRole('textbox')
+    expect(name).toHaveValue('Wed Oct 14')
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Taken')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+    expect(await within(dialog).findByText('That name is taken.')).toBeInTheDocument()
+    expect(onClose).not.toHaveBeenCalled()
+    await userEvent.clear(name)
+    await userEvent.type(name, 'Beginner night')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(fake.callsTo('programs:setCurrent')).toEqual([[3]]))
+    expect(fake.callsTo('programs:create').at(-1)).toEqual(['Beginner night'])
+    expect(onClose).toHaveBeenCalled()
   })
 })

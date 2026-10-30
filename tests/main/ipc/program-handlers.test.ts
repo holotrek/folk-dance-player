@@ -75,6 +75,44 @@ describe('program handlers', () => {
     expect(flagged.map((f) => f.path)).toEqual(['/m/kolo.mp3'])
   })
 
+  test('unloading a program leaves it, its items and its log saved, and loads again as it was', async () => {
+    const { h, settings, songs } = setup()
+    const p = await h['programs:create']('Set')
+    await h['programs:addTracks'](p, [songs.hora.fileId, songs.kolo.fileId], null)
+    await h['programs:setCurrent'](p)
+    await h['player:play']() // Hora starts, so it is played and logged
+    await h['player:stop']()
+
+    await h['programs:setCurrent'](null)
+    expect(settings.get('currentProgramId')).toBeNull()
+    const unloaded = await h['player:getState']()
+    expect(unloaded.programId).toBeNull()
+    expect(unloaded.nextUp).toBeNull()
+    expect((await h['programs:get'](p))?.items.map((i) => i.kind === 'track' && i.title)).toEqual([
+      'Kolo'
+    ])
+    expect((await h['programs:played'](p)).map((e) => e.track?.title)).toEqual(['Hora'])
+
+    await h['programs:setCurrent'](p)
+    expect((await h['player:getState']()).nextUp).toMatchObject({ title: 'Kolo' })
+  })
+
+  test('unloading while a song plays lets it play on, and nothing follows it', async () => {
+    const { h, songs } = setup()
+    const p = await h['programs:create']('Set')
+    await h['programs:addTracks'](p, [songs.hora.fileId, songs.kolo.fileId], null)
+    await h['programs:setCurrent'](p)
+    await h['player:play']()
+    const playing = (await h['player:getState']()).current!
+    await h['programs:setCurrent'](null)
+    expect(await h['player:getState']()).toMatchObject({
+      status: 'playing',
+      current: { playId: playing.playId, track: { title: 'Hora' } }
+    })
+    await h['player:ended'](playing.playId)
+    expect(await h['player:getState']()).toMatchObject({ status: 'idle', current: null })
+  })
+
   test('deleting the current program unloads it', async () => {
     const { h, settings } = setup()
     const p = await h['programs:create']('Set')
@@ -94,7 +132,7 @@ describe('program handlers', () => {
     expect(state).toMatchObject({ status: 'playing', current: { track: { title: 'Hora' } } })
     await h['player:ended'](state.current!.playId)
     expect((await h['player:getState']()).current?.track.title).toBe('Kolo')
-    expect((await h['programs:played'](p)).map((e) => e.track?.title)).toEqual(['Kolo', 'Hora'])
+    expect((await h['programs:played'](p)).map((e) => e.track?.title)).toEqual(['Hora', 'Kolo'])
   })
 
   test('◀◀ restarts the current song through the player', async () => {

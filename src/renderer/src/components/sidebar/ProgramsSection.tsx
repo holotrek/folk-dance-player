@@ -3,8 +3,9 @@ import { ActionIcon, Group, Menu, NavLink, ScrollArea, Text } from '@mantine/cor
 import SearchInput from '../SearchInput'
 import { useDebouncedValue } from '@mantine/hooks'
 import type { ProgramSummary } from '@shared/program'
+import { formatTotal, totalMs, type AutoContinue } from '@shared/program-time'
 import { useLibraryApi } from '../../library/LibraryProvider'
-import { defaultProgramName } from '../../program/program-name'
+import NewProgramPrompt from '../../program/NewProgramPrompt'
 import { useProgram } from '../../program/ProgramProvider'
 import ConfirmDialog from '../ConfirmDialog'
 import NamePrompt from '../NamePrompt'
@@ -17,6 +18,7 @@ const songs = (n: number): string => `${n} ${n === 1 ? 'song' : 'songs'} to play
 function ProgramEntry(props: {
   program: ProgramSummary
   current: boolean
+  autoContinue: AutoContinue // its gaps are part of the total play time
   onLoad: () => void
   onRename: () => void
   onDelete: () => void
@@ -34,7 +36,24 @@ function ProgramEntry(props: {
     >
       <NavLink
         label={p.name}
-        description={songs(p.unplayedCount)}
+        description={
+          <>
+            <Text span inherit display="block">
+              {songs(p.unplayedCount)}
+            </Text>
+            {p.unplayedCount > 0 && (
+              <Text span inherit display="block">
+                Total play time:{' '}
+                {formatTotal(
+                  totalMs(
+                    { durationMs: p.unplayedDurationMs, gaps: p.unplayedGaps },
+                    props.autoContinue
+                  )
+                )}
+              </Text>
+            )}
+          </>
+        }
         active={props.current}
         aria-current={props.current ? 'page' : undefined}
         onClick={props.onLoad}
@@ -71,13 +90,13 @@ export default function ProgramsSection(): React.JSX.Element {
   const api = useLibraryApi()
   const programs = useProgram((s) => s.programs)
   const currentId = useProgram((s) => s.player.programId)
+  const autoContinue = useProgram((s) => s.player.autoContinue)
   const setSearch = useProgram((s) => s.setSearch)
   const load = useProgram((s) => s.load)
   const [text, setText] = useState('')
   const [debounced] = useDebouncedValue(text, 150)
-  const [prompt, setPrompt] = useState<
-    { mode: 'create' } | { mode: 'rename'; program: ProgramSummary } | null
-  >(null)
+  const [creating, setCreating] = useState(false)
+  const [renaming, setRenaming] = useState<ProgramSummary | null>(null)
   const [deleting, setDeleting] = useState<ProgramSummary | null>(null)
   const [switching, setSwitching] = useState<ProgramSummary | null>(null)
   const busy = useProgram((s) => s.player.status !== 'idle')
@@ -98,7 +117,7 @@ export default function ProgramsSection(): React.JSX.Element {
           variant="subtle"
           size="sm"
           aria-label="New program"
-          onClick={() => setPrompt({ mode: 'create' })}
+          onClick={() => setCreating(true)}
         >
           +
         </ActionIcon>
@@ -123,24 +142,22 @@ export default function ProgramsSection(): React.JSX.Element {
               key={p.id}
               program={p}
               current={p.id === currentId}
+              autoContinue={autoContinue}
               onLoad={() => choose(p)}
-              onRename={() => setPrompt({ mode: 'rename', program: p })}
+              onRename={() => setRenaming(p)}
               onDelete={() => setDeleting(p)}
             />
           ))}
         </div>
       </ScrollArea>
+      <NewProgramPrompt opened={creating} onClose={() => setCreating(false)} />
       <NamePrompt
-        opened={prompt !== null}
-        title={prompt?.mode === 'rename' ? 'Rename program' : 'New program'}
-        initialValue={prompt?.mode === 'rename' ? prompt.program.name : defaultProgramName()}
-        submitLabel={prompt?.mode === 'rename' ? 'Save' : 'Create'}
-        onSubmit={async (name) => {
-          if (prompt?.mode === 'rename')
-            return api.invoke('programs:rename', prompt.program.id, name)
-          await load(await api.invoke('programs:create', name))
-        }}
-        onClose={() => setPrompt(null)}
+        opened={renaming !== null}
+        title="Rename program"
+        initialValue={renaming?.name ?? ''}
+        submitLabel="Save"
+        onSubmit={(name) => api.invoke('programs:rename', renaming!.id, name)}
+        onClose={() => setRenaming(null)}
       />
       <ConfirmDialog
         opened={switching !== null}

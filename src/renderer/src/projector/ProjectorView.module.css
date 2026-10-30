@@ -27,6 +27,26 @@
   overflow: hidden;
 }
 
+/* Oldest first, anchored to the bottom: the newest song sits just above Now Playing, and when
+   there are more than fit, the oldest fall off the top. The projector can't be scrolled. */
+.played {
+  display: flex;
+  flex-direction: column;
+}
+
+.played .list {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.slideRow .played .list {
+  margin-top: auto;
+}
+
 .middle {
   flex: 0 0 auto;
 }
@@ -204,4 +224,11 @@
   font-size: 4vh;
   color: #555;
   letter-spacing: 0.1em;
+}
+
+/* One quiet line at the bottom: when the program will end. */
+.ending {
+  flex: 0 0 auto;
+  font-size: 2.2vh;
+  color: #7a7a7a;
 }

@@ -1,7 +1,8 @@
 import { render, screen, within } from '@testing-library/react'
 import { act } from 'react'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { ProjectorEntry, ProjectorSnapshot } from '@shared/projector'
+import { formatClock } from '@shared/program-time'
 import ProjectorView from '@renderer/projector/ProjectorView'
 
 const pravo: ProjectorEntry = {
@@ -29,10 +30,86 @@ const playing: ProjectorSnapshot = {
     { kind: 'teaching' },
     { kind: 'dance', entry: hora }
   ],
-  played: [misirlou, hora]
+  played: [hora, misirlou],
+  tailMs: 20 * 60_000
 }
 
 const region = (name: string) => screen.getByRole('region', { name })
+
+describe('the ending time in the footer', () => {
+  const START = new Date(2026, 9, 30, 20, 0, 0)
+  const clocked = () => {
+    vi.useFakeTimers({ toFake: ['Date', 'setInterval', 'clearInterval'] })
+    vi.setSystemTime(START)
+  }
+  const footer = () => screen.queryByRole('contentinfo', { name: 'Ending time' })
+  afterEach(() => vi.useRealTimers())
+
+  test('shows when the program will end: what is left of the song, then the rest', () => {
+    clocked()
+    render(
+      <ProjectorView
+        snapshot={playing}
+        progress={{ playId: 4, positionMs: 60_000, durationMs: 180_000 }}
+      />
+    )
+    // 2:00 of Pravo is left, and 20:00 after it
+    expect(footer()).toHaveTextContent(
+      `Ending about ${formatClock(START.getTime() + 120_000 + 20 * 60_000)}`
+    )
+  })
+
+  test('while paused it moves later as the clock runs', () => {
+    clocked()
+    const paused: ProjectorSnapshot = {
+      ...playing,
+      middle: { kind: 'now', entry: pravo, playId: 4, paused: true }
+    }
+    render(
+      <ProjectorView
+        snapshot={paused}
+        progress={{ playId: 4, positionMs: 60_000, durationMs: 180_000 }}
+      />
+    )
+    act(() => void vi.advanceTimersByTime(3 * 60_000))
+    expect(footer()).toHaveTextContent(
+      `Ending about ${formatClock(START.getTime() + 3 * 60_000 + 120_000 + 20 * 60_000)}`
+    )
+  })
+
+  test('before the song reports progress, the rest of the program is what counts', () => {
+    clocked()
+    render(<ProjectorView snapshot={playing} progress={null} />)
+    expect(footer()).toHaveTextContent(`Ending about ${formatClock(START.getTime() + 20 * 60_000)}`)
+  })
+
+  test('a progress report for another play is ignored', () => {
+    clocked()
+    render(
+      <ProjectorView
+        snapshot={playing}
+        progress={{ playId: 99, positionMs: 60_000, durationMs: 180_000 }}
+      />
+    )
+    expect(footer()).toHaveTextContent(`Ending about ${formatClock(START.getTime() + 20 * 60_000)}`)
+  })
+
+  test('nothing is shown without a program or without a time', () => {
+    clocked()
+    const { rerender } = render(
+      <ProjectorView snapshot={{ ...playing, tailMs: null }} progress={null} />
+    )
+    expect(footer()).toBeNull()
+    rerender(<ProjectorView snapshot={{ ...playing, hasProgram: false }} progress={null} />)
+    expect(footer()).toBeNull()
+  })
+
+  test('never shows the total or the pauses note', () => {
+    clocked()
+    render(<ProjectorView snapshot={playing} progress={null} />)
+    expect(screen.queryByText(/Total play time|no pauses/)).toBeNull()
+  })
+})
 
 describe('projector view (spec §8.2)', () => {
   test('Now Playing: the dance large with its choreographer, ♪ the song below, the country right', () => {
@@ -71,13 +148,20 @@ describe('projector view (spec §8.2)', () => {
     expect(rows[1].querySelectorAll('svg')).toHaveLength(2) // ⌄ arrows pointing at the dance
   })
 
-  test('previously played is listed newest first with countries; a missing country is left blank', () => {
+  test('previously played is listed oldest first, the newest last, with countries; a missing country is left blank', () => {
     render(<ProjectorView snapshot={playing} progress={null} />)
     const rows = within(region('Previously played')).getAllByRole('listitem')
     expect(rows.map((r) => r.textContent)).toEqual([
-      'Misirlou',
-      'Hora Mare♪ Hora de la MunteRomania'
+      'Hora Mare♪ Hora de la MunteRomania',
+      'Misirlou'
     ])
+  })
+
+  test('the newest previously played song is last, in the section just above Now Playing', () => {
+    render(<ProjectorView snapshot={playing} progress={null} />)
+    expect(region('Previously played').nextElementSibling).toBe(region('Now playing'))
+    const rows = within(region('Previously played')).getAllByRole('listitem')
+    expect(rows.at(-1)).toHaveTextContent('Misirlou')
   })
 
   test('a paused or stopped song says so', () => {
@@ -116,7 +200,7 @@ describe('projector view (spec §8.2)', () => {
   test('a loaded program with nothing left, played or playing shows the logo, not a blank screen', () => {
     render(
       <ProjectorView
-        snapshot={{ hasProgram: true, middle: null, upcoming: [], played: [] }}
+        snapshot={{ hasProgram: true, middle: null, upcoming: [], played: [], tailMs: null }}
         progress={null}
       />
     )
@@ -127,7 +211,7 @@ describe('projector view (spec §8.2)', () => {
   test('with no program and nothing playing, only the app’s name', () => {
     render(
       <ProjectorView
-        snapshot={{ hasProgram: false, middle: null, upcoming: [], played: [] }}
+        snapshot={{ hasProgram: false, middle: null, upcoming: [], played: [], tailMs: null }}
         progress={null}
       />
     )
@@ -158,6 +242,14 @@ describe('projector view (spec §8.2)', () => {
       const top = screen.getByTestId('slide-row')
       expect(within(top).getByRole('region', { name: 'Previously played' })).toBeInTheDocument()
       expect(within(region('Now playing')).getByText('♪ Pusteno Ludo')).toBeInTheDocument()
+    })
+
+    test('beside the slide, previously played still reads oldest to newest', () => {
+      render(
+        <ProjectorView snapshot={{ ...withSlide, played: [hora, misirlou] }} progress={null} />
+      )
+      const rows = within(region('Previously played')).getAllByRole('listitem')
+      expect(rows.map((r) => r.textContent)).toEqual(['Hora Mare', 'Misirlou'])
     })
 
     test('beside the slide, previously played shows titles only (the column is narrow)', () => {

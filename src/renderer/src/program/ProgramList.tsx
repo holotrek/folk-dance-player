@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { ActionIcon, Badge, Button, Group, Menu, Text, Title } from '@mantine/core'
+import { ActionIcon, Badge, Button, Group, Menu, Stack, Text, Title } from '@mantine/core'
 import type { SongDance } from '@shared/library'
 import type { ProgramItem } from '@shared/program'
 import { PauseIcon } from '../components/icons'
 import NamePrompt from '../components/NamePrompt'
 import FavoriteToggle from '../library/FavoriteToggle'
+import ProgramTimes from './ProgramTimes'
+import NewProgramPrompt from './NewProgramPrompt'
 import DanceChoiceDialog, { type DanceChoice } from './DanceChoiceDialog'
 import { errorMessage } from '../ipc-error'
 import {
@@ -118,6 +120,7 @@ export default function ProgramList(): React.JSX.Element {
   const programId = useProgram((s) => s.player.programId)
   const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
   const [renaming, setRenaming] = useState(false)
+  const [starting, setStarting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [choices, setChoices] = useState<DanceChoice[]>([])
   const selection = useProgram((s) => s.selection)
@@ -231,8 +234,8 @@ export default function ProgramList(): React.JSX.Element {
       onDragLeave={() => setDropTarget(null)}
       onDrop={(e) => drop(e, null)}
     >
-      <Group justify="space-between" mb="xs" wrap="nowrap">
-        <Group gap={6} wrap="nowrap" style={{ minWidth: 0 }}>
+      <div className={classes.header}>
+        <Group gap={6} wrap="nowrap" className={classes.headerTitle}>
           <Title order={5} style={{ whiteSpace: 'nowrap' }}>
             {program ? `Program: ${program.name}` : 'Program'}
           </Title>
@@ -247,7 +250,10 @@ export default function ProgramList(): React.JSX.Element {
             </ActionIcon>
           )}
         </Group>
-        <Group gap={6} wrap="nowrap">
+        <div className={classes.times}>
+          <ProgramTimes />
+        </div>
+        <Group gap={6} wrap="nowrap" className={classes.headerButtons}>
           <Button
             size="compact-sm"
             variant="default"
@@ -266,8 +272,17 @@ export default function ProgramList(): React.JSX.Element {
           >
             ➕ Add selected
           </Button>
+          <Button
+            size="compact-sm"
+            variant="default"
+            disabled={programId === null}
+            title="Clear the program and Previously played from the screen; the program stays saved"
+            onClick={() => act(() => programStore.getState().load(null))}
+          >
+            End Program
+          </Button>
         </Group>
-      </Group>
+      </div>
       {error && (
         <Text c="red" size="sm" role="alert" mb="xs">
           {error}
@@ -366,15 +381,22 @@ export default function ProgramList(): React.JSX.Element {
           </div>
         ))}
         <div className={classes.end}>
-          {items.length === 0 && (
-            <Text size="sm" c="dimmed" p="sm">
-              {programId === null
-                ? 'No program loaded. Drag songs here to start one, or choose one in the sidebar.'
-                : 'Nothing left to play. Drag songs here, or select songs and use ➕ Add selected.'}
-            </Text>
-          )}
+          {items.length === 0 &&
+            (programId === null ? (
+              <Stack align="flex-start" gap="xs" p="sm">
+                <Button onClick={() => setStarting(true)}>Start New Program</Button>
+                <Text size="sm" c="dimmed">
+                  Or drag songs here, or choose a program in the sidebar.
+                </Text>
+              </Stack>
+            ) : (
+              <Text size="sm" c="dimmed" p="sm">
+                Nothing left to play. Drag songs here, or select songs and use ➕ Add selected.
+              </Text>
+            ))}
         </div>
       </div>
+      <NewProgramPrompt opened={starting} onClose={() => setStarting(false)} />
       <DanceChoiceDialog
         choices={choices}
         onClose={() => setChoices([])}

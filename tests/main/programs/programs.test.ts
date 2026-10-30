@@ -63,6 +63,30 @@ describe('programs', () => {
     expect(listPrograms(db, 'OCT').map((p) => p.name)).toEqual(['Tue Oct 14'])
   })
 
+  test('a program’s summary carries the unplayed songs’ time and the gaps between them', () => {
+    const setMs = (song: typeof hora, ms: number | null) =>
+      db.prepare('UPDATE files SET duration_ms = ? WHERE id = ?').run(ms, song.fileId)
+    setMs(hora, 180_000)
+    setMs(kolo, 120_000)
+    setMs(tune, 60_000)
+    const p = createProgram(db, 'Set')
+    addTracks(db, p, [hora.fileId, kolo.fileId])
+    addStop(db, p)
+    addTracks(db, p, [tune.fileId])
+    const summary = () => listPrograms(db).find((s) => s.id === p)!
+    // Hora and Kolo play back to back; the STOP removes the gap before Pusteno.
+    expect(summary()).toMatchObject({ unplayedDurationMs: 360_000, unplayedGaps: 1 })
+
+    markPlayed(db, getProgram(db, p)!.items[0].id) // Hora is played: only Kolo, STOP, Pusteno remain
+    expect(summary()).toMatchObject({ unplayedDurationMs: 180_000, unplayedGaps: 0 })
+
+    db.prepare('UPDATE files SET is_missing = 1 WHERE id = ?').run(tune.fileId)
+    expect(summary()).toMatchObject({ unplayedDurationMs: 120_000, unplayedGaps: 0 })
+
+    setMs(kolo, null) // no known duration counts as zero
+    expect(summary()).toMatchObject({ unplayedDurationMs: 0, unplayedGaps: 0 })
+  })
+
   test('the dances still to come: unplayed tracks in order, without STOP markers or played items', () => {
     const p = createProgram(db, 'Tonight')
     const [first] = addTracks(db, p, [hora.fileId, kolo.fileId, tune.fileId])

@@ -62,7 +62,8 @@ describe('projector snapshot', () => {
         { kind: 'dance', entry: { parts: kolo.parts, country: 'Country 2' } },
         { kind: 'dance', entry: { parts: tfilati.parts, country: 'Country 3' } }
       ],
-      played: [{ parts: hora.parts, country: 'Country 1' }]
+      played: [{ parts: hora.parts, country: 'Country 1' }],
+      tailMs: 2 * 180_000 + 2 * 5000
     })
   })
 
@@ -154,13 +155,52 @@ describe('projector snapshot', () => {
     expect(snap.upcoming).toEqual([])
   })
 
-  test('previously played lists previews and replays too, newest first; removed songs are left out', () => {
+  test('previously played keeps the log’s order (oldest first), with previews and replays; removed songs are left out', () => {
     const snap = buildProjectorSnapshot(
       state(),
       [],
-      [played(3, kolo, 'preview'), played(2, null), played(1, hora, 'replay')]
+      [played(1, hora, 'replay'), played(2, null), played(3, kolo, 'preview')]
     )
-    expect(snap.played.map((e) => e.parts.dance)).toEqual(['Kolo', 'Hora Mare'])
+    expect(snap.played.map((e) => e.parts.dance)).toEqual(['Hora Mare', 'Kolo'])
+  })
+
+  describe('the time that remains', () => {
+    const playingHora = (extra: Partial<PlayerState> = {}) =>
+      state({
+        status: 'playing',
+        current: { playId: 7, source: 'program', itemId: 1, track: hora, restarts: 0, logId: null },
+        ...extra
+      })
+
+    test('playing: the rest of the program and the gap after the song that is playing', () => {
+      const snap = buildProjectorSnapshot(playingHora(), [item(2, kolo), item(3, tfilati)], [])
+      expect(snap.tailMs).toBe(2 * 180_000 + 2 * 5000)
+    })
+
+    test('nothing playing: the next song is part of what remains, and a countdown adds its seconds', () => {
+      const countdown = { secondsLeft: 4, reason: 'continue' as const }
+      const snap = buildProjectorSnapshot(
+        state({ status: 'countdown', countdown }),
+        [item(2, kolo), item(3, tfilati)],
+        []
+      )
+      expect(snap.middle).toMatchObject({ kind: 'next' })
+      expect(snap.tailMs).toBe(2 * 180_000 + 5000 + 4000)
+    })
+
+    test('auto-continue off adds no gaps', () => {
+      const snap = buildProjectorSnapshot(
+        playingHora({ autoContinue: { enabled: false, seconds: 5 } }),
+        [item(2, kolo)],
+        []
+      )
+      expect(snap.tailMs).toBe(180_000)
+    })
+
+    test('no time without anything to show', () => {
+      expect(buildProjectorSnapshot(state({ programId: null }), [], []).tailMs).toBeNull()
+      expect(buildProjectorSnapshot(state(), [], []).tailMs).toBeNull()
+    })
   })
 
   test('the middle dance carries its slide, when it has one', () => {
@@ -193,7 +233,8 @@ describe('projector snapshot', () => {
       hasProgram: false,
       middle: null,
       upcoming: [],
-      played: []
+      played: [],
+      tailMs: null
     })
   })
 })

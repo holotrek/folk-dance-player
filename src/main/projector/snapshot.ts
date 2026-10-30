@@ -1,3 +1,4 @@
+import { tailMs } from '@shared/program-time'
 import type { PlayedEntry, PlayerState, ProgramItem, Track } from '@shared/program'
 import type {
   ProjectorEntry,
@@ -55,7 +56,8 @@ export function buildProjectorSnapshot(
         ...withSlide(current.track)
       },
       upcoming: upcomingRows(unplayed),
-      played: history
+      played: history,
+      tailMs: tailMs(unplayed, player)
     }
   }
   // Nothing loaded: the next song that will play is the middle; what's after it, the list.
@@ -72,6 +74,7 @@ export function buildProjectorSnapshot(
       ...withSlide(next)
     },
     upcoming: next ? upcomingRows(unplayed.slice(index + 1)) : [],
-    played: history
+    played: history,
+    tailMs: next ? tailMs(unplayed, player) : null
   }
 }

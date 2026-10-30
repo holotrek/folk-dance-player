@@ -177,8 +177,8 @@ describe('program list', () => {
     vi.useFakeTimers({ toFake: ['Date'] })
     vi.setSystemTime(new Date(2026, 9, 14, 12))
     const fake = setup({ loaded: false })
-    expect(await screen.findByText(/No program loaded/)).toBeInTheDocument()
-    fireEvent.drop(screen.getByText(/No program loaded/), files([201]))
+    expect(await screen.findByText(/Or drag songs here/)).toBeInTheDocument()
+    fireEvent.drop(screen.getByText(/Or drag songs here/), files([201]))
     await waitFor(() => expect(fake.callsTo('programs:addTracks')).toEqual([[6, [201], null]]))
     expect(fake.callsTo('programs:create')).toEqual([['Wed Oct 14']])
     expect(fake.callsTo('programs:setCurrent')).toEqual([[6]])
@@ -325,6 +325,57 @@ describe('program list', () => {
     expect(
       fake.calls.filter(([c]) => String(c).startsWith('player:') && c !== 'player:getState')
     ).toEqual([])
+  })
+})
+
+describe('the header’s times', () => {
+  test('sit between the title and the buttons', async () => {
+    setup()
+    const title = await screen.findByText('Program: Tue Oct 14')
+    const times = await screen.findByText(/Total play time/)
+    const buttons = screen.getByRole('button', { name: 'End Program' })
+    expect(title.compareDocumentPosition(times) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(times.compareDocumentPosition(buttons) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.getByText(/^Ending about /)).toBeInTheDocument()
+  })
+})
+
+describe('End Program and Start New Program', () => {
+  const endButton = () => screen.getByRole('button', { name: 'End Program' })
+
+  test('End Program unloads the program without asking, and removes nothing', async () => {
+    const fake = setup()
+    await screen.findByText('Hora')
+    await userEvent.click(endButton())
+    await waitFor(() => expect(fake.callsTo('programs:setCurrent')).toEqual([[null]]))
+    expect(fake.callsTo('programs:removeItems')).toEqual([])
+    expect(screen.queryByRole('dialog')).toBeNull()
+  })
+
+  test('End Program is disabled while no program is loaded', async () => {
+    setup({ loaded: false })
+    await screen.findByRole('button', { name: 'Start New Program' })
+    expect(endButton()).toBeDisabled()
+  })
+
+  test('with nothing loaded the list offers Start New Program', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 9, 14, 12))
+    const fake = setup({ loaded: false })
+    await userEvent.click(await screen.findByRole('button', { name: 'Start New Program' }))
+    expect(screen.queryByText(/No program loaded/)).toBeNull()
+    const dialog = await screen.findByRole('dialog', { name: 'New program' })
+    expect(within(dialog).getByRole('textbox')).toHaveValue('Wed Oct 14')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
+    await waitFor(() => expect(fake.callsTo('programs:create')).toEqual([['Wed Oct 14']]))
+    expect(fake.callsTo('programs:setCurrent')).toEqual([[6]])
+  })
+
+  test('a loaded program with nothing left still offers End Program', async () => {
+    setup({ programs: { ...program, items: [] } })
+    expect(await screen.findByText(/Nothing left to play/)).toBeInTheDocument()
+    expect(endButton()).toBeEnabled()
+    expect(screen.queryByRole('button', { name: 'Start New Program' })).toBeNull()
   })
 })
 

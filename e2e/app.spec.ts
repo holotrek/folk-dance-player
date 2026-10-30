@@ -2,7 +2,7 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { drag, launch, workspace, type Running } from './app'
+import { drag, dropInProgram, launch, workspace, type Running } from './app'
 
 // Spec §10.2's end-to-end tests. The file dialog is native, so music is imported through the
 // app's own import channel; everything after that goes through the windows.
@@ -44,11 +44,9 @@ test('import a folder, then search', async () => {
 })
 
 test('drag songs into a program, then reorder them', async () => {
-  const { page } = running
-  const program = page.getByRole('region', { name: 'Program' })
-  await drag(running.page, libraryRow('Hora'), program)
+  await dropInProgram(running.page, libraryRow('Hora'))
   await expect(programItems()).toHaveCount(1)
-  await drag(running.page, libraryRow('Kolo'), program)
+  await dropInProgram(running.page, libraryRow('Kolo'))
   await expect(programItems()).toHaveText([/Hora/, /Kolo/])
   await drag(
     running.page,
@@ -60,9 +58,8 @@ test('drag songs into a program, then reorder them', async () => {
 
 test('select two program items and drag them together', async () => {
   const { page } = running
-  const program = page.getByRole('region', { name: 'Program' })
   for (const title of ['Hora', 'Kolo', 'Tfilati']) {
-    await drag(page, libraryRow(title), program)
+    await dropInProgram(page, libraryRow(title))
     await expect(programItems()).toHaveCount(['Hora', 'Kolo', 'Tfilati'].indexOf(title) + 1)
   }
   const item = (title: string) => programItems().filter({ hasText: title })
@@ -75,9 +72,70 @@ test('select two program items and drag them together', async () => {
   await expect(item('Hora')).toHaveAttribute('aria-selected', 'false')
 })
 
+test('end a program, start a new one, and load the first again', async () => {
+  const { page } = running
+  await dropInProgram(page, libraryRow('Hora'))
+  await dropInProgram(page, libraryRow('Kolo'))
+  await page.getByRole('button', { name: 'Rename program' }).click()
+  await page.getByRole('dialog', { name: 'Rename program' }).getByLabel('Name').fill('Tuesday')
+  await page.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByText('Program: Tuesday')).toBeVisible()
+
+  await page.getByRole('button', { name: 'End Program' }).click()
+  await expect(page.getByRole('button', { name: 'Start New Program' })).toBeVisible()
+  await expect(programItems()).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'End Program' })).toBeDisabled()
+
+  await page.getByRole('button', { name: 'Start New Program' }).click()
+  await page.getByRole('dialog').getByLabel('Name').fill('Wednesday')
+  await page.getByRole('dialog').getByRole('button', { name: 'Create' }).click()
+  await expect(page.getByText('Program: Wednesday')).toBeVisible()
+  await expect(page.getByRole('dialog')).toBeHidden() // its overlay would swallow the drag
+  await dropInProgram(page, libraryRow('Tfilati'))
+  await expect(programItems()).toHaveText([/Tfilati/])
+
+  await page.getByRole('group', { name: 'Programs' }).getByText('Tuesday').click()
+  await expect(programItems()).toHaveText([/Hora/, /Kolo/])
+})
+
+test('Previously played reads oldest to newest, and the projector snapshot agrees', async () => {
+  const { page, invoke } = running
+  await dropInProgram(page, libraryRow('Hora'))
+  await dropInProgram(page, libraryRow('Kolo'))
+  await page.getByRole('button', { name: 'Play', exact: true }).click()
+  await expect(page.getByTestId('player-title')).toHaveText('Hora')
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await expect(page.getByTestId('player-title')).toHaveText('Kolo')
+  const played = page.getByRole('list', { name: 'Played songs' }).getByRole('listitem')
+  await expect(played).toHaveText([/Hora/, /Kolo/])
+  type Snapshot = { played: { parts: { dance: string } }[] }
+  // The song playing now is the middle entry, so the snapshot lists only what came before it.
+  await expect
+    .poll(async () =>
+      (await invoke<Snapshot>('projector:getSnapshot')).played.map((e) => e.parts.dance)
+    )
+    .toEqual(['Hora'])
+  await page.getByRole('button', { name: 'Stop', exact: true }).click()
+})
+
+test('the sidebar and the Program page show the program’s times', async () => {
+  const { page } = running
+  const program = page.getByRole('region', { name: 'Program' })
+  await dropInProgram(page, libraryRow('Hora'))
+  await dropInProgram(page, libraryRow('Kolo'))
+  await expect(programItems()).toHaveCount(2)
+  const sidebar = page.getByRole('group', { name: 'Programs' })
+  await expect(sidebar.getByText(/Total play time: \d+:\d\d/)).toBeVisible()
+  await expect(program.getByText(/Total play time: \d+:\d\d/)).toBeVisible()
+  await expect(program.getByText(/^Ending about /)).toBeVisible()
+
+  await page.getByRole('button', { name: 'End Program' }).click()
+  await expect(program.getByText(/Ending about/)).toHaveCount(0)
+})
+
 test('Edit details on a program item opens its song in the Music page editor', async () => {
   const { page } = running
-  await drag(running.page, libraryRow('Kolo'), page.getByRole('region', { name: 'Program' }))
+  await dropInProgram(running.page, libraryRow('Kolo'))
   await programItems().filter({ hasText: 'Kolo' }).click({ button: 'right' })
   await page.getByRole('menuitem', { name: 'Edit details' }).click()
   await expect(page.getByRole('tab', { name: 'Music' })).toHaveAttribute('aria-selected', 'true')
@@ -87,7 +145,7 @@ test('Edit details on a program item opens its song in the Music page editor', a
 
 test('play, and the projector’s snapshot follows', async () => {
   const { page, invoke } = running
-  await drag(running.page, libraryRow('Tfilati'), page.getByRole('region', { name: 'Program' }))
+  await dropInProgram(running.page, libraryRow('Tfilati'))
   await expect(page.getByTestId('player-title')).toHaveText('Next up: Tfilati')
   type Snapshot = { middle: { kind: string; entry: { parts: { dance: string } } } | null }
   expect((await invoke<Snapshot>('projector:getSnapshot')).middle).toMatchObject({ kind: 'next' })
@@ -101,9 +159,8 @@ test('play, and the projector’s snapshot follows', async () => {
 
 test('a program is saved, and loads again, also after a restart', async () => {
   const { page } = running
-  const program = page.getByRole('region', { name: 'Program' })
-  await drag(running.page, libraryRow('Hora'), program)
-  await drag(running.page, libraryRow('Kolo'), program)
+  await dropInProgram(running.page, libraryRow('Hora'))
+  await dropInProgram(running.page, libraryRow('Kolo'))
   await page.getByRole('button', { name: 'Rename program' }).click()
   await page.getByRole('dialog', { name: 'Rename program' }).getByLabel('Name').fill('Tuesday')
   await page.getByRole('button', { name: 'Save' }).click()
@@ -234,7 +291,7 @@ test('a slide image is attached, and the projector snapshot carries it', async (
     await expect(page.getByRole('radiogroup', { name: 'Show on the projector' })).toHaveCount(0)
 
     await page.getByRole('tab', { name: 'Program' }).click()
-    await drag(page, libraryRow('Hora'), page.getByRole('region', { name: 'Program' }))
+    await dropInProgram(page, libraryRow('Hora'))
     await expect
       .poll(async () => (await invoke<Snapshot>('projector:getSnapshot')).middle?.slide)
       .toMatchObject({

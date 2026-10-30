@@ -63,13 +63,27 @@ export async function launch(
 // re-rendering (just after an import or a drop), the drop target never accepts the drag and the
 // drop is lost. Ten steps give it the dragover it needs.
 export async function drag(page: Page, source: Locator, target: Locator): Promise<void> {
-  const from = await source.boundingBox()
   const to = await target.boundingBox()
-  if (!from || !to) throw new Error('drag: source or target is not visible')
+  if (!to) throw new Error('drag: source or target is not visible')
+  await dragToPoint(page, source, to.x + to.width / 2, to.y + to.height / 2)
+}
+
+async function dragToPoint(page: Page, source: Locator, x: number, y: number): Promise<void> {
+  const from = await source.boundingBox()
+  if (!from) throw new Error('drag: source or target is not visible')
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2)
   await page.mouse.down()
-  await page.mouse.move(to.x + to.width / 2, to.y + to.height / 2, { steps: 10 })
+  await page.mouse.move(x, y, { steps: 10 })
   await page.mouse.up()
+}
+
+// Drops `source` on the Program panel near its bottom edge: below the list however many items it
+// holds and however small the window is. The panel's center can land on an item, and a drop on an
+// item goes before it (a small CI display did exactly that).
+export async function dropInProgram(page: Page, source: Locator): Promise<void> {
+  const panel = await page.getByRole('region', { name: 'Program' }).boundingBox()
+  if (!panel) throw new Error('dropInProgram: the Program panel is not visible')
+  await dragToPoint(page, source, panel.x + panel.width / 2, panel.y + panel.height - 12)
 }
 
 export interface FakeMusicTrack {
