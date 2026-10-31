@@ -2,6 +2,7 @@ import type { AttachmentStore } from '../attachments/attachment-store'
 import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
 import type { RemoteStatus } from '@shared/program'
+import type { TourPart } from '@shared/tour'
 import { appleSyncHandlers, type AppleSyncHandlerDeps } from './apple-sync-handlers'
 import { canvaHandlers, type CanvaDeps } from './canva-handlers'
 import { projectorHandlers, type ProjectorDeps } from './projector-handlers'
@@ -10,6 +11,7 @@ import { getLibraryStats } from '../library/stats'
 import type { PlayerSession } from '../session/player-session'
 import { libraryHandlers } from './library-handlers'
 import { programHandlers } from './program-handlers'
+import { tourHandlers } from './tour-handlers'
 import type { SettingsStore } from '../settings/settings-store'
 
 export interface Dialogs {
@@ -53,6 +55,13 @@ export interface HandlerDeps {
   canva?: CanvaDeps
   // Sync with Apple Music (sync spec); reported off when absent.
   appleSync?: AppleSyncHandlerDeps
+  // The guided tour's mode (tour spec §4.1): entering and leaving a tour, and the part a window
+  // is on. Absent in tests that don't tour: start and leave then do nothing.
+  tour?: {
+    start(part: TourPart): void
+    leave(): void
+    state(): TourPart | null
+  }
   // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void
   // Called after every change to programs or their items.
@@ -76,6 +85,7 @@ export function createHandlers(deps: HandlerDeps): InvokeHandlers {
     'library:stats': () => getLibraryStats(deps.db),
     ...libraryHandlers(deps),
     ...programHandlers(deps),
+    ...tourHandlers(deps),
     ...projectorHandlers(deps),
     ...canvaHandlers(deps),
     ...appleSyncHandlers(deps)
