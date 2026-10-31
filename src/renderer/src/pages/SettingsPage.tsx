@@ -146,6 +146,10 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
           </Group>
           <Text size="sm">Library database (schema {info.schemaVersion}):</Text>
           <Code>{info.dbPath}</Code>
+          <Text size="xs" c="dimmed" mt="xs">
+            The tour’s practice tune is a synthesized rendition of the traditional melody “Hava
+            Nagila”.
+          </Text>
         </Stack>
       )}
     </Stack>

@@ -57,6 +57,9 @@ describe('SettingsPage', () => {
     expect(screen.getByLabelText('Auto-continue after (seconds)')).toHaveValue('8')
     expect(await screen.findByText('/data/folk-dance-player.sqlite')).toBeInTheDocument()
     expect(screen.getByTestId('logo')).toBeInTheDocument() // in About
+    expect(
+      screen.getByText(/practice tune is a synthesized rendition of the traditional melody/)
+    ).toBeInTheDocument()
   })
 
   test('Appearance switches between light, dark and the system setting at once, and saves it', async () => {

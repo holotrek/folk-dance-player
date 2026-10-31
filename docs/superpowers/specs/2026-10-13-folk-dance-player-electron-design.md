@@ -175,6 +175,7 @@ The projector uses the same parts with a different emphasis (§8.2): the dance n
 - **Laptop mode:** `autoFullscreen.enabled`, `autoFullscreen.seconds` (edited in the player bar as "Auto-show when playing", 5–3600 s)
 - **Appearance:** `appearance` (`system` (default), `light` or `dark`)
 - **Apple Music sync:** `appleSync.enabled` (bool), `appleSync.libraryId` (the synced library's ID), `appleSync.lastResult` (the last sync's summary), `playlistFolders.open` (the sidebar's open Music folders, by persistent ID)
+- **Guided tour:** `tour.basic` and `tour.advanced` (each `unseen` (default), `done` or `hidden`; see §6.5)
 - **Other:** `window.bounds`, `currentProgramId`
 
 **Sync with Apple Music (migration 004, `2026-10-15-apple-music-sync-design.md` §4)**
@@ -377,8 +378,17 @@ PROGRAMS                  [+]
 - Appearance: Light, Dark or System (applied at once)
 - Countdown seconds
 - Remote control: whether the remote's media keys work, and a button that asks macOS for Accessibility permission when they don't (§7.4)
-- About: the logo, the version and the library's location
+- About: the logo, the version, the library's location, and the credit for the tour's practice tune
 - "Reveal logs"
+
+### 6.5 Guided tour
+
+A hands-on, game-style tour of the app (design: `2026-10-30-guided-tour-design.md`; plan 22). The screen dims, what to use is lit with a popover pointing at it, the person does it, and the tour moves on only when the real result is there. It runs on a **practice library** of sample songs and dances with one short, playable tune, so nothing of the person's is touched.
+
+- **Two parts.** **Basic** (24 steps: music management, building a program, playback) and **Advanced** (the projector, programs, playlists, settings). Each begins with an **intro screen** that says what is coming. At the end of Basic the person chooses **Learn more** (on into Advanced) or **Start now!**. Every way out of a tour lands on the Music tab of the real library.
+- **Offered on the first launch of 0.3.0** to everyone (intro screen with Start the tour, Not now, Don't show this again), and always available from Help → Take the Basic Tour… / Take the Advanced Tour…. The flags `tour.basic` and `tour.advanced` (`unseen`, `done`, `hidden`) are set by finishing a part or Don't show this again; leaving part-way changes nothing, so the offer comes back. After Basic is done, Advanced is offered next.
+- **A practice context in main.** The tour has its own handlers, settings and player over a throwaway database, used by the control window only while it is touring. Entering and leaving a tour **reload that window**, and nothing real is ever swapped, so a quit or a crash mid-tour leaves the real library showing next launch (stale practice folders are swept at startup). The remote's media keys, File → Sync with Apple Music and the real library's events are inert during a tour. Import, Apple Music, Canva, attachments, file dialogs and the projector are not available in the practice library, so the steps about them explain instead of doing.
+- **Steps are data** (`src/renderer/src/tour/`): a target (`data-tour` on an existing element), text, and for hands-on steps a condition on the real stores or API. A step whose condition is already true when it arrives completes at once.
 
 ## 7. Playback and program flow
 
@@ -629,7 +639,7 @@ The music never stops because of a side failure, and the projector never shows a
 - **Crash or restart:** the program position is restored from `played_at`, and playback does not auto-resume.
 - **Import errors** are per file and never abort the batch (§5.4).
 - **Logging:** the app log is `main.log` in `~/Library/Logs/Folk Dance Player` (beside the library when `FDP_USER_DATA` is set). It rolls over at 1 MB, keeping 3 old files, and writing it never throws. It records each start (with the version), backups, finished imports, failed slide captures, uncaught errors, crashed windows or utility processes, and errors in the windows' consoles.
-- **The app menu:** About; Settings… (⌘,), which opens the Settings page; the standard Edit (copy and paste in text fields) and Window menus; and Help → Reveal Logs in Finder and Reveal Library Backups in Finder. The developer tools are offered only in development.
+- **The app menu:** About; Settings… (⌘,), which opens the Settings page; the standard Edit (copy and paste in text fields) and Window menus; and Help → Take the Basic Tour…, Take the Advanced Tour…, Reveal Logs in Finder and Reveal Library Backups in Finder. The developer tools are offered only in development.
 
 ### 10.2 Testing
 
@@ -692,7 +702,7 @@ The throwaway spike was deleted after this spec was approved; only its display h
 - **Converting AIFF/ALAC** so those files can be imported.
 - **Windows build and testing.**
 - **Import from MITPlayer:** read MITPlayer's metadata file and map its fields into `songs` (and its lists into playlists or programs, if it has them), through the same mapping step and summary as other imports (§5). The file format still needs to be examined from a real sample before this can be designed.
-- **First-run tour:** a guided tutorial the first time the app opens. It steps through each area (sidebar, library and search, building a program, the player bar with auto-continue, the projector toggle, the Music page and importing, Settings) and explains how to use each one. It can be skipped and replayed later from Help.
+- ~~**First-run tour**~~ Built in 0.3.0 as a hands-on guided tour: see §6.5.
 - **Bulk editing, like Apple Music's "Get Info" on several songs:** select several songs in the Music page table and edit their fields together.
   - **Fields that agree** across the selection show the shared value.
   - **Fields that differ** show a `Mixed` placeholder; a field left as `Mixed` isn't changed.

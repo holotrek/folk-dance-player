@@ -1,6 +1,6 @@
 # Guided tour — Design
 
-- **Status:** draft for the maintainer's review (2026-10-30)
+- **Status:** built (Plan 22), 2026-10-31
 - **Ships:** with 0.3.0, which the maintainer plans to publicise; the tour is there to save explaining
 - **Builds on:** the main spec (`2026-10-13-folk-dance-player-electron-design.md`) and the 0.3.0 spec
   (`2026-10-18-release-0-3-0-design.md`); AGENTS.md's conventions apply
@@ -138,46 +138,71 @@ Each step has a **page**, a **target**, a **kind** and (for hands-on steps) a **
 condition on the real result. *Explain* steps have **Next**. The wording is the builder's, in plain
 language; this table fixes the content and order (the maintainer's list, 2026-10-30).
 
-### Basic
+### Basic (as built: 24 steps)
 
-| # | Topic | Page | Kind | What the person does / learns |
+The welcome (step 0, §2.1.1) is the intro screen shown before the tour is entered. "Page" is where
+the tour switches to; **explain** steps have **Next**; **do** steps end on the real result.
+
+| # | Step id | Page | Kind | What the person does / learns |
 |---|---|---|---|---|
-| 0 | Welcome | — | intro | The Basic intro screen (§2.1.1): shown before the tour is entered, so it is not a step inside the practice library. |
-| 1 | Import or sync | Music | explain | Points at **Add Music…** and the Apple Music sync switch: "this is how your music gets in" (a file picker and Music permission can't run in a practice library). |
-| 2 | Edit details | Music | do | Click a song; the editor opens. Done when a song is selected. |
-| 3 | Dance vs song | Music | explain + do | In the editor, a tune with **two dances**: "a song is the music; a dance is what you do to it. One tune can carry several dances." Then a dance **used by two tunes**: "…and one dance can be done to many tunes." |
-| 4 | Same dance, edited once | Music | do | Change a detail (for example the country) of a dance shared by two songs. Done when the field is saved. Then click the **other** song: its card shows the same change ("one dance, edited once"). Done when that song is selected. |
-| 5 | Who owns what | Music | explain | The artist belongs to the **music**; the teacher belongs to the **dance and song together**. |
-| 6 | Attachments | Music | explain | A PDF (written notes) and a slide image for a dance (native pickers can't run). |
-| 7 | Canva slides | Music | explain | Link a Canva slide to a dance (needs the network and the person's decks). |
-| 8 | Search and add | Program | do | Type in the library search (done when the list narrows), then drag a song into the Program. Done when the program has it. |
-| 9 | Pick a dance | Program | do | Drag in the tune that has **two dances**; the "Which dance?" dialog appears. Done when the dialog is answered. |
-| 10 | Remove | Program | do | Remove an item with ✕. Done when one is removed. |
-| 11 | Holding | Program | do | Drag a song into **Holding**, then back into the program. Done when it has made both trips. |
-| 12 | Favorites | Program | do | Click a star. Done when a song is a favorite. |
-| 13 | Play | Program | do | Press **Play**; the practice tune plays. Done when playing. |
-| 14 | Speed and volume | Program | do | Move the speed slider ("the pitch stays the same") and the volume slider. Done when each has changed. |
-| 15 | The wait | Program | explain | "After a song ends there is a few seconds' wait before the next one starts; set it here. **Stop** or the STOP marker pauses for teaching." Points at the auto-continue seconds. |
-| 16 | The end of Basic | — | choice | "Would you like to learn about some more app features or start building your music library now?" **Learn more** / **Start now!** (§2.4). |
+| 1 | `basic.import` | Music | explain | **Add Music…** and Apple Music sync: "this is how your music gets in" (a file picker can't run here). |
+| 2 | `basic.select` | Music | do | Click Hava Nagila; its details open. |
+| 3 | `basic.two-dances-pick` | Music | do | Click Misirlou. |
+| 4 | `basic.two-dances` | Music | explain | "A song is the music; a dance is what you do to it." Misirlou has two dance cards. |
+| 5 | `basic.shared-pick` | Music | do | Click Makedonsko Devojče. |
+| 6 | `basic.shared-edit` | Music | do | Set the Dance type of Lesnoto (done when it is saved). |
+| 7 | `basic.shared-other` | Music | do | Click Pusti Me Mamo: the same dance shows the same change, "edited once". |
+| 8 | `basic.who-owns` | Music | explain | The artist belongs to the music; the teacher to the dance and song together. |
+| 9 | `basic.attachments` | Music | explain | A PDF of a dance's notes (a file picker can't run here). |
+| 10 | `basic.canva` | Music | explain | Canva slides and slide images for the projector. |
+| 11 | `basic.search` | Program | do | Type `hora` in the library search. |
+| 12 | `basic.search-clear` | Program | do | Clear the search. |
+| 13 | `basic.add` | Program | do | Drag Hora Mare into the program (this starts one). |
+| 14 | `basic.pick-dance` | Program | do | Drag Misirlou in: the "Which dance?" dialog opens. |
+| 15 | `basic.pick-dance-answer` | Program | do | Choose a dance and press Done. |
+| 16 | `basic.remove` | Program | do | Remove Hora Mare with ✕. |
+| 17 | `basic.hold` | Program | do | Drag Ali Pasa into Holding. |
+| 18 | `basic.hold-back` | Program | do | Drag it from Holding into the program (it moves). |
+| 19 | `basic.favorite` | Program | do | Star Zemer Atik. |
+| 20 | `basic.play` | Program | do | Press Play (the countdown starts; the practice tune plays). |
+| 21 | `basic.speed` | Program | do | Move the speed slider: slower or faster, same pitch. |
+| 22 | `basic.volume` | Program | do | Move the volume slider. |
+| 23 | `basic.wait` | Program | explain | The few seconds' wait before the next song, and STOP markers. |
+| 24 | `basic.end` | — | choice | "Would you like to learn about some more app features or start building your music library now?" **Learn more** / **Start now!** (§2.4). |
 
-### Advanced
+### Advanced (as built: intro + 11 steps)
 
-| # | Topic | Page | Kind | What the person does / learns |
+| # | Step id | Page | Kind | What the person does / learns |
 |---|---|---|---|---|
-| 16b | Advanced intro | — | intro | The Advanced intro screen (§2.1.1): shown in the real window when entered from the launch offer or Help, and inside the tour (one button, **Let's go**) after **Learn more**. |
-| 17 | Projector view | Program | explain | The **Projector** switch: "show dancers what's playing and next on a TV or projector". |
-| 18 | With only one screen | Program | explain | "With no second screen the view covers your laptop after a while without activity; the **Auto-show** box turns that off." |
-| 19 | How programs start | Program | explain | "Drop a song on an empty program and one is made for you, named for today." |
-| 20 | Add and delete programs | Program | do | In the sidebar, **+** makes a program (done when created); a program's menu offers **Delete…** (explained, not run). |
-| 21 | Load another program | Program | do | Click another program in the sidebar. Done when loaded. |
-| 22 | Playlists: yours and synced | Music | explain | Custom playlists are yours to edit; ones from Apple Music are marked with a note icon. |
-| 23 | Editing a synced playlist | Music | do | On a synced playlist, **Duplicate as my playlist** (done when made): "a synced playlist can't be edited, so you edit a copy". |
-| 24 | Settings | Settings | explain | A tour of the Settings page's sections (appearance, import mapping, remote, about). |
-| 25 | The end | — | choice | **Done** (flag `done`), then the Music tab of the real library. |
+| 0 | `advanced.intro` | — | intro | The Advanced intro screen (§2.1.1): shown in the real window from the launch offer or Help, and inside the tour (one button, **Let's go**) after **Learn more**. |
+| 1 | `advanced.projector` | Program | explain | The **Projector** switch (no second screen in a practice library). |
+| 2 | `advanced.one-screen` | Program | explain | With one screen the view covers the laptop after a while; **Auto-show** turns that off. |
+| 3 | `advanced.auto-programs` | Program | explain | Drop a song on an empty program and one is made, named for today. |
+| 4 | `advanced.add-program` | Program | do | Press **+**, name a program, Create. |
+| 5 | `advanced.delete` | Program | explain | Rename, Duplicate and Delete in a program's ⋯ menu (Delete is not run here). |
+| 6 | `advanced.load` | Program | do | Load Friday warm-up from the sidebar (the app asks first if a song is loaded). |
+| 7 | `advanced.playlists` | Music | explain | Your playlists are editable; Apple Music's are marked with a note and mirror Music. |
+| 8 | `advanced.open-folder` | Music | do | Open the Festival 2026 folder. |
+| 9 | `advanced.mirror` | Music | do | On the synced playlist Balkan night, **Duplicate as my playlist**. |
+| 10 | `advanced.settings` | Settings | explain | A look at what Settings holds. |
+| 11 | `advanced.end` | — | choice | **Done**, then the Music tab of the real library. |
 
-Step 23 uses a **synced-style playlist** in the practice library (§5). Steps that point at the
-projector, sync, import, attachments and Canva are explain-only because the practice context has none of
-those services.
+The practice library (§5) supplies the songs, the two-dance tune, the shared dance, the folder and
+its synced playlist, and the saved program these steps name. Steps about the projector, sync,
+import, attachments and Canva are explain-only because the practice context has none of those
+services.
+
+### Built behavior worth knowing (found while building)
+
+- A step's condition can read a store or the screen, so the provider re-checks the current step after
+  events, after store changes (typing in the search box changes only a store), and every 400 ms (a
+  dialog fading out sends no event).
+- A step may note where something started the instant it arrives (`begin`), for "one more than
+  before" conditions.
+- The popover steps aside the instant a drag starts, so it can never sit over a drop target; the
+  centered cards have no overlay of their own; a target missing for under 700 ms keeps its hole.
+- The first **Play** has the app's normal countdown ("Starting in 5…"), so that step is done once
+  the countdown starts.
 
 ## 4. How it works (the design)
 
