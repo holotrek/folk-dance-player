@@ -206,6 +206,17 @@ describe('SongEditor', () => {
     expect(fake.callsTo('library:mergeDances')).toEqual([[30, 12]])
   })
 
+  test('choosing a suggestion saves it at once, without leaving the field', async () => {
+    const fake = setup()
+    await screen.findByDisplayValue('Pusteno Ludo')
+    const card = within(danceCard('Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo'))
+    await userEvent.click(card.getByRole('combobox', { name: 'Dance type' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Line' }))
+    await waitFor(() =>
+      expect(fake.callsTo('library:updateDance')).toEqual([[11, { danceType: 'Line' }]])
+    )
+  })
+
   test('answers a same-name suggestion', async () => {
     const fake = setup(
       detail({

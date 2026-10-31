@@ -26,6 +26,7 @@ function PlaylistEntry(props: {
   return (
     <div
       className={classes.entry}
+      data-tour={`sidebar.playlist:${p.name}`}
       onContextMenu={(e) => {
         e.preventDefault()
         options.current?.click()

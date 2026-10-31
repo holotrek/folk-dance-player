@@ -125,6 +125,27 @@ test('a tour shows the practice library, and leaving brings the real one back', 
   expect(await invoke('tour:state')).toEqual({ part: null, landOn: null })
 })
 
+test('a tour grows the window to fit, and leaving puts it back', async () => {
+  await running.page.getByRole('button', { name: 'Not now' }).click()
+  const size = (): Promise<{ w: number; h: number; availH: number }> =>
+    running.page.evaluate(() => ({
+      w: window.outerWidth,
+      h: window.outerHeight,
+      availH: screen.availHeight
+    }))
+  const before = await size()
+  await enter('basic')
+  const during = await size()
+  // 1200 high, or as high as the screen allows (tour spec §2.3).
+  expect(during.h).toBeGreaterThanOrEqual(Math.min(1200, during.availH) - 40)
+  expect(during.h).toBeGreaterThanOrEqual(before.h)
+  expect(during.w).toBeGreaterThanOrEqual(before.w)
+  await leave()
+  const after = await size()
+  expect(Math.abs(after.h - before.h)).toBeLessThanOrEqual(2)
+  expect(Math.abs(after.w - before.w)).toBeLessThanOrEqual(2)
+})
+
 test('the practice tune really plays', async () => {
   const { invoke } = running
   await enter('basic')
@@ -221,13 +242,24 @@ async function doBasicTour(): Promise<void> {
   await onPage('Music')
   await next()
 
+  await onStep('Try an import')
+  await page.getByRole('button', { name: /Add Music/ }).click()
+  await onStep('Which tag goes where')
+  await expect(page.getByText('Populate Artist from', { exact: true })).toBeVisible()
+  await next()
+  await onStep('Import')
+  await page.getByRole('dialog').getByRole('button', { name: 'Import', exact: true }).click()
+  await onStep('What happened')
+  await page.getByRole('dialog').getByRole('button', { name: 'Done' }).click()
+
   await onStep('Open a song’s details')
   await song('Hava Nagila').click()
 
-  await onStep('One tune, more than one dance')
-  await song('Misirlou').click()
+  await onStep('More than one dance for a song')
+  await song('Legnala Dana').click()
 
-  await onStep('A song is not a dance')
+  await onStep('Two dances, one song')
+  await expect(page.getByRole('group', { name: /Lesnoto/ })).toBeVisible()
   await next()
 
   await onStep('One dance, more than one tune')
@@ -235,13 +267,15 @@ async function doBasicTour(): Promise<void> {
 
   await onStep('Edit a dance once')
   const danceType = page.getByRole('combobox', { name: 'Dance type' })
-  await danceType.fill('Open Circle')
-  await danceType.press('Tab') // leaving the field saves it
+  await danceType.click()
+  await page.getByRole('option', { name: 'Open Circle' }).click() // choosing a suggestion saves it at once
 
   await onStep('Now the other tune')
-  await song('Pusti Me Mamo').click()
+  await song('Legnala Dana').click()
 
-  await onStep('Who belongs to what')
+  await onStep('The artist belongs to the song')
+  await next()
+  await onStep('The teacher belongs to the dance and tune together')
   await next()
   await onStep('Notes for a dance')
   await next()
@@ -256,21 +290,24 @@ async function doBasicTour(): Promise<void> {
   await page.getByRole('button', { name: 'Clear search' }).click()
 
   await onStep('Build your program')
-  await dragUntil(() => dropInProgram(page, song('Hora Mare')), 'When a song has two dances')
-  await dragUntil(() => dropInProgram(page, song('Misirlou')), 'Which dance?')
+  await dragUntil(() => dropInProgram(page, song('Hava Nagila')), 'When a song has two dances')
+  await dragUntil(() => dropInProgram(page, song('Legnala Dana')), 'Which dance?')
   const dialog = page.getByRole('dialog', { name: 'Which dance?' })
   await dialog.getByRole('radio').last().check()
   await dialog.getByRole('button', { name: 'Done' }).click()
 
   await onStep('Take something out')
-  await page.getByRole('button', { name: /^Remove Hora Mare/ }).click()
+  await page.getByRole('button', { name: /^Remove .*Legnala Dana/ }).click()
 
   await onStep('Holding')
-  await dragUntil(() => dropInHolding(page, song('Ali Pasa')), 'From the shelf to the program')
+  await dragUntil(() => dropInHolding(page, song('Korobushka')), 'From the shelf to the program')
   const held = page.getByRole('listbox', { name: 'Held songs' }).getByRole('option')
-  await dragUntil(() => dropInProgram(page, held.filter({ hasText: 'Ali Pasa' })), 'Favorites')
+  await dragUntil(() => dropInProgram(page, held.filter({ hasText: 'Korobushka' })), 'Favorites')
   await page.getByRole('button', { name: 'Add Zemer Atik to favorites' }).click()
 
+  // Quick enough for a test: no countdown, and a one-second wait before the next song.
+  await running.invoke('settings:set', 'countdown.seconds', 0)
+  await running.invoke('settings:set', 'autoContinue.seconds', 1)
   await onStep('Play it')
   await page.getByRole('button', { name: 'Play', exact: true }).click()
 
@@ -283,9 +320,11 @@ async function doBasicTour(): Promise<void> {
   await volume.focus()
   await volume.press('ArrowLeft')
 
+  // The first song repeats until this step, which jumps to its end; Korobushka then follows.
   await onStep('The wait between songs')
-  await next()
-
+  await expect(running.page.getByTestId('player-title')).toContainText('Korobushka', {
+    timeout: 30_000
+  })
   await onStep('That is the basics')
   await expect(page.getByText(new RegExp(`Step ${STEP_COUNT} of ${STEP_COUNT}$`))).toBeVisible()
 }
@@ -319,16 +358,22 @@ async function doAdvancedTour(): Promise<void> {
     .catch(() => undefined)
 
   await onStep('Playlists')
-  await onPage('Music')
-  await next()
+  await page.getByText('Easy circle dances').first().click()
   await onStep('Folders from Music')
   await page.getByText('Festival 2026').first().click()
   await onStep('Changing a synced playlist')
   await page.getByRole('button', { name: 'Options for Balkan night' }).click()
   await page.getByRole('menuitem', { name: 'Duplicate as my playlist' }).click()
 
-  await onStep('Settings')
-  await next()
+  for (const title of [
+    'Settings: Appearance',
+    'Settings: Import',
+    'Settings: Remote control',
+    'Settings: About'
+  ]) {
+    await onStep(title)
+    await next()
+  }
   await onStep('That is everything')
   await page.getByRole('button', { name: 'Done' }).click()
 }

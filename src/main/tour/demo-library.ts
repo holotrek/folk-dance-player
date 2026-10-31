@@ -8,13 +8,13 @@ import { migrate } from '../db/migrate'
 import { MIGRATIONS } from '../db/migrations'
 import type { ImportMapping } from '../import/mapping'
 import { saveImportedFile } from '../import/save-file'
-import { createDance, mergeDances, updateDance } from '../library/edit'
+import { linkDance, setTeacher, updateDance } from '../library/edit'
 import { addToPlaylist, createPlaylist, setFavorite } from '../library/playlists'
 import { addTracks, createProgram } from '../programs/programs'
 
 // The guided tour's practice library (tour spec §5): realistic songs and dances, built with the
 // app's own import and edit functions so it can't drift from the schema. Every song's file is a
-// copy of the one practice tune, so Play really plays and a song can reach its end.
+// copy of one of the two practice tunes, so Play really plays and a song can reach its end.
 
 const SAMPLE_RATE = 16_000
 const WAV_HEADER = 44
@@ -24,8 +24,11 @@ export function tuneDurationMs(tunePath: string): number {
   return Math.round(((statSync(tunePath).size - WAV_HEADER) / 2 / SAMPLE_RATE) * 1000)
 }
 
+type Tune = 'hava-nagila' | 'korobushka'
+
 interface DemoSong {
   title: string
+  tune?: Tune // which practice tune is the song's audio (Korobushka's, unless it says)
   country: string
   teacher: string // the Album Artist tag, which the mapping sends to the teacher
   dance: string // the dance made for the song on import (the same name merges into one dance)
@@ -41,10 +44,16 @@ const MAPPING: ImportMapping = {
 }
 
 const SONGS: DemoSong[] = [
-  { title: 'Hava Nagila', country: 'Israel', teacher: 'Ruth Adler', dance: 'Hava Nagila' },
-  { title: 'Misirlou', country: 'Greece', teacher: 'Nikos Pappas', dance: 'Misirlou' },
+  {
+    title: 'Hava Nagila',
+    tune: 'hava-nagila',
+    country: 'Israel',
+    teacher: 'Ruth Adler',
+    dance: 'Hava Nagila'
+  },
+  { title: 'Korobushka', country: 'Russia', teacher: 'Olga Ivanova', dance: 'Korobushka' },
+  { title: 'Legnala Dana', country: 'Bulgaria', teacher: 'Elena Petrova', dance: 'Legnala Dana' },
   { title: 'Makedonsko Devojče', country: 'Macedonia', teacher: 'Anna Kovacs', dance: 'Lesnoto' },
-  { title: 'Pusti Me Mamo', country: 'Macedonia', teacher: 'Peter Lund', dance: 'Lesnoto' },
   {
     title: 'Pravo Rhodopsko Oro',
     country: 'Bulgaria',
@@ -59,28 +68,29 @@ const SONGS: DemoSong[] = [
 export interface DemoLibrary {
   db: DatabaseSync
   dbPath: string
-  tuneMs: number
 }
 
-// Builds `dir/library.sqlite` (migrated) and `dir/music/` with a copy of the tune per song.
-export function buildDemoLibrary(dir: string, tunePath: string): DemoLibrary {
+// Builds `dir/library.sqlite` (migrated) and `dir/music/` with a copy of a tune per song. `tuneDir`
+// holds `hava-nagila.wav` and `korobushka.wav`.
+export function buildDemoLibrary(dir: string, tuneDir: string): DemoLibrary {
   const music = join(dir, 'music')
   mkdirSync(music, { recursive: true })
   const dbPath = join(dir, 'library.sqlite')
   const db = openDatabase(dbPath)
   migrate(db, MIGRATIONS)
-  const tuneMs = tuneDurationMs(tunePath)
+  const tuneMs = (tune: Tune): number => tuneDurationMs(join(tuneDir, `${tune}.wav`))
 
   const saved = SONGS.map((song, i) => {
     const path = join(music, `${String(i + 1).padStart(2, '0')} ${song.title}.wav`)
-    copyFileSync(tunePath, path)
+    const tune = song.tune ?? 'korobushka'
+    copyFileSync(join(tuneDir, `${tune}.wav`), path)
     const { fileId } = saveImportedFile(
       db,
       {
         path,
         fileSize: statSync(path).size,
         mtimeMs: Date.now(),
-        durationMs: tuneMs,
+        durationMs: tuneMs(tune),
         contentHash: `practice-${i + 1}`, // distinct, so no copy is taken for a moved file
         tags: {
           title: song.title,
@@ -106,15 +116,15 @@ export function buildDemoLibrary(dir: string, tunePath: string): DemoLibrary {
     if (song.dance !== song.title) updateDance(db, song.danceId, { name: song.dance })
   }
 
-  // One dance used by two tunes: Lesnoto, each tune keeping its own teacher.
+  // One tune with two dances: Legnala Dana, which fits Legnala Dana and Lesnoto. Lesnoto is also
+  // danced to Makedonsko Devojče, so that dance has two tunes, each pairing with its own teacher.
+  const legnala = bySong('Legnala Dana')
   const lesnoto = bySong('Makedonsko Devojče')
-  mergeDances(db, lesnoto.danceId, bySong('Pusti Me Mamo').danceId)
-
-  // One tune with two dances: Misirlou, as a line dance and as a mixer.
-  const misirlou = bySong('Misirlou')
-  const mixer = createDance(db, misirlou.songId, 'Misirlou Mixer')
-  updateDance(db, mixer, { country: 'Greece', danceType: 'Mixer' })
-  updateDance(db, misirlou.danceId, { danceType: 'Line' })
+  linkDance(db, legnala.songId, lesnoto.danceId)
+  const pairing = db
+    .prepare('SELECT id FROM dance_songs WHERE song_id = ? AND dance_id = ?')
+    .get(legnala.songId, lesnoto.danceId) as { id: number }
+  setTeacher(db, pairing.id, 'Peter Lund')
 
   setFavorite(db, [bySong('Hava Nagila').fileId], true)
 
@@ -139,7 +149,7 @@ export function buildDemoLibrary(dir: string, tunePath: string): DemoLibrary {
         persistentId: 'D000000000000001',
         name: 'Balkan night',
         parentId: 'C000000000000001',
-        itemIds: [ids[2], ids[3], ids[4], ids[7]]
+        itemIds: [ids[2], ids[3], ids[4], ids[7]] // Legnala Dana, Makedonsko Devojče, Pravo, Hora Mare
       }
     ]
   }
@@ -152,5 +162,5 @@ export function buildDemoLibrary(dir: string, tunePath: string): DemoLibrary {
     ['Hava Nagila', 'Hora Mare', 'Pravo Rhodopsko Oro'].map((t) => bySong(t).fileId)
   )
 
-  return { db, dbPath, tuneMs }
+  return { db, dbPath }
 }

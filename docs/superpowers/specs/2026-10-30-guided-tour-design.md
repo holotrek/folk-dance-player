@@ -100,6 +100,10 @@ Two settings, `tour.basic` and `tour.advanced`, each `'unseen'` (the default), `
 - The flags live in the **real** settings (`settings.ts`, validated like the others), never in the
   practice library. Replaying from Help does not change them unless the part is finished.
 
+### 2.2a The tour's window
+
+A tour needs room for the Music page's columns and the song editor together, so entering one **grows the window to at least 1280 × 1200 points, or as large as the screen's work area allows**, and sets that as its minimum size; leaving restores the size and position it had (`src/main/tour/window-size.ts`). Scrolling is locked during a step unless the step asks for it, and the first step never shows centered before moving to its target.
+
 ### 2.3 A step
 
 - The rest of the window is dimmed; the **target** (what to use) is bright, with a pulsing outline,
@@ -138,56 +142,61 @@ Each step has a **page**, a **target**, a **kind** and (for hands-on steps) a **
 condition on the real result. *Explain* steps have **Next**. The wording is the builder's, in plain
 language; this table fixes the content and order (the maintainer's list, 2026-10-30).
 
-### Basic (as built: 24 steps)
+### Basic (as built: 29 steps)
 
 The welcome (step 0, §2.1.1) is the intro screen shown before the tour is entered. "Page" is where
 the tour switches to; **explain** steps have **Next**; **do** steps end on the real result.
 
 | # | Step id | Page | Kind | What the person does / learns |
 |---|---|---|---|---|
-| 1 | `basic.import` | Music | explain | **Add Music…** and Apple Music sync: "this is how your music gets in" (a file picker can't run here). |
-| 2 | `basic.select` | Music | do | Click Hava Nagila; its details open. |
-| 3 | `basic.two-dances-pick` | Music | do | Click Misirlou. |
-| 4 | `basic.two-dances` | Music | explain | "A song is the music; a dance is what you do to it." Misirlou has two dance cards. |
-| 5 | `basic.shared-pick` | Music | do | Click Makedonsko Devojče. |
-| 6 | `basic.shared-edit` | Music | do | Set the Dance type of Lesnoto (done when it is saved). |
-| 7 | `basic.shared-other` | Music | do | Click Pusti Me Mamo: the same dance shows the same change, "edited once". |
-| 8 | `basic.who-owns` | Music | explain | The artist belongs to the music; the teacher to the dance and song together. |
-| 9 | `basic.attachments` | Music | explain | A PDF of a dance's notes (a file picker can't run here). |
-| 10 | `basic.canva` | Music | explain | Canva slides and slide images for the projector. |
-| 11 | `basic.search` | Program | do | Type `hora` in the library search. |
-| 12 | `basic.search-clear` | Program | do | Clear the search. |
-| 13 | `basic.add` | Program | do | Drag Hora Mare into the program (this starts one). |
-| 14 | `basic.pick-dance` | Program | do | Drag Misirlou in: the "Which dance?" dialog opens. |
-| 15 | `basic.pick-dance-answer` | Program | do | Choose a dance and press Done. |
-| 16 | `basic.remove` | Program | do | Remove Hora Mare with ✕. |
-| 17 | `basic.hold` | Program | do | Drag Ali Pasa into Holding. |
-| 18 | `basic.hold-back` | Program | do | Drag it from Holding into the program (it moves). |
-| 19 | `basic.favorite` | Program | do | Star Zemer Atik. |
-| 20 | `basic.play` | Program | do | Press Play (the countdown starts; the practice tune plays). |
-| 21 | `basic.speed` | Program | do | Move the speed slider: slower or faster, same pitch. |
-| 22 | `basic.volume` | Program | do | Move the volume slider. |
-| 23 | `basic.wait` | Program | explain | The few seconds' wait before the next song, and STOP markers. |
-| 24 | `basic.end` | — | choice | "Would you like to learn about some more app features or start building your music library now?" **Learn more** / **Start now!** (§2.4). |
+| 1 | `basic.import` | Music | explain | **Add Music…** and Apple Music sync: how music gets in. |
+| 2 | `basic.import-open` | Music | do | Press **Add Music…**: the practice library pretends a folder was picked (§5.2). |
+| 3 | `basic.import-tags` | Music | explain | "Populate Artist / Teacher / Choreographer from" and "Genre is Country": which tag goes where. |
+| 4 | `basic.import-run` | Music | do | Press **Import**; the summary says the songs are already there. |
+| 5 | `basic.import-done` | Music | do | Press **Done**. |
+| 6 | `basic.select` | Music | do | Click Hava Nagila; its details open. |
+| 7 | `basic.two-dances-pick` | Music | do | Click Legnala Dana. |
+| 8 | `basic.two-dances` | Music | explain | "You can assign more than one dance to a song, when it makes sense to": Legnala Dana and Lesnoto. |
+| 9 | `basic.shared-pick` | Music | do | Click Makedonsko Devojče. |
+| 10 | `basic.shared-edit` | Music | do | Pick a Dance type for Lesnoto (done when it is saved, which choosing a suggestion does at once). |
+| 11 | `basic.shared-other` | Music | do | Click Legnala Dana: its Lesnoto card shows the same change, "edited once". |
+| 12 | `basic.who-owns-artist` | Music | explain | The artist belongs to the song. |
+| 13 | `basic.who-owns-teacher` | Music | explain | The teacher belongs to the dance and tune together. |
+| 14 | `basic.attachments` | Music | explain | A PDF of a dance's notes (a file picker can't run here). |
+| 15 | `basic.canva` | Music | explain | Canva slides and slide images for the projector. |
+| 16 | `basic.search` | Program | do | Type `hora` (the whole word) in the library search. |
+| 17 | `basic.search-clear` | Program | do | Clear the search. |
+| 18 | `basic.add` | Program | do | Drag Hava Nagila into the program (this starts one). |
+| 19 | `basic.pick-dance` | Program | do | Drag Legnala Dana in: the "Which dance?" dialog opens. |
+| 20 | `basic.pick-dance-answer` | Program | do | Choose a dance and press Done. |
+| 21 | `basic.remove` | Program | do | Remove Legnala Dana with ✕. |
+| 22 | `basic.hold` | Program | do | Drag Korobushka into Holding. |
+| 23 | `basic.hold-back` | Program | do | Drag it from Holding into the program (it moves). |
+| 24 | `basic.favorite` | Program | do | Star Zemer Atik. |
+| 25 | `basic.play` | Program | do | Press Play. Hava Nagila **repeats** from here (`tourAudio.setLoop`). |
+| 26 | `basic.speed` | Program | do | Move the speed slider: slower or faster, same pitch. |
+| 27 | `basic.volume` | Program | do | Move the volume slider. |
+| 28 | `basic.wait` | Program | do | The repeat stops and the song **jumps to its last five seconds**; the step ends when Korobushka starts. Explains the wait, Auto-continue and STOP markers. |
+| 29 | `basic.end` | — | choice | "Would you like to learn about some more app features or start building your music library now?" **Learn more** / **Start now!** (§2.4). |
 
-### Advanced (as built: intro + 11 steps)
+### Advanced (as built: intro + 14 steps)
 
 | # | Step id | Page | Kind | What the person does / learns |
 |---|---|---|---|---|
 | 0 | `advanced.intro` | — | intro | The Advanced intro screen (§2.1.1): shown in the real window from the launch offer or Help, and inside the tour (one button, **Let's go**) after **Learn more**. |
 | 1 | `advanced.projector` | Program | explain | The **Projector** switch (no second screen in a practice library). |
-| 2 | `advanced.one-screen` | Program | explain | With one screen the view covers the laptop after a while; **Auto-show** turns that off. |
+| 2 | `advanced.one-screen` | Program | explain | With one screen the view covers the laptop after a while; "Uncheck to disable showing the overlay". |
 | 3 | `advanced.auto-programs` | Program | explain | Drop a song on an empty program and one is made, named for today. |
 | 4 | `advanced.add-program` | Program | do | Press **+**, name a program, Create. |
 | 5 | `advanced.delete` | Program | explain | Rename, Duplicate and Delete in a program's ⋯ menu (Delete is not run here). |
 | 6 | `advanced.load` | Program | do | Load Friday warm-up from the sidebar (the app asks first if a song is loaded). |
-| 7 | `advanced.playlists` | Music | explain | Your playlists are editable; Apple Music's are marked with a note and mirror Music. |
-| 8 | `advanced.open-folder` | Music | do | Open the Festival 2026 folder. |
-| 9 | `advanced.mirror` | Music | do | On the synced playlist Balkan night, **Duplicate as my playlist**. |
-| 10 | `advanced.settings` | Settings | explain | A look at what Settings holds. |
-| 11 | `advanced.end` | — | choice | **Done**, then the Music tab of the real library. |
+| 7 | `advanced.playlists` | any | do | Click Easy circle dances. The sidebar is on every page, so the tour no longer switches pages. |
+| 8 | `advanced.open-folder` | any | do | Open the Festival 2026 folder. |
+| 9 | `advanced.mirror` | any | do | On the synced playlist Balkan night, **Duplicate as my playlist**. |
+| 10–13 | `advanced.settings-appearance`, `-import`, `-remote`, `-about` | Settings | explain | One control at a time: light or dark, the import defaults, the remote's media keys, About. |
+| 14 | `advanced.end` | — | choice | **Done**, then the Music tab of the real library. |
 
-The practice library (§5) supplies the songs, the two-dance tune, the shared dance, the folder and
+The practice library (§5) supplies the songs, the song with two dances (Legnala Dana: Legnala Dana and Lesnoto), the shared dance (Lesnoto), the folder and
 its synced playlist, and the saved program these steps name. Steps about the projector, sync,
 import, attachments and Canva are explain-only because the practice context has none of those
 services.
@@ -304,7 +313,13 @@ Realistic contents (the builder chooses the names; they should be real folk danc
 - Every song's file is a **copy of the one practice tune** (§5.1) in the temp folder, with its
   duration set, so **Play** really plays and the song can reach its end (the auto-continue wait).
 
-### 5.1 The practice tune
+### 5.2 Add Music… in the practice library
+
+The file picker returns a pretend folder, and `import:start` "finds" the songs already in the library (summary: all *already in your library*, nothing added), with real progress events. The mapping step, progress and summary are the app's real dialog, so the tour can explain "Populate … from". Everything else in §6 stays unavailable.
+
+### 5.1 The practice tunes
+
+Two tunes: "Hava Nagila" (below) and the Russian folk tune "Korobushka" (about 21 s, plain folk melody, not the game arrangement; see `resources/tour/README.md`). The first song of a program repeats until the wait-between-songs step, so the speed and volume can be tried at leisure; that step then jumps to the song's last seconds so the second song is heard starting.
 
 A short (about 25 s) **synthesized rendition of the traditional melody of "Hava Nagila"**, made by
 a script (`scripts/make-tour-tune.mts`) and committed as a small WAV (the media server already

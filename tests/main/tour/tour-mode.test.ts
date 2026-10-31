@@ -23,7 +23,12 @@ const handlersOf = (who: string): InvokeHandlers =>
 
 function setup() {
   const contexts: { dir: string; disposed: boolean }[] = []
-  const calls = { stopped: 0, reloaded: [] as number[] }
+  const calls = {
+    stopped: 0,
+    reloaded: [] as number[],
+    resized: [] as number[],
+    restored: [] as number[]
+  }
   const mode = createTourMode({
     realHandlers: () => handlersOf('real'),
     tmpDir: tmp,
@@ -41,6 +46,8 @@ function setup() {
       } as PracticeContext
     },
     sendToWindow: () => () => undefined,
+    resize: (id) => void calls.resized.push(id),
+    restoreSize: (id) => void calls.restored.push(id),
     stopRealPlayer: () => void calls.stopped++,
     reload: (id) => void calls.reloaded.push(id)
   })
@@ -95,6 +102,17 @@ describe('tour mode', () => {
     expect(existsSync(contexts[0].dir)).toBe(false)
     expect(calls.reloaded).toEqual([7, 7])
     expect(mode.active()).toBe(false)
+  })
+
+  test('the window is enlarged once when a tour starts, and put back when it ends', () => {
+    const { mode, calls } = setup()
+    mode.start(7, 'basic')
+    mode.start(7, 'advanced') // replacing a tour does not enlarge it again
+    expect(calls.resized).toEqual([7])
+    mode.leave()
+    expect(calls.restored).toEqual([7])
+    mode.leave()
+    expect(calls.restored).toEqual([7]) // nothing to restore the second time
   })
 
   test('leaving when there is no tour does nothing', () => {

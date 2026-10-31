@@ -52,6 +52,7 @@ import { mediaResponse } from './media/media-response'
 import { coalesced } from './coalesce'
 import { createPracticeContext } from './tour/practice-context'
 import { createTourMode } from './tour/tour-mode'
+import { tourWindowBounds } from './tour/window-size'
 import { menuTemplate, syncAppleMusicFromMenu } from './menu'
 import { KeepAwake } from './power/keep-awake'
 import { ActivityWatcher } from './projector/activity'
@@ -310,21 +311,43 @@ function startApp(): void {
       const window = BrowserWindow.fromId(windowId)
       if (window && !window.isDestroyed()) window.webContents.send(channel, payload)
     }
+  const savedSizes = new Map<number, { bounds: Electron.Rectangle; min: number[] }>()
   const tour = createTourMode({
     realHandlers: () => realHandlers!,
     tmpDir: app.getPath('temp'),
     makeContext: (dir, send) =>
       createPracticeContext({
         dir,
-        tunePath: app.isPackaged
-          ? join(process.resourcesPath, 'hava-nagila.wav')
-          : join(app.getAppPath(), 'resources', 'tour', 'hava-nagila.wav'),
+        tuneDir: app.isPackaged
+          ? process.resourcesPath
+          : join(app.getAppPath(), 'resources', 'tour'),
         appVersion: app.getVersion(),
         send
       }),
     sendToWindow: sendTo,
     stopRealPlayer: () => player.stop(),
-    reload: (windowId) => BrowserWindow.fromId(windowId)?.webContents.reload()
+    reload: (windowId) => BrowserWindow.fromId(windowId)?.webContents.reload(),
+    // A tour needs a taller window (tour spec §2.3); it goes back to what it was afterwards.
+    resize: (windowId) => {
+      const window = BrowserWindow.fromId(windowId)
+      if (!window || window.isFullScreen() || window.isMaximized()) return
+      const before = window.getBounds()
+      savedSizes.set(windowId, { bounds: before, min: window.getMinimumSize() })
+      const { bounds, minSize } = tourWindowBounds(
+        before,
+        screen.getDisplayMatching(before).workArea
+      )
+      window.setMinimumSize(minSize.width, minSize.height)
+      window.setBounds(bounds)
+    },
+    restoreSize: (windowId) => {
+      const saved = savedSizes.get(windowId)
+      const window = BrowserWindow.fromId(windowId)
+      savedSizes.delete(windowId)
+      if (!saved || !window) return
+      window.setMinimumSize(saved.min[0], saved.min[1])
+      window.setBounds(saved.bounds)
+    }
   })
   touringWindowId = tour.touringWindowId
   tour.sweepStale()

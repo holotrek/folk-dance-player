@@ -21,12 +21,13 @@ function useDraft(value: string | null, onSave: (v: string) => void) {
     setDraft(value ?? '')
     saved.current = value ?? ''
   }, [value])
-  const onBlur = (): void => {
-    if (draft === saved.current) return
-    saved.current = draft
-    onSave(draft)
+  // Saves `value` unless it is what was saved.
+  const save = (value: string): void => {
+    if (value === saved.current) return
+    saved.current = value
+    onSave(value)
   }
-  return { draft, setDraft, onBlur }
+  return { draft, setDraft, onBlur: () => save(draft), save }
 }
 
 export function TextField(props: FieldProps): React.JSX.Element {
@@ -45,7 +46,7 @@ export function TextField(props: FieldProps): React.JSX.Element {
 }
 
 export function SuggestField(props: FieldProps & { suggestions: string[] }): React.JSX.Element {
-  const { draft, setDraft, onBlur } = useDraft(props.value, props.onSave)
+  const { draft, setDraft, onBlur, save } = useDraft(props.value, props.onSave)
   return (
     <Autocomplete
       label={props.label}
@@ -53,6 +54,8 @@ export function SuggestField(props: FieldProps & { suggestions: string[] }): Rea
       data={props.suggestions}
       value={draft}
       onChange={setDraft}
+      // Picking a suggestion is a decision: save it now, not when the field is left.
+      onOptionSubmit={save}
       onBlur={onBlur}
       limit={8}
     />

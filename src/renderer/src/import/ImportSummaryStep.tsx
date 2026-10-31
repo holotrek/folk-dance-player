@@ -38,7 +38,7 @@ export default function ImportSummaryStep(props: {
   const playlists = playlistLine(summary.playlists)
 
   return (
-    <Stack>
+    <Stack data-tour="import.summary">
       {summary.cancelled && (
         <Alert color="yellow">
           Import cancelled — the songs imported before you stopped it were kept.
@@ -70,7 +70,9 @@ export default function ImportSummaryStep(props: {
       </Accordion>
       {playlists && <Text size="sm">{playlists}</Text>}
       <Group justify="flex-end">
-        <Button onClick={props.onDone}>Done</Button>
+        <Button data-tour="import.done" onClick={props.onDone}>
+          Done
+        </Button>
       </Group>
     </Stack>
   )

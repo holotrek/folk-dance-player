@@ -208,6 +208,16 @@ Done-when conditions (read the real stores / API, per spec §3): a song is selec
 - **The demo library names dances for real dances** (Lesnoto, Misirlou Mixer, …), because import names each dance after its song.
 - **README is left for the release bump PR**, as the maintainer asked.
 
+### Round 2 (the maintainer's feedback after trying the tour)
+
+- **The tour grows the window** (min of 1200 and the work area high, at least 1280 wide) and restores it on leaving, rather than splitting steps for small screens only; the Artist and Teacher step is now two steps.
+- **No flash at the first step:** `useHoles` reports "not measured yet" (`undefined`) separately from "target missing" (`null`), and only a target missing for 700 ms centers the card. Scrolling is locked (wheel, touch and scrollbars) unless a step sets `scroll`.
+- **Choosing a suggestion saves at once** (`SuggestField` `onOptionSubmit`), so Open Circle finishes its step without clicking elsewhere. The search step waits for the whole word.
+- **Wording:** "A song is not a dance" became "You can assign more than one dance to a song, when it makes sense to". Legnala Dana (Legnala Dana + Lesnoto) replaced Misirlou; Pusti Me Mamo and Ali Pasa left the practice library.
+- **Two tunes (Hava Nagila, Korobushka):** the first song repeats from Play (`tour/audio-hold.ts`, followed by `useAudio`) until the wait step jumps near its end and waits for Korobushka. Playback is real; only the tour asks for the repeat.
+- **A pretend import** (§5.2 of the spec) lets the tour use the real dialog to explain "Populate … from".
+- **Advanced:** playlists, folder and duplicate steps don't switch pages (the person clicks a playlist instead); Settings is four steps, one per control.
+
 ## Self-Review
 
 - **Spec coverage:** intro screens and offer (§2.1.1) → Tasks 1, 4; flags and offer rule (§2.2) → Tasks 1, 4; spotlight steps, leave, banner (§2.3, §2.5) → Task 4; end choice and Music landing (§2.4) → Tasks 3, 4, 7; steps (§3) → Tasks 5–6; practice context, routing, broadcasts, media, inert menu/keys/idle, reload in and out, sweep (§4.1–4.2) → Task 3; engine and targets (§4.3) → Tasks 4–5; storage and menu (§4.4–4.6) → Tasks 1, 3; demo library and tune (§5) → Task 2; limits (§6) → Task 3; docs (§7) → Task 7; tests (§8) → each task and Task 7.

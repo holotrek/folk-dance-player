@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useLayoutEffect, useState } from 'react'
 import { Button, Group, Modal, Popover, Stack, Text } from '@mantine/core'
 import type { TourStep } from './steps'
 import classes from './TourOverlay.module.css'
@@ -7,7 +7,7 @@ const MARGIN = 6 // the hole is a little larger than what it lights up
 const POLL_MS = 150 // layout moves (a dialog opens, a list scrolls): follow it
 const GONE_MS = 700 // a target missing for less than this is a re-render, not a missing target
 
-interface Hole {
+export interface Hole {
   x: number
   y: number
   w: number
@@ -17,14 +17,18 @@ interface Hole {
 const ids = (target: TourStep['target']): string[] =>
   target === undefined ? [] : Array.isArray(target) ? target : [target]
 
-// Where the step's targets are on screen; null when one of them isn't (yet).
-function useHoles(target: TourStep['target']): Hole[] | null {
+// Where the step's targets are on screen. `undefined`: not measured yet (nothing is shown for it);
+// `null`: it has been missing for a while; otherwise one hole per target.
+export function useHoles(target: TourStep['target']): Hole[] | null | undefined {
   const key = ids(target).join('|')
-  const [holes, setHoles] = useState<Hole[] | null>(null)
-  useEffect(() => {
+  const [holes, setHoles] = useState<Hole[] | null | undefined>(undefined)
+  // A layout effect, so the first measurement lands before the first paint: no frame shows a card
+  // for a target that is merely about to be found, or the previous step's outline.
+  useLayoutEffect(() => {
+    setHoles(undefined)
     let scrolled = false
     let lastSeen = Date.now()
-    // Missing now: keep the last hole for a moment, so a re-render doesn't flip the step to "not on
+    // Missing now: keep what we have for a moment, so a re-render doesn't flip the step to "not on
     // screen" (whose card would sit over the screen and catch the pointer).
     const missing = (): void => {
       if (Date.now() - lastSeen > GONE_MS) setHoles(null)
@@ -96,6 +100,22 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
   const { step } = props
   const holes = useHoles(step.target)
   const [asking, setAsking] = useState(false)
+  // No scrolling during a step, by wheel or touch, and no scrollbars: the popover and the hole follow
+  // their target, so a scrolled panel would drag the tour around. Steps that need it say so.
+  useEffect(() => {
+    if (props.step.scroll) return
+    const stop = (e: Event): void => {
+      if (e.cancelable) e.preventDefault()
+    }
+    document.addEventListener('wheel', stop, { passive: false, capture: true })
+    document.addEventListener('touchmove', stop, { passive: false, capture: true })
+    document.documentElement.setAttribute('data-tour-lock', '')
+    return () => {
+      document.removeEventListener('wheel', stop, true)
+      document.removeEventListener('touchmove', stop, true)
+      document.documentElement.removeAttribute('data-tour-lock')
+    }
+  }, [props.step.scroll])
   // While the person drags something, the popover steps aside: it could be over the drop.
   const [dragging, setDragging] = useState(false)
   useEffect(() => {
@@ -124,8 +144,10 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
       Leave the tour
     </Button>
   )
-  const lit = holes !== null && holes.length > 0
-  const centered = !lit
+  const lit = Array.isArray(holes) && holes.length > 0
+  // The "not on screen" card is only for a target that has been missing a while, not one that has
+  // not been measured yet.
+  const centered = holes === null
 
   const card = (
     <Stack gap="xs">

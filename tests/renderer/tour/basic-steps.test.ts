@@ -1,7 +1,8 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { SongDetail } from '@shared/library'
 import type { LibraryRow } from '@shared/library'
 import { IDLE_PLAYER_STATE, type ProgramDetail } from '@shared/program'
+import { tourAudio } from '@renderer/tour/audio-hold'
 import { createLibraryStore } from '@renderer/library/library-store'
 import { createProgramStore } from '@renderer/program/program-store'
 import { BASIC_STEPS } from '@renderer/tour/basic-steps'
@@ -24,12 +25,7 @@ function context(options: { holding?: string[]; detail?: Partial<SongDetail> } =
   const program = createProgramStore(fake.api)
   const ctx: StepContext = { api: fake.api, library, program, page: 'music', memo: {} }
   const select = (...titles: string[]) => {
-    const rows = [
-      row(1, 'Hava Nagila'),
-      row(2, 'Misirlou'),
-      row(3, 'Makedonsko Devojče'),
-      row(4, 'Pusti Me Mamo')
-    ]
+    const rows = [row(1, 'Hava Nagila'), row(2, 'Legnala Dana'), row(3, 'Makedonsko Devojče')]
     library.setState({
       rows,
       selected: rows.filter((r) => titles.includes(r.title)).map((r) => r.songId)
@@ -58,9 +54,11 @@ describe('the Basic tour’s steps', () => {
     expect(ids[0]).toBe('basic.import')
     expect(ids.at(-1)).toBe('basic.end')
     expect(BASIC_STEPS.every((s) => s.part === 'basic')).toBe(true)
-    // The first ten are on the Music page; the rest on the Program page; the choice on either.
-    expect(BASIC_STEPS.slice(0, 10).every((s) => s.page === 'music')).toBe(true)
-    expect(BASIC_STEPS.slice(10, -1).every((s) => s.page === 'program')).toBe(true)
+    // The Music page's steps come first (through the slide), then the Program page's; the choice
+    // can be on either.
+    const lastMusic = ids.indexOf('basic.canva')
+    expect(BASIC_STEPS.slice(0, lastMusic + 1).every((s) => s.page === 'music')).toBe(true)
+    expect(BASIC_STEPS.slice(lastMusic + 1, -1).every((s) => s.page === 'program')).toBe(true)
   })
 
   test('every do step has a condition, every lit step a target, and the last is the choice', () => {
@@ -80,13 +78,13 @@ describe('the Basic tour’s steps', () => {
 })
 
 describe('the Basic tour’s conditions read the real result', () => {
-  test('a song is selected, then Misirlou, then Makedonsko Devojče, then Pusti Me Mamo', async () => {
+  test('a song is selected, then Legnala Dana, then Makedonsko Devojče, then Legnala Dana again', async () => {
     const { ctx, select } = context()
     for (const [id, title] of [
       ['basic.select', 'Hava Nagila'],
-      ['basic.two-dances-pick', 'Misirlou'],
+      ['basic.two-dances-pick', 'Legnala Dana'],
       ['basic.shared-pick', 'Makedonsko Devojče'],
-      ['basic.shared-other', 'Pusti Me Mamo']
+      ['basic.shared-other', 'Legnala Dana']
     ]) {
       select()
       expect(await isDone(id, ctx), `${id} before`).toBe(false)
@@ -94,7 +92,7 @@ describe('the Basic tour’s conditions read the real result', () => {
       expect(await isDone(id, ctx), `${id} after`).toBe(true)
     }
     select('Hava Nagila')
-    expect(await isDone('basic.two-dances-pick', ctx)).toBe(false) // another song is not Misirlou
+    expect(await isDone('basic.two-dances-pick', ctx)).toBe(false) // another song is not Legnala Dana
   })
 
   test('the shared dance has a dance type once the person saves one', async () => {
@@ -106,6 +104,18 @@ describe('the Basic tour’s conditions read the real result', () => {
     const after = context({ detail: lesnoto('Open Circle') })
     after.select('Makedonsko Devojče')
     expect(await isDone('basic.shared-edit', after.ctx)).toBe(true)
+  })
+
+  test('the search step waits for the whole word, not its first letter', async () => {
+    const { ctx, library } = context()
+    for (const typed of ['', 'h', 'ho', 'hor']) {
+      library.setState({ search: typed })
+      expect(await isDone('basic.search', ctx), `"${typed}"`).toBe(false)
+    }
+    library.setState({ search: 'hora' })
+    expect(await isDone('basic.search', ctx)).toBe(true)
+    library.setState({ search: ' Hora ' })
+    expect(await isDone('basic.search', ctx)).toBe(true) // spaces and capitals do not matter
   })
 
   test('a search is typed, then cleared', async () => {
@@ -122,11 +132,11 @@ describe('the Basic tour’s conditions read the real result', () => {
     const { ctx, inProgram } = context()
     inProgram()
     expect(await isDone('basic.add', ctx)).toBe(false)
-    inProgram('Hora Mare')
+    inProgram('Hava Nagila')
     expect(await isDone('basic.add', ctx)).toBe(true)
 
     expect(await isDone('basic.pick-dance', ctx)).toBe(false)
-    inProgram('Hora Mare', 'Misirlou')
+    inProgram('Hava Nagila', 'Legnala Dana')
     expect(await isDone('basic.pick-dance', ctx)).toBe(false) // added, but no dialog yet
     const dialog = document.createElement('div')
     dialog.dataset.tour = 'program.dance-dialog'
@@ -139,25 +149,58 @@ describe('the Basic tour’s conditions read the real result', () => {
 
   test('a song is removed', async () => {
     const { ctx, inProgram } = context()
-    inProgram('Hora Mare', 'Misirlou')
+    inProgram('Hava Nagila', 'Legnala Dana')
     expect(await isDone('basic.remove', ctx)).toBe(false)
-    inProgram('Misirlou')
+    inProgram('Hava Nagila')
     expect(await isDone('basic.remove', ctx)).toBe(true)
   })
 
   test('a song goes into Holding, then back to the program', async () => {
     const empty = context({ holding: [] })
     expect(await isDone('basic.hold', empty.ctx)).toBe(false)
-    const held = context({ holding: ['Ali Pasa'] })
+    const held = context({ holding: ['Korobushka'] })
     expect(await isDone('basic.hold', held.ctx)).toBe(true)
-    held.inProgram('Misirlou')
+    held.inProgram('Hava Nagila')
     expect(await isDone('basic.hold-back', held.ctx)).toBe(false) // still held, not in the program
     const back = context({ holding: [] })
-    back.inProgram('Misirlou', 'Ali Pasa')
+    back.inProgram('Hava Nagila', 'Korobushka')
     expect(await isDone('basic.hold-back', back.ctx)).toBe(true)
-    const copy = context({ holding: ['Ali Pasa'] })
-    copy.inProgram('Ali Pasa')
+    const copy = context({ holding: ['Korobushka'] })
+    copy.inProgram('Korobushka')
     expect(await isDone('basic.hold-back', copy.ctx)).toBe(false) // in both: not a move
+  })
+
+  test('the import walk-through follows the real dialog', async () => {
+    const { ctx } = context()
+    const dialog = (target: string): HTMLElement => {
+      const el = document.createElement('div')
+      el.dataset.tour = target
+      document.body.appendChild(el)
+      return el
+    }
+    expect(await isDone('basic.import-open', ctx)).toBe(false)
+    const mapping = dialog('import.mapping')
+    expect(await isDone('basic.import-open', ctx)).toBe(true)
+    expect(await isDone('basic.import-run', ctx)).toBe(false)
+    mapping.remove()
+    const summary = dialog('import.summary')
+    expect(await isDone('basic.import-run', ctx)).toBe(true)
+    expect(await isDone('basic.import-done', ctx)).toBe(false)
+    summary.remove()
+    expect(await isDone('basic.import-done', ctx)).toBe(true)
+  })
+
+  test('the import step explains the “Populate … from” choices', () => {
+    const body = step('basic.import-tags').body
+    expect(body).toContain('Populate Artist from')
+    expect(body).toMatch(/Album Artist/)
+  })
+
+  test('the wording about dances is not pedantic', () => {
+    const text = BASIC_STEPS.map((s) => `${s.title} ${s.body}`).join('\n')
+    expect(text).not.toMatch(/a song is not a dance/i)
+    expect(text).toContain('You can assign more than one dance to a song, when it makes sense to')
+    expect(text).not.toMatch(/Misirlou|Pusti Me Mamo|Ali Pasa/)
   })
 
   test('a song becomes a favorite', async () => {
@@ -181,5 +224,29 @@ describe('the Basic tour’s conditions read the real result', () => {
     expect(await isDone('basic.speed', ctx)).toBe(true)
     program.setState({ player: { ...IDLE_PLAYER_STATE, volume: 0.5 } })
     expect(await isDone('basic.volume', ctx)).toBe(true)
+  })
+
+  test('the first song repeats from Play until the wait step, which jumps to its end and waits for Korobushka', async () => {
+    tourAudio.reset()
+    const { ctx, program } = context()
+    const jumped = vi.fn()
+    const stop = tourAudio.onJump(jumped)
+    step('basic.play').begin!(ctx)
+    expect(tourAudio.loop()).toBe(true)
+    step('basic.wait').begin!(ctx)
+    expect(tourAudio.loop()).toBe(false)
+    expect(jumped).toHaveBeenCalledTimes(1)
+    stop()
+
+    const playingNow = (title: string) =>
+      ({
+        ...IDLE_PLAYER_STATE,
+        status: 'playing',
+        current: { track: { title } }
+      }) as unknown as typeof IDLE_PLAYER_STATE
+    program.setState({ player: playingNow('Hava Nagila') })
+    expect(await isDone('basic.wait', ctx)).toBe(false)
+    program.setState({ player: playingNow('Korobushka') })
+    expect(await isDone('basic.wait', ctx)).toBe(true)
   })
 })

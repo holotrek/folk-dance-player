@@ -14,11 +14,12 @@ export const UNAVAILABLE = 'Not available in the practice library'
 
 // Calls that need the real app: file pickers, importing, Apple Music, Canva and attachments. The
 // tour explains these instead of running them (tour spec §6), so nothing reaches them.
+// Add Music… is the exception: the tour walks through it with a pretend folder (below).
+const PRACTICE_FOLDER = '/Practice Music/Folk dance mix'
+
 const UNAVAILABLE_CHANNELS = [
-  'import:pickMusic',
   'import:pickAppleLibrary',
   'import:previewApple',
-  'import:start',
   'library:attachNotesPdf',
   'library:openNotesPdf',
   'library:removeNotesPdf',
@@ -53,7 +54,7 @@ export interface PracticeContext {
 
 export interface PracticeOptions {
   dir: string
-  tunePath: string
+  tuneDir: string // holds the practice tunes (hava-nagila.wav, korobushka.wav)
   appVersion: string
   // Where the context's events go: only to the window that is touring.
   send<C extends EventChannel>(channel: C, payload: EventContract[C]): void
@@ -62,7 +63,7 @@ export interface PracticeOptions {
 // A second, complete set of handlers over a throwaway library (tour spec §4.1): its own database,
 // settings and player, with no import, sync, Canva, projector, remote or attachments.
 export function createPracticeContext(opts: PracticeOptions): PracticeContext {
-  const { db, dbPath } = buildDemoLibrary(opts.dir, opts.tunePath)
+  const { db, dbPath } = buildDemoLibrary(opts.dir, opts.tuneDir)
   const settings = new SettingsStore(db)
   const programsChanged = coalesced(() => opts.send('programs:changed', null))
   const libraryChanged = coalesced(() => opts.send('library:changed', null))
@@ -76,13 +77,45 @@ export function createPracticeContext(opts: PracticeOptions): PracticeContext {
     settings,
     appInfo: () => ({ version: opts.appVersion, dbPath, schemaVersion: getSchemaVersion(db) }),
     importer: {
-      run: () => Promise.reject(new Error(UNAVAILABLE)),
+      // A pretend import (tour spec §3, step 1): it "finds" the songs the practice library already
+      // has, so the dialog's mapping, progress and summary are real and nothing is added.
+      run: async () => {
+        const found = (
+          db.prepare('SELECT path FROM files ORDER BY path').all() as { path: string }[]
+        ).map((f) => ({ path: f.path }))
+        opts.send('import:progress', { phase: 'scanning', done: 0, total: 0, currentPath: null })
+        opts.send('import:progress', {
+          phase: 'reading',
+          done: found.length,
+          total: found.length,
+          currentPath: found.at(-1)?.path ?? null
+        })
+        opts.send('import:progress', {
+          phase: 'done',
+          done: found.length,
+          total: found.length,
+          currentPath: null
+        })
+        return {
+          added: [],
+          updated: [],
+          relinked: [],
+          alreadyPresent: found,
+          restored: [],
+          appleSynced: [],
+          notFound: [],
+          unsupported: [],
+          unreadable: [],
+          playlists: { created: [], replaced: [], kept: [], duplicated: [] },
+          cancelled: false
+        }
+      },
       cancel: () => undefined,
       previewApple: () => Promise.reject(new Error(UNAVAILABLE)),
       checkPlaylistConflicts: () => []
     },
     dialogs: {
-      pickMusic: () => Promise.reject(new Error(UNAVAILABLE)),
+      pickMusic: () => Promise.resolve([PRACTICE_FOLDER]),
       pickAppleLibrary: () => Promise.reject(new Error(UNAVAILABLE)),
       pickPdf: () => Promise.reject(new Error(UNAVAILABLE)),
       pickImage: () => Promise.reject(new Error(UNAVAILABLE))

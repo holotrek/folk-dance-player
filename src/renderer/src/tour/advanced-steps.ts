@@ -34,7 +34,7 @@ export const ADVANCED_STEPS: TourStep[] = [
     kind: 'explain',
     target: 'player.autoshow',
     title: 'With only one screen',
-    body: 'With no second screen, the same display covers your laptop after a little while without any activity while music plays, and goes away when you move the mouse or press Esc. Untick Auto-show if you would rather it never did.'
+    body: 'With no second screen, the same display covers your laptop after a little while without any activity while music plays, and goes away when you move the mouse or press Esc. Uncheck to disable showing the overlay.'
   }),
   step({
     id: 'advanced.auto-programs',
@@ -80,16 +80,21 @@ export const ADVANCED_STEPS: TourStep[] = [
   }),
   step({
     id: 'advanced.playlists',
-    page: 'music',
-    kind: 'explain',
-    target: 'sidebar.playlists',
+    page: null,
+    kind: 'do',
+    target: 'sidebar.playlist:Easy circle dances',
     placement: 'right',
     title: 'Playlists',
-    body: 'Playlists group your songs however you like, for example easy circle dances. Ones you make are yours to change.\n\nPlaylists from Apple Music are marked with a note icon. They mirror the Music app, so you cannot change them here, and anything you add in Music appears here by itself.'
+    body: 'Playlists group your songs however you like, for example easy circle dances. Ones you make are yours to change.\n\nPlaylists from Apple Music are marked with a note icon. They mirror the Music app, so you cannot change them here, and anything you add in Music appears here by itself.\n\nClick Easy circle dances to see what is in it.',
+    done: (ctx) => {
+      const { filter, playlists } = ctx.library.getState()
+      const mine = playlists.find((p) => p.name === 'Easy circle dances')
+      return filter.kind === 'playlist' && mine !== undefined && filter.playlistId === mine.id
+    }
   }),
   step({
     id: 'advanced.open-folder',
-    page: 'music',
+    page: null,
     kind: 'do',
     target: 'sidebar.folder:Festival 2026',
     placement: 'right',
@@ -100,7 +105,7 @@ export const ADVANCED_STEPS: TourStep[] = [
   }),
   step({
     id: 'advanced.mirror',
-    page: 'music',
+    page: null,
     kind: 'do',
     target: 'sidebar.playlist-options:Balkan night',
     placement: 'top',
@@ -110,13 +115,40 @@ export const ADVANCED_STEPS: TourStep[] = [
     done: (ctx) => mine(ctx).length > (ctx.memo.playlists as number)
   }),
   step({
-    id: 'advanced.settings',
+    id: 'advanced.settings-appearance',
     page: 'settings',
     kind: 'explain',
-    target: 'settings.page',
-    placement: 'left',
-    title: 'Settings',
-    body: 'Appearance (light or dark), how your songs’ tags fill in artist, teacher and choreographer when you import, the remote control’s media keys, and About are all here. Most people never need to change anything.'
+    target: 'settings.appearance',
+    placement: 'right',
+    title: 'Settings: Appearance',
+    body: 'Settings holds the choices you rarely change. Appearance picks light or dark, or follows your Mac.'
+  }),
+  step({
+    id: 'advanced.settings-import',
+    page: 'settings',
+    kind: 'explain',
+    target: 'settings.import',
+    placement: 'right',
+    title: 'Settings: Import',
+    body: 'These are the defaults for the “Populate … from” choices you saw when importing. You can still change them for any one import.'
+  }),
+  step({
+    id: 'advanced.settings-remote',
+    page: 'settings',
+    kind: 'explain',
+    target: 'settings.remote',
+    placement: 'right',
+    title: 'Settings: Remote control',
+    body: 'If you use a presentation remote or keyboard media keys, they play, pause and skip songs even when the app is in the background. macOS asks you to allow it here.'
+  }),
+  step({
+    id: 'advanced.settings-about',
+    page: 'settings',
+    kind: 'explain',
+    target: 'settings.about',
+    placement: 'right',
+    title: 'Settings: About',
+    body: 'The version and where your library is stored. Most people never need to change anything here.'
   }),
   step({
     id: 'advanced.end',

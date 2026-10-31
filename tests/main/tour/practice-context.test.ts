@@ -1,10 +1,10 @@
 import { existsSync, mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'vitest'
 import type { EventChannel } from '@shared/contract'
 import { createPracticeContext } from '../../../src/main/tour/practice-context'
-import { TUNE_PATH } from '../../../scripts/make-tour-tune.mjs'
+import { tunePath } from '../../../scripts/make-tour-tune.mjs'
 
 let dir: string
 let sent: [EventChannel, unknown][]
@@ -15,7 +15,7 @@ beforeEach(() => {
   sent = []
   context = createPracticeContext({
     dir,
-    tunePath: TUNE_PATH,
+    tuneDir: dirname(tunePath('hava-nagila')),
     appVersion: '0.3.0',
     send: (channel, payload) => void sent.push([channel, payload])
   })
@@ -44,8 +44,6 @@ describe('the practice context', () => {
   test('services that need the real app answer with a clear message', async () => {
     const h = context.handlers
     const channels: (() => unknown)[] = [
-      () => h['import:pickMusic'](),
-      () => h['import:start']({ kind: 'paths', paths: ['/x'] }),
       () => h['library:attachNotesPdf'](1),
       () => h['library:attachSlideImage'](1),
       () => h['canva:addDeck']('https://canva.com/x'),
@@ -57,6 +55,35 @@ describe('the practice context', () => {
         'Not available in the practice library'
       )
     }
+  })
+
+  test('Add Music… pretends: a practice folder is "picked" and importing it adds nothing', async () => {
+    const h = context.handlers
+    const before = (
+      await h['library:list']({
+        search: '',
+        filter: { kind: 'all' },
+        sort: { column: 'title', direction: 'asc' }
+      })
+    ).length
+    const paths = await h['import:pickMusic']()
+    expect(paths).toHaveLength(1)
+    sent.length = 0
+    const summary = await h['import:start']({ kind: 'paths', paths })
+    // The songs it "finds" are the ones already there, so the library is unchanged.
+    expect(summary.added).toEqual([])
+    expect(summary.alreadyPresent).toHaveLength(before)
+    expect(summary.cancelled).toBe(false)
+    expect(sent.some(([channel]) => channel === 'import:progress')).toBe(true)
+    expect(
+      (
+        await h['library:list']({
+          search: '',
+          filter: { kind: 'all' },
+          sort: { column: 'title', direction: 'asc' }
+        })
+      ).length
+    ).toBe(before)
   })
 
   test('the projector and sync report off', async () => {

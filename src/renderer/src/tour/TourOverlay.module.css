@@ -42,3 +42,12 @@
 .popover {
   max-width: 340px;
 }
+
+/* No scrollbars while a step locks scrolling (see TourOverlay). */
+:global(html[data-tour-lock]) :global(*) {
+  scrollbar-width: none;
+}
+
+:global(html[data-tour-lock]) :global(*)::-webkit-scrollbar {
+  display: none;
+}

@@ -1,6 +1,7 @@
+import { tourAudio } from './audio-hold'
 import type { StepContext, TourStep } from './steps'
 
-// The Basic tour (tour spec §3, steps 1–16), as 21 steps. The welcome screen is not a step: it is
+// The Basic tour (tour spec §3, steps 1–16), . The welcome screen is not a step: it is
 // shown before the tour is entered. Song names are the practice library's (demo-library.ts).
 // Each "do" step ends on the real result, read from the stores or the API.
 
@@ -12,6 +13,8 @@ const titles = (ctx: StepContext): string[] =>
 const selected = (ctx: StepContext, title: string): boolean => titles(ctx).includes(title)
 const inProgram = (ctx: StepContext, title: string): boolean =>
   (ctx.program.getState().program?.items ?? []).some((i) => i.kind === 'track' && i.title === title)
+const shown = (target: string): boolean =>
+  document.querySelector(`[data-tour="${target}"]`) !== null
 const dialogOpen = (): boolean =>
   document.querySelector('[data-tour="program.dance-dialog"]') !== null
 const inHolding = async (ctx: StepContext, title: string): Promise<boolean> =>
@@ -31,7 +34,46 @@ export const BASIC_STEPS: TourStep[] = [
     kind: 'explain',
     target: 'music.add',
     title: 'Getting your music in',
-    body: 'This is where your music comes in. Press Add Music… to choose a folder of songs; the app reads each song’s title, artist and country from the file. On a Mac you can also turn on Sync with Apple Music, beside it, to keep your Music library and playlists in step automatically.\n\nA file picker can’t open in this practice library, so we’ll leave that for later: it already has some songs.'
+    body: 'This is where your music comes in. Add Music… takes a folder of songs; the app reads each song’s title, artist and country from the file. On a Mac you can also turn on Sync with Apple Music, beside it, to keep your Music library and playlists in step automatically.\n\nThe practice library already has songs, but let’s walk through an import.'
+  }),
+  step({
+    id: 'basic.import-open',
+    page: 'music',
+    kind: 'do',
+    target: 'music.add',
+    placement: 'bottom',
+    title: 'Try an import',
+    body: 'Press Add Music…. A file picker would open here; in the practice library we pretend you chose a folder.',
+    done: () => shown('import.mapping')
+  }),
+  step({
+    id: 'basic.import-tags',
+    page: 'music',
+    kind: 'explain',
+    target: 'import.mapping',
+    placement: 'right',
+    title: 'Which tag goes where',
+    body: 'Every song file carries tags, and different collections fill them differently. “Populate Artist from” says which tag becomes the artist; the same goes for the teacher and the choreographer. Many folk dance collections keep the teacher in the Album Artist tag, so check yours. “Genre is Country” turns the Genre tag into the dance’s country.\n\nYour choices are remembered for next time, and you can re-apply them to songs you already have.'
+  }),
+  step({
+    id: 'basic.import-run',
+    page: 'music',
+    kind: 'do',
+    target: 'import.start',
+    placement: 'top',
+    title: 'Import',
+    body: 'Press Import. The practice library has nothing new to add, so it will say the songs are already there.',
+    done: () => shown('import.summary')
+  }),
+  step({
+    id: 'basic.import-done',
+    page: 'music',
+    kind: 'do',
+    target: 'import.done',
+    placement: 'top',
+    title: 'What happened',
+    body: 'Every import ends with a summary of what was added, updated, or could not be read. Press Done.',
+    done: () => !shown('import.summary') && !shown('import.mapping')
   }),
   step({
     id: 'basic.select',
@@ -46,18 +88,18 @@ export const BASIC_STEPS: TourStep[] = [
     id: 'basic.two-dances-pick',
     page: 'music',
     kind: 'do',
-    target: 'song:Misirlou',
-    title: 'One tune, more than one dance',
-    body: 'Now click Misirlou.',
-    done: (ctx) => selected(ctx, 'Misirlou')
+    target: 'song:Legnala Dana',
+    title: 'More than one dance for a song',
+    body: 'Now click Legnala Dana.',
+    done: (ctx) => selected(ctx, 'Legnala Dana')
   }),
   step({
     id: 'basic.two-dances',
     page: 'music',
     kind: 'explain',
     target: 'editor.dances',
-    title: 'A song is not a dance',
-    body: 'A song is the music. A dance is what you do to it. Misirlou is one tune with two dances, a line dance and a mixer, so it has two dance cards.\n\nYou can link more dances to a song, or make a new one, whenever you need to.'
+    title: 'Two dances, one song',
+    body: 'You can assign more than one dance to a song, when it makes sense to. This tune has two: Legnala Dana, and Lesnoto, which fits the same music. Each has its own card.\n\nYou can link more dances to a song, or make a new one, whenever you need to.'
   }),
   step({
     id: 'basic.shared-pick',
@@ -74,7 +116,7 @@ export const BASIC_STEPS: TourStep[] = [
     kind: 'do',
     target: 'editor.dance-type',
     title: 'Edit a dance once',
-    body: 'This dance, Lesnoto, is done to another tune as well. Set its Dance type (Open Circle is a good choice), then click anywhere else to save it.',
+    body: 'This dance, Lesnoto, is done to another tune as well. Set its Dance type: pick Open Circle from the list.',
     done: async (ctx) =>
       (await selectedDances(ctx)).some((d) => d.name === 'Lesnoto' && !!d.danceType)
   }),
@@ -82,18 +124,26 @@ export const BASIC_STEPS: TourStep[] = [
     id: 'basic.shared-other',
     page: 'music',
     kind: 'do',
-    target: 'song:Pusti Me Mamo',
+    target: 'song:Legnala Dana',
     title: 'Now the other tune',
-    body: 'Click Pusti Me Mamo. Lesnoto has the same dance type here: it is one dance, so you only edit it once.',
-    done: (ctx) => selected(ctx, 'Pusti Me Mamo')
+    body: 'Click Legnala Dana again. Its Lesnoto card has the same dance type: it is one dance, so you only edit it once.',
+    done: (ctx) => selected(ctx, 'Legnala Dana')
   }),
   step({
-    id: 'basic.who-owns',
+    id: 'basic.who-owns-artist',
     page: 'music',
     kind: 'explain',
-    target: ['editor.artist', 'editor.teacher'],
-    title: 'Who belongs to what',
-    body: 'The artist belongs to the music, so it stays with the song.\n\nThe teacher belongs to the dance and the song together: whoever taught this dance to this tune. That is why Pusti Me Mamo and Makedonsko Devojče can have different teachers for the same dance.'
+    target: 'editor.artist',
+    title: 'The artist belongs to the song',
+    body: 'The artist is who made the recording, so it stays with the song, whichever dances it has.'
+  }),
+  step({
+    id: 'basic.who-owns-teacher',
+    page: 'music',
+    kind: 'explain',
+    target: 'editor.teacher',
+    title: 'The teacher belongs to the dance and tune together',
+    body: 'The teacher is whoever taught this dance to this tune. That is why Lesnoto has one teacher here and another with Makedonsko Devojče, though it is the same dance.'
   }),
   step({
     id: 'basic.attachments',
@@ -118,7 +168,7 @@ export const BASIC_STEPS: TourStep[] = [
     target: 'library.search',
     title: 'Find songs',
     body: 'This is the Program page. On the right is your library. Type hora in the search box: it searches titles, dance names, teachers, choreographers and countries.',
-    done: (ctx) => ctx.library.getState().search.trim() !== ''
+    done: (ctx) => ctx.library.getState().search.toLowerCase().includes('hora')
   }),
   step({
     id: 'basic.search-clear',
@@ -133,19 +183,19 @@ export const BASIC_STEPS: TourStep[] = [
     id: 'basic.add',
     page: 'program',
     kind: 'do',
-    target: ['song:Hora Mare', 'program.panel'],
+    target: ['song:Hava Nagila', 'program.panel'],
     title: 'Build your program',
-    body: 'Your program is the running order for the evening. Drag Hora Mare from the library into the Program on the left.',
-    done: (ctx) => inProgram(ctx, 'Hora Mare')
+    body: 'Your program is the running order for the evening. Drag Hava Nagila from the library into the Program on the left.',
+    done: (ctx) => inProgram(ctx, 'Hava Nagila')
   }),
   step({
     id: 'basic.pick-dance',
     page: 'program',
     kind: 'do',
-    target: ['song:Misirlou', 'program.panel'],
+    target: ['song:Legnala Dana', 'program.panel'],
     title: 'When a song has two dances',
-    body: 'Now drag Misirlou in. It has two dances, so the app asks which one you want.',
-    done: (ctx) => inProgram(ctx, 'Misirlou') && dialogOpen()
+    body: 'Now drag Legnala Dana in. It has two dances, so the app asks which one you want.',
+    done: (ctx) => inProgram(ctx, 'Legnala Dana') && dialogOpen()
   }),
   step({
     id: 'basic.pick-dance-answer',
@@ -160,28 +210,28 @@ export const BASIC_STEPS: TourStep[] = [
     id: 'basic.remove',
     page: 'program',
     kind: 'do',
-    target: 'program.remove:Hora Mare',
+    target: 'program.remove:Legnala Dana',
     title: 'Take something out',
-    body: 'Changed your mind? Click the ✕ on Hora Mare to remove it from the program.',
-    done: (ctx) => !inProgram(ctx, 'Hora Mare')
+    body: 'Changed your mind? Click the ✕ on Legnala Dana to remove it from the program.',
+    done: (ctx) => !inProgram(ctx, 'Legnala Dana')
   }),
   step({
     id: 'basic.hold',
     page: 'program',
     kind: 'do',
-    target: ['song:Ali Pasa', 'holding.panel'],
+    target: ['song:Korobushka', 'holding.panel'],
     title: 'Holding',
-    body: 'Holding is a shelf for songs you might use tonight. Drag Ali Pasa into Holding.',
-    done: (ctx) => inHolding(ctx, 'Ali Pasa')
+    body: 'Holding is a shelf for songs you might use tonight. Drag Korobushka into Holding.',
+    done: (ctx) => inHolding(ctx, 'Korobushka')
   }),
   step({
     id: 'basic.hold-back',
     page: 'program',
     kind: 'do',
-    target: ['holding.row:Ali Pasa', 'program.panel'],
+    target: ['holding.row:Korobushka', 'program.panel'],
     title: 'From the shelf to the program',
     body: 'When you decide, drag it from Holding into your program. It moves, so it leaves the shelf.',
-    done: async (ctx) => inProgram(ctx, 'Ali Pasa') && !(await inHolding(ctx, 'Ali Pasa'))
+    done: async (ctx) => inProgram(ctx, 'Korobushka') && !(await inHolding(ctx, 'Korobushka'))
   }),
   step({
     id: 'basic.favorite',
@@ -198,7 +248,8 @@ export const BASIC_STEPS: TourStep[] = [
     kind: 'do',
     target: 'player.play',
     title: 'Play it',
-    body: 'Press Play. The first song starts after a short countdown, and the practice tune plays.',
+    body: 'Press Play. The first song starts after a short countdown. It will repeat for as long as you want to look around.',
+    begin: () => tourAudio.setLoop(true),
     done: (ctx) => ['countdown', 'playing'].includes(ctx.program.getState().player.status)
   }),
   step({
@@ -222,10 +273,16 @@ export const BASIC_STEPS: TourStep[] = [
   step({
     id: 'basic.wait',
     page: 'program',
-    kind: 'explain',
+    kind: 'do',
     target: 'player.wait',
+    placement: 'top',
     title: 'The wait between songs',
-    body: 'When a song ends, the next one starts after a few seconds, so dancers can change partners. Set how many here, or untick Auto-continue to start each song yourself. A STOP marker in the program also pauses everything while you teach.'
+    body: 'When a song ends, the next one starts after a few seconds, so dancers can change partners. We have jumped to the end of this song: watch the next one begin. Set the wait here, or untick Auto-continue to start each song yourself. A STOP marker in the program also pauses everything while you teach.',
+    begin: () => {
+      tourAudio.setLoop(false)
+      tourAudio.jumpNearEnd()
+    },
+    done: (ctx) => ctx.program.getState().player.current?.track.title === 'Korobushka'
   }),
   step({
     id: 'basic.end',

@@ -1,8 +1,9 @@
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, test } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import type { PlayerState } from '@shared/program'
 import PlayerBar from '@renderer/program/PlayerBar'
+import { tourAudio } from '@renderer/tour/audio-hold'
 import { createFakeApi } from '../fake-api'
 import { renderWithLibrary } from '../library/render-library'
 import { item, playerState, playing, stop, track } from './fixtures'
@@ -38,6 +39,8 @@ const audio = () => screen.getByTestId('player-audio') as HTMLAudioElement
 const title = () => screen.getByTestId('player-title')
 
 describe('player bar', () => {
+  afterEach(() => tourAudio.reset())
+
   test('idle: shows next up, and ▶ starts the program', async () => {
     const fake = setup(playerState({ nextUp: item(1, hora) }))
     await waitFor(() => expect(title()).toHaveTextContent('Next up: Hora'))
@@ -61,6 +64,19 @@ describe('player bar', () => {
     expect(title()).toHaveTextContent('Hora')
     expect(screen.getByText('Romania')).toBeInTheDocument()
     expect(screen.getByText('0:00 / 3:05')).toBeInTheDocument()
+  })
+
+  test('during the tour a song repeats until the tour lets it end, and can jump to its last seconds', async () => {
+    setup(playing(hora))
+    await waitFor(() => expect(audio().src).toBe('fdp-media://file/101'))
+    expect(audio().loop).toBe(false)
+    act(() => tourAudio.setLoop(true))
+    expect(audio().loop).toBe(true)
+    Object.defineProperty(audio(), 'duration', { value: 185, configurable: true })
+    act(() => tourAudio.jumpNearEnd())
+    expect(audio().currentTime).toBeCloseTo(180, 0)
+    act(() => tourAudio.setLoop(false))
+    expect(audio().loop).toBe(false)
   })
 
   test('a double-click on ▶ or ⏸ counts as one press', async () => {

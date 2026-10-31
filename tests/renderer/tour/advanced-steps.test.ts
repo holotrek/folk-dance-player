@@ -66,6 +66,50 @@ describe('the Advanced tour’s steps', () => {
     }
   })
 
+  test('the one-screen step says how to turn the overlay off', () => {
+    const body = step('advanced.one-screen').body
+    expect(body).toContain('Uncheck to disable showing the overlay')
+    expect(body).not.toMatch(/untick/i)
+  })
+
+  test('the sidebar steps stay on whatever page the person is on, instead of switching to Music', () => {
+    for (const id of [
+      'advanced.playlists',
+      'advanced.open-folder',
+      'advanced.mirror',
+      'advanced.load'
+    ]) {
+      expect(step(id).page === null || id === 'advanced.load', id).toBe(true)
+    }
+    expect(step('advanced.load').page).toBe('program')
+    expect(step('advanced.playlists').kind).toBe('do')
+  })
+
+  test('playlists: done once the person has opened a playlist of their own', async () => {
+    const { ctx, library } = context()
+    library.setState({
+      playlists: [playlist(1, 'Easy circle dances'), playlist(2, 'Balkan night', true)],
+      filter: { kind: 'all' }
+    })
+    expect(await isDone('advanced.playlists', ctx)).toBe(false)
+    library.setState({ filter: { kind: 'playlist', playlistId: 2 } })
+    expect(await isDone('advanced.playlists', ctx)).toBe(false) // the synced one is the folder step's
+    library.setState({ filter: { kind: 'playlist', playlistId: 1 } })
+    expect(await isDone('advanced.playlists', ctx)).toBe(true)
+  })
+
+  test('Settings is shown a control at a time, each pointing at its own control', () => {
+    const settings = ADVANCED_STEPS.filter((s) => s.page === 'settings')
+    expect(settings.map((s) => s.target)).toEqual([
+      'settings.appearance',
+      'settings.import',
+      'settings.remote',
+      'settings.about'
+    ])
+    expect(settings[0].body).toMatch(/light or dark/i)
+    expect(settings.every((s) => s.kind === 'explain')).toBe(true)
+  })
+
   test('adding a program: done once there is one more than when the step began', async () => {
     const { ctx, program } = context()
     program.setState({ programs: [summary(1, 'Friday warm-up')] })

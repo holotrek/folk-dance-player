@@ -2,7 +2,7 @@ import { MantineProvider } from '@mantine/core'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test, vi } from 'vitest'
-import TourOverlay from '@renderer/tour/TourOverlay'
+import TourOverlay, { useHoles, type Hole } from '@renderer/tour/TourOverlay'
 import type { TourStep } from '@renderer/tour/steps'
 import { testTheme } from '../test-theme'
 
@@ -65,13 +65,28 @@ function setup(step: TourStep, extra: Partial<React.ComponentProps<typeof TourOv
     onLeave: vi.fn(),
     onGoThere: vi.fn()
   }
-  render(
+  const { unmount } = render(
     <MantineProvider theme={testTheme}>
       <TourOverlay step={step} index={3} total={14} {...handlers} {...extra} />
     </MantineProvider>
   )
-  return handlers
+  return { ...handlers, unmount }
 }
+
+describe('measuring a step’s target', () => {
+  test('is “not measured yet” on the first render, never “missing”, and is settled before the first paint', () => {
+    target('song')
+    const seen: (Hole[] | null | undefined)[] = []
+    function Probe(): null {
+      seen.push(useHoles('song'))
+      return null
+    }
+    render(<Probe />)
+    expect(seen[0]).toBeUndefined() // not null: nothing says the target is missing yet
+    expect(seen.at(-1)).toEqual([{ x: 94, y: 74, w: 212, h: 52 }])
+    expect(seen).not.toContain(null)
+  })
+})
 
 describe('the tour overlay', () => {
   test('shows the popover at the target, with the step count, and dims the rest around a hole', async () => {
@@ -127,6 +142,32 @@ describe('the tour overlay', () => {
     expect(under).not.toHaveBeenCalled()
   })
 
+  test('scrolling is locked during a step, so the tour does not move under the person', async () => {
+    target('song')
+    setup(doStep)
+    await screen.findByText('Pick a song')
+    expect(fireEvent.wheel(document.body, { deltaY: 120 })).toBe(false) // prevented
+    expect(fireEvent.touchMove(document.body)).toBe(false)
+    expect(document.documentElement.hasAttribute('data-tour-lock')).toBe(true)
+  })
+
+  test('a step that needs scrolling allows it', async () => {
+    target('song')
+    setup({ ...doStep, scroll: true })
+    await screen.findByText('Pick a song')
+    expect(fireEvent.wheel(document.body, { deltaY: 120 })).toBe(true)
+    expect(document.documentElement.hasAttribute('data-tour-lock')).toBe(false)
+  })
+
+  test('the lock is lifted when the tour goes', async () => {
+    target('song')
+    const { unmount } = setup(doStep)
+    await screen.findByText('Pick a song')
+    unmount()
+    expect(fireEvent.wheel(document.body, { deltaY: 120 })).toBe(true)
+    expect(document.documentElement.hasAttribute('data-tour-lock')).toBe(false)
+  })
+
   test('Leave the tour asks first; Keep going cancels, Leave leaves', async () => {
     target('song')
     const { onLeave } = setup(doStep)
@@ -151,9 +192,28 @@ describe('the tour overlay', () => {
     expect(await screen.findByRole('dialog', { name: 'Leave the tour?' })).toBeInTheDocument()
   })
 
+  test('the first paint already has the hole and the popover: no centered card flashes first', async () => {
+    target('song')
+    setup(doStep)
+    // Straight after render, before anything has had time to settle.
+    expect(screen.queryByRole('button', { name: 'Take me there' })).toBeNull()
+    expect(screen.queryByText(/isn’t on screen/)).toBeNull()
+    expect(screen.getByTestId('tour-blocker').dataset.holes).toBe('94,74,212,52')
+  })
+
+  test('a target that is not there yet shows no card until it has been missing a while', async () => {
+    setup(doStep)
+    expect(screen.queryByRole('button', { name: 'Take me there' })).toBeNull()
+    expect(
+      await screen.findByRole('button', { name: 'Take me there' }, { timeout: 2000 })
+    ).toBeInTheDocument()
+  })
+
   test('a missing target offers Take me there', async () => {
     const { onGoThere } = setup(doStep)
-    await userEvent.click(await screen.findByRole('button', { name: 'Take me there' }))
+    await userEvent.click(
+      await screen.findByRole('button', { name: 'Take me there' }, { timeout: 2000 })
+    )
     expect(onGoThere).toHaveBeenCalled()
     expect(screen.getByTestId('tour-blocker').dataset.holes).toBe('')
   })

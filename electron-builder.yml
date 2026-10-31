@@ -26,9 +26,11 @@ mac:
   extraResources:
     - from: resources/bin/fdp-music-library
       to: fdp-music-library
-    # The guided tour's practice tune (tour spec §5.1).
+    # The guided tour's practice tunes (tour spec §5.1).
     - from: resources/tour/hava-nagila.wav
       to: hava-nagila.wav
+    - from: resources/tour/korobushka.wav
+      to: korobushka.wav
   x64ArchFiles: Contents/Resources/fdp-music-library
   # Without this key macOS refuses Music access without asking (sync spec §9).
   extendInfo:

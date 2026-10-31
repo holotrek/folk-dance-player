@@ -36,6 +36,9 @@ export interface TourStep {
   // Which side of the target the popover opens on (below by default); steps whose target opens a
   // menu or a dialog choose a side that stays clear of it.
   placement?: 'top' | 'bottom' | 'left' | 'right'
+  // Scrolling is locked during a step (the tour must not move under the person), unless the step
+  // asks the person to scroll.
+  scroll?: boolean
   title: string
   body: string
   // Runs the instant the step arrives (not when its condition is first looked at, which can be

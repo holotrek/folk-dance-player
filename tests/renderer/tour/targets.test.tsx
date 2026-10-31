@@ -23,11 +23,10 @@ const record = (): void =>
 
 const TITLES = [
   'Hava Nagila',
-  'Misirlou',
+  'Korobushka',
+  'Legnala Dana',
   'Makedonsko Devojče',
-  'Pusti Me Mamo',
   'Hora Mare',
-  'Ali Pasa',
   'Zemer Atik'
 ]
 const row = (i: number, title: string): LibraryRow =>
@@ -59,7 +58,7 @@ const detail = (): SongDetail =>
   ({
     songId: 2,
     fileId: 102,
-    title: 'Misirlou',
+    title: 'Legnala Dana',
     artist: 'The Practice Band',
     path: '/m/2.wav',
     durationMs: 23_000,
@@ -98,13 +97,13 @@ describe('the tour’s targets exist on the screen', () => {
       'settings:getAll': DEFAULT_SETTINGS
     })
     renderWithLibrary(<MusicPage />, fake.api)
-    fireEvent.click((await screen.findByText('Misirlou')).closest('[role=row]')!)
+    fireEvent.click((await screen.findByText('Legnala Dana')).closest('[role=row]')!)
     await screen.findByRole('group', { name: 'Dance 11' })
     record()
     for (const id of [
       'music.add',
-      'song:Misirlou',
-      'star:Misirlou',
+      'song:Legnala Dana',
+      'star:Legnala Dana',
       'editor.dances',
       'editor.dance-card',
       'editor.artist',
@@ -118,14 +117,47 @@ describe('the tour’s targets exist on the screen', () => {
     }
   })
 
+  test('the import dialog: its tags, Import and Done', async () => {
+    const fake = createFakeApi({
+      'library:list': ROWS,
+      'library:stats': { fileCount: ROWS.length },
+      'playlists:list': [],
+      'settings:getAll': DEFAULT_SETTINGS,
+      'import:pickMusic': ['/Practice Music'],
+      'import:start': {
+        added: [],
+        updated: [],
+        relinked: [],
+        alreadyPresent: [{ path: '/m/1.wav' }],
+        restored: [],
+        appleSynced: [],
+        notFound: [],
+        unsupported: [],
+        unreadable: [],
+        playlists: { created: [], replaced: [], kept: [], duplicated: [] },
+        cancelled: false
+      }
+    })
+    renderWithLibrary(<MusicPage />, fake.api)
+    fireEvent.click(await screen.findByRole('button', { name: /Add Music/ }))
+    await screen.findByText('Choose how their tags are used:', { exact: false })
+    record()
+    fireEvent.click(screen.getByRole('button', { name: 'Import' }))
+    await screen.findByRole('button', { name: 'Done' })
+    record()
+    for (const id of ['import.mapping', 'import.start', 'import.summary', 'import.done']) {
+      expect(found, id).toContain(id)
+    }
+  })
+
   test('the Program page: search, panels, holding, remove, and the player bar', async () => {
-    const hora = track(104, 'Hora Mare')
+    const legnala = track(104, 'Legnala Dana')
     const fake = createFakeApi({
       'player:getState': playerState({ programId: 5 }),
       'library:list': ROWS,
       'library:stats': { fileCount: ROWS.length },
-      'library:holding': [{ id: 1, ...track(106, 'Ali Pasa') }],
-      'programs:get': { id: 5, name: 'Set', items: [item(1, hora)] },
+      'library:holding': [{ id: 1, ...track(106, 'Korobushka') }],
+      'programs:get': { id: 5, name: 'Set', items: [item(1, legnala)] },
       'programs:played': [],
       'programs:list': [],
       'playlists:list': [],
@@ -139,17 +171,18 @@ describe('the tour’s targets exist on the screen', () => {
       </>,
       fake.api
     )
-    await screen.findByText('Ali Pasa')
-    await screen.findByRole('button', { name: /Remove Hora Mare/ })
+    await screen.findByText('Korobushka')
+    await screen.findByRole('button', { name: /Remove Legnala Dana/ })
     record()
     for (const id of [
       'library.search',
       'program.panel',
       'holding.panel',
-      'holding.row:Ali Pasa',
-      'program.remove:Hora Mare',
-      'song:Hora Mare',
-      'song:Ali Pasa',
+      'holding.row:Korobushka',
+      'program.remove:Legnala Dana',
+      'song:Hava Nagila',
+      'song:Legnala Dana',
+      'song:Korobushka',
       'star:Zemer Atik',
       'player.play',
       'player.speed',
@@ -168,10 +201,10 @@ describe('the tour’s targets exist on the screen', () => {
       <DanceChoiceDialog
         choices={[
           {
-            item: { id: 1, title: 'Misirlou', danceId: 1 },
+            item: { id: 1, title: 'Legnala Dana', danceId: 1 },
             dances: [
-              { danceId: 1, label: 'Misirlou' },
-              { danceId: 2, label: 'Misirlou Mixer' }
+              { danceId: 1, label: 'Legnala Dana' },
+              { danceId: 2, label: 'Lesnoto' }
             ] as never
           }
         ]}
@@ -237,6 +270,7 @@ describe('the tour’s targets exist on the screen', () => {
       'sidebar.programs',
       'sidebar.program:Friday warm-up',
       'sidebar.playlists',
+      'sidebar.playlist:Easy circle dances',
       'sidebar.folder:Festival 2026',
       'sidebar.playlist-options:Balkan night'
     ]) {
@@ -255,7 +289,15 @@ describe('the tour’s targets exist on the screen', () => {
     renderWithLibrary(<SettingsPage api={fake.api} />, fake.api)
     await screen.findByText('Appearance')
     record()
-    expect(found).toContain('settings.page')
+    for (const id of [
+      'settings.page',
+      'settings.appearance',
+      'settings.import',
+      'settings.remote',
+      'settings.about'
+    ]) {
+      expect(found, id).toContain(id)
+    }
   })
 
   test('every target a Basic or Advanced step names was found', () => {
