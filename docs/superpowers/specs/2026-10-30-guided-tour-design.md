@@ -75,8 +75,7 @@ Two settings, `tour.basic` and `tour.advanced`, each `'unseen'` (the default), `
   which is why it carries **Don't show this again**: it is how someone who left early says "enough".
 - On launch, the offer is for **Basic** while `tour.basic` is `unseen`; otherwise for **Advanced**
   while `tour.basic` is `done` and `tour.advanced` is `unseen`. Nothing is offered when both
-  parts are `done` or `hidden`, or after `hidden`. (**My call:** someone who picks "Stop and use it
-  already!" at the end of Basic is offered Advanced once more next launch, with Don't show this
+  parts are `done` or `hidden`, or after `hidden`. (**My call:** someone who picks "Start now!" at the end of Basic is offered Advanced once more next launch, with Don't show this
   again; see §10.)
 - The flags live in the **real** settings (`settings.ts`, validated like the others), never in the
   practice library. Replaying from Help does not change them unless the part is finished.
@@ -92,14 +91,21 @@ Two settings, `tour.basic` and `tour.advanced`, each `'unseen'` (the default), `
   step appeared, it completes at once.
 - The tour **switches pages itself** (Music, Program, Settings) and scrolls the target into view.
 - **Escape** or **Leave the tour** asks "Leave the tour? Your practice library is thrown away" with
-  **Keep going** and **Leave**. Leaving returns to the real library.
+  **Keep going** and **Leave**. Leaving returns to the real library, on the Music tab.
 - Reduced motion: the pulse is a steady outline.
 
 ### 2.4 The end of Basic
 
-A closing step offers two buttons: **Stop and use it already!** (ends the tour, flag `done`) and
-**Continue to the advanced features** (goes on into Advanced without leaving the tour; finishing it
-sets `tour.advanced` to `done`). Both end back in the real library.
+The last Basic step asks (the maintainer's wording, 2026-10-30): "Would you like to learn about some
+more app features or start building your music library now?" with two buttons:
+
+- **Learn more** goes on into Advanced without leaving the tour; finishing it sets `tour.advanced`
+  to `done`.
+- **Start now!** ends the tour (flag `done` for Basic).
+
+**After the tour the person lands on the Music tab of the real library** (decided 2026-10-30), the
+natural place to start adding music. This is true of every way out of a tour (finishing, **Start
+now!**, or leaving part-way); the Program tab is not where they land.
 
 ### 2.5 A visible reminder
 
@@ -131,7 +137,7 @@ language; this table fixes the content and order (the maintainer's list, 2026-10
 | 13 | Play | Program | do | Press **Play**; the practice tune plays. Done when playing. |
 | 14 | Speed and volume | Program | do | Move the speed slider ("the pitch stays the same") and the volume slider. Done when each has changed. |
 | 15 | The wait | Program | explain | "After a song ends there is a few seconds' wait before the next one starts; set it here. **Stop** or the STOP marker pauses for teaching." Points at the auto-continue seconds. |
-| 16 | The end of Basic | — | choice | **Stop and use it already!** or **Continue to the advanced features**. |
+| 16 | The end of Basic | — | choice | "Would you like to learn about some more app features or start building your music library now?" **Learn more** / **Start now!** (§2.4). |
 
 ### Advanced
 
@@ -145,7 +151,7 @@ language; this table fixes the content and order (the maintainer's list, 2026-10
 | 22 | Playlists: yours and synced | Music | explain | Custom playlists are yours to edit; ones from Apple Music are marked with a note icon. |
 | 23 | Editing a synced playlist | Music | do | On a synced playlist, **Duplicate as my playlist** (done when made): "a synced playlist can't be edited, so you edit a copy". |
 | 24 | Settings | Settings | explain | A tour of the Settings page's sections (appearance, import mapping, remote, about). |
-| 25 | The end | — | choice | **Done** (flag `done`), back to the real library. |
+| 25 | The end | — | choice | **Done** (flag `done`), then the Music tab of the real library. |
 
 Step 23 uses a **synced-style playlist** in the practice library (§5). Steps that point at the
 projector, sync, import, attachments and Canva are explain-only because the practice context has none of
@@ -186,7 +192,7 @@ Entering tour mode is a **reload of the control window** in tour mode: main sets
 (in memory only), builds the practice context, and reloads the page; the renderer starts fresh on
 the practice library and shows the tour. Leaving clears the mode, disposes the context (closes the
 temp database, deletes the folder) and reloads again, so every store refetches from the real
-library. Reasons: it needs no "reset every store" code, and it is **crash-safe by construction**:
+library, then shows the Music page (the existing `app:showPage`; the app otherwise opens on Program). Reasons: it needs no "reset every store" code, and it is **crash-safe by construction**:
 the mode lives only in main's memory and the real database is never swapped, so quitting or
 crashing mid-tour leaves nothing to restore. A startup sweep deletes stale `fdp-tour-*` temp
 folders from crashed runs.
@@ -308,7 +314,7 @@ reach it), it shows a short "Not in the practice library" message.
   different teachers, a synced playlist in a folder, a program), and its files exist and play.
 - **Settings:** the flags validate and default; the offer logic returns `basic`, `advanced` or null
   for each state in §2.2.
-- **End-to-end (Playwright, as the other specs):** launch, accept the offer, **perform each Basic
+- **End-to-end (Playwright, as the other specs):** every exit from a tour (Start now!, finishing Advanced, leaving part-way) ends on the Music tab of the real library; launch, accept the offer, **perform each Basic
   step's action in the real UI** (drag a song, answer the dialog, press Play, move the speed slider)
   and assert the tour advances; reach the choice and continue into Advanced; leave halfway and
   check the real library is intact and the offer returns next launch; run once at the minimum
@@ -327,9 +333,9 @@ reach it), it shows a short "Not in the practice library" message.
 
 1. **Entering and leaving the tour reloads the control window.** Simple and crash-safe; the cost is a
    brief flash.
-2. **"Stop and use it already!" marks Basic `done` but leaves Advanced `unseen`**, so Advanced is
-   offered once more next launch (with Don't show this again). If you would rather Advanced never
-   nag after that choice, "Stop and use it already!" should set Advanced to `hidden`.
+2. **"Start now!" marks Basic `done` but leaves Advanced `unseen`**, so Advanced is offered once more
+   next launch (with Don't show this again). If you would rather Advanced never come up again after
+   that choice, "Start now!" should set Advanced to `hidden`.
 3. **The banner "Practice library: your real music is safe"** is always on during a tour.
 4. **Step 4 (edit a shared dance)** shows the second song's card changing, to make "edit once" visible.
 5. **Delete…** of a program is explained, not run, so the practice library keeps its saved program.
