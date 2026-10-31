@@ -144,7 +144,71 @@ describe('the Basic tour’s conditions read the real result', () => {
     expect(await isDone('basic.pick-dance', ctx)).toBe(true)
     expect(await isDone('basic.pick-dance-answer', ctx)).toBe(false)
     dialog.remove()
+    // The dialog closed, but with the song's own dance: the person is asked for the other one.
+    expect(await isDone('basic.pick-dance-answer', ctx)).toBe(false)
+  })
+
+  test('the Which dance step ends once Legnala Dana is in the program as Lesnoto', async () => {
+    const { ctx, program } = context()
+    const withLabel = (label: string) =>
+      program.setState({
+        program: {
+          id: 1,
+          name: 'Set',
+          items: [item(1, track(100, 'Legnala Dana', { label }))]
+        } as ProgramDetail
+      })
+    withLabel('Legnala Dana')
+    expect(await isDone('basic.pick-dance-answer', ctx)).toBe(false)
+    withLabel('Lesnoto ♪ Legnala Dana')
     expect(await isDone('basic.pick-dance-answer', ctx)).toBe(true)
+    // Still open: not done yet.
+    const dialog = document.createElement('div')
+    dialog.dataset.tour = 'program.dance-dialog'
+    document.body.appendChild(dialog)
+    expect(await isDone('basic.pick-dance-answer', ctx)).toBe(false)
+  })
+
+  test('folding a dance card ends the fold step', async () => {
+    const { ctx } = context()
+    expect(await isDone('basic.collapse-dance', ctx)).toBe(false)
+    const card = document.createElement('div')
+    card.dataset.tour = 'editor.dance-card'
+    document.body.appendChild(card)
+    expect(await isDone('basic.collapse-dance', ctx)).toBe(false) // open
+    card.setAttribute('data-collapsed', '')
+    expect(await isDone('basic.collapse-dance', ctx)).toBe(true)
+  })
+
+  test('another dance goes below Korobushka, and a STOP goes right before it', async () => {
+    const { ctx, program } = context()
+    const setItems = (...entries: (string | 'STOP')[]) =>
+      program.setState({
+        program: {
+          id: 1,
+          name: 'Set',
+          items: entries.map((t, i) =>
+            t === 'STOP' ? { id: i + 1, kind: 'stop' } : item(i + 1, track(100 + i, t))
+          )
+        } as ProgramDetail
+      })
+    setItems('Hava Nagila', 'Korobushka')
+    expect(await isDone('basic.add-more', ctx)).toBe(false)
+    setItems('Hava Nagila', 'Hora Mare', 'Korobushka') // above Korobushka does not count
+    expect(await isDone('basic.add-more', ctx)).toBe(false)
+    setItems('Hava Nagila', 'Korobushka', 'Hora Mare')
+    expect(await isDone('basic.add-more', ctx)).toBe(true)
+
+    expect(await isDone('basic.stop', ctx)).toBe(false)
+    setItems('Hava Nagila', 'Korobushka', 'STOP', 'Hora Mare')
+    expect(await isDone('basic.stop', ctx)).toBe(true)
+  })
+
+  test('the wait text speaks of conversation and lining up, not partners, and the STOP the person added', () => {
+    const body = step('basic.wait').body
+    expect(body).toContain('leave time to converse and line up for the next dance')
+    expect(body).not.toMatch(/partner/i)
+    expect(body).toMatch(/STOP marker you added/)
   })
 
   test('a song is removed', async () => {

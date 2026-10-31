@@ -96,6 +96,25 @@ async function edit(input: HTMLElement, value: string): Promise<void> {
 }
 
 describe('SongEditor', () => {
+  test('a dance card folds to its header and opens again, on its own', async () => {
+    setup()
+    const first = 'Pravo Rhodopsko Oro (Yves Moreau) ♪ Pusteno Ludo'
+    const second = 'Lesnoto (Someone) ♪ Pusteno Ludo'
+    await screen.findByDisplayValue('Pusteno Ludo')
+    const toggle = (name: string) => screen.getByRole('button', { name })
+    expect(toggle(`Collapse ${first}`)).toHaveAttribute('aria-expanded', 'true')
+
+    await userEvent.click(toggle(`Collapse ${first}`))
+    expect(toggle(`Expand ${first}`)).toHaveAttribute('aria-expanded', 'false')
+    // Folded: its fields are hidden, while the other card is untouched.
+    expect(within(danceCard(first)).getByLabelText('Dance name')).not.toBeVisible()
+    expect(within(danceCard(second)).getByLabelText('Dance name')).toBeVisible()
+    expect(toggle(`Collapse ${second}`)).toHaveAttribute('aria-expanded', 'true')
+
+    await userEvent.click(toggle(`Expand ${first}`))
+    expect(within(danceCard(first)).getByLabelText('Dance name')).toBeVisible()
+  })
+
   test('shows the song and each dance by its label, with the default first', async () => {
     setup()
     expect(await screen.findByDisplayValue('Pusteno Ludo')).toBeInTheDocument()

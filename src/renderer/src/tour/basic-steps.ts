@@ -13,6 +13,13 @@ const titles = (ctx: StepContext): string[] =>
 const selected = (ctx: StepContext, title: string): boolean => titles(ctx).includes(title)
 const inProgram = (ctx: StepContext, title: string): boolean =>
   (ctx.program.getState().program?.items ?? []).some((i) => i.kind === 'track' && i.title === title)
+// The program's order as titles, with STOP markers as 'STOP'.
+const order = (ctx: StepContext): string[] =>
+  (ctx.program.getState().program?.items ?? []).map((i) => (i.kind === 'track' ? i.title : 'STOP'))
+const labelOf = (ctx: StepContext, title: string): string | undefined =>
+  (ctx.program.getState().program?.items ?? []).flatMap((i) =>
+    i.kind === 'track' && i.title === title ? [i.label] : []
+  )[0]
 const shown = (target: string): boolean =>
   document.querySelector(`[data-tour="${target}"]`) !== null
 const dialogOpen = (): boolean =>
@@ -100,6 +107,16 @@ export const BASIC_STEPS: TourStep[] = [
     target: 'editor.dances',
     title: 'Two dances, one song',
     body: 'You can assign more than one dance to a song, when it makes sense to. This tune has two: Legnala Dana, and Lesnoto, which fits the same music. Each has its own card.\n\nYou can link more dances to a song, or make a new one, whenever you need to.'
+  }),
+  step({
+    id: 'basic.collapse-dance',
+    page: 'music',
+    kind: 'do',
+    target: 'editor.dance-toggle',
+    placement: 'left',
+    title: 'Fold a dance away',
+    body: 'With several dances, the editor gets long. Click the arrow beside the first dance to fold it up; click it again to open it. Now the second dance is in view too.',
+    done: () => document.querySelector('[data-tour="editor.dance-card"][data-collapsed]') !== null
   }),
   step({
     id: 'basic.shared-pick',
@@ -204,8 +221,17 @@ export const BASIC_STEPS: TourStep[] = [
     kind: 'do',
     target: 'program.dance-dialog',
     title: 'Which dance?',
-    body: 'Choose one of the dances and press Done. You can change it later from the item’s ⋯ menu.',
-    done: () => !dialogOpen()
+    body: 'Choose Lesnoto, the same tune under its other name, and press Done. You can change it later from the item’s ⋯ menu.',
+    done: (ctx) => !dialogOpen() && (labelOf(ctx, 'Legnala Dana') ?? '').startsWith('Lesnoto')
+  }),
+  step({
+    id: 'basic.pick-dance-result',
+    page: 'program',
+    kind: 'explain',
+    target: 'program.item:Legnala Dana',
+    placement: 'right',
+    title: 'The dance’s name comes first',
+    body: 'The program lists the dance, then the song: “Lesnoto ♪ Legnala Dana”. When the two names differ you see both, here and on the projector.'
   }),
   step({
     id: 'basic.remove',
@@ -233,6 +259,33 @@ export const BASIC_STEPS: TourStep[] = [
     title: 'From the shelf to the program',
     body: 'When you decide, drag it from Holding into your program. It moves, so it leaves the shelf.',
     done: async (ctx) => inProgram(ctx, 'Korobushka') && !(await inHolding(ctx, 'Korobushka'))
+  }),
+  step({
+    id: 'basic.add-more',
+    page: 'program',
+    kind: 'do',
+    target: ['song:Hora Mare', 'program.panel'],
+    title: 'One more dance',
+    body: 'Drag Hora Mare into the program, below Korobushka.',
+    done: (ctx) => {
+      const titles = order(ctx)
+      return (
+        titles.indexOf('Hora Mare') > titles.indexOf('Korobushka') && titles.includes('Korobushka')
+      )
+    }
+  }),
+  step({
+    id: 'basic.stop',
+    page: 'program',
+    kind: 'do',
+    target: 'program.options:Hora Mare',
+    placement: 'left',
+    title: 'A STOP marker',
+    body: 'A STOP marker pauses the program so you can teach or talk before the next dance. Open Hora Mare’s ⋯ menu and choose Insert STOP before.',
+    done: (ctx) => {
+      const titles = order(ctx)
+      return titles.indexOf('Hora Mare') > 0 && titles[titles.indexOf('Hora Mare') - 1] === 'STOP'
+    }
   }),
   step({
     id: 'basic.favorite',
@@ -278,7 +331,7 @@ export const BASIC_STEPS: TourStep[] = [
     target: 'player.wait',
     placement: 'top',
     title: 'The wait between songs',
-    body: 'When a song ends, the next one starts after a few seconds, so dancers can change partners. We have jumped to the end of this song: watch the next one begin, then press Next when you have read this. Set the wait here, or untick Auto-continue to start each song yourself. A STOP marker in the program also pauses everything while you teach.',
+    body: 'When a song ends, the next one starts after a few seconds, to leave time to converse and line up for the next dance. We have jumped to the end of this song: watch the next one begin, then press Next when you have read this. Set the wait here, or uncheck Auto-continue to start each song yourself. The STOP marker you added makes it pause after Korobushka until you press Play.',
     begin: () => {
       tourAudio.setLoop(false)
       tourAudio.jumpNearEnd()

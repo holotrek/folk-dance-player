@@ -64,6 +64,7 @@ function ItemMenu(props: {
           className={classes.options}
           aria-label={`Options for ${name}`}
           data-options
+          data-tour={item.kind === 'track' ? `program.options:${item.title}` : undefined}
         >
           ⋯
         </ActionIcon>
@@ -325,6 +326,7 @@ export default function ProgramList(): React.JSX.Element {
               dropTarget === item.id ? classes.dropBefore : ''
             ].join(' ')}
             data-removed={item.kind === 'track' && item.isRemoved ? 'true' : undefined}
+            data-tour={item.kind === 'track' ? `program.item:${item.title}` : undefined}
             draggable
             onClick={(e) => click(e, item.id)}
             onDragStart={(e) => startDrag(e, item.id)}

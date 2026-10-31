@@ -1,7 +1,7 @@
 # Release 0.3.0 — Design
 
 - **Date:** 2026-10-18
-- **Status:** Draft, for the maintainer's review. §3.1, §3.2 and §3.3 are built and merged; §3.13 is built (Plan 12). Nothing else in §3 is built.
+- **Status:** Draft, for the maintainer's review. §3.1 to §3.13 are built; §3.15 is built with the guided tour (PR #54); §3.14 is deferred.
 - **Extends:** `2026-10-13-folk-dance-player-electron-design.md` (the main spec): §4 Labels, §5.2
   Import mapping, §6 Library and Program pages, §7 Playback, §8 Projector and Canva slides
 - **Ships:** 0.3.0, after 0.2.0 (the first published release) is out
@@ -72,6 +72,7 @@ built on its own.
 | 3.12 | Holding works like a Program on the side: moves, keeps the dance | Holding, Program list, `holding_items` | Built (Plan 21) |
 | 3.13 | Reorder columns in the Music and Program lists | `LibraryTable`, settings | Built (Plan 12) |
 | 3.14 | Quick-set a field from the song's own tags | Song editor | **To investigate** |
+| 3.15 | Fold and unfold a dance's card in the song editor | Song editor | Built (with the guided tour, PR #54) |
 
 ## 3. Details
 
@@ -669,6 +670,28 @@ show it.
 
 **Outcome wanted.** A recommendation (build it, or not, and the exact rule for "not changed")
 for the maintainer to decide, before any plan is written.
+
+### 3.15 Fold and unfold a dance's card in the song editor
+
+**Problem (the maintainer's, while trying the guided tour).** A song with two or more dances shows
+a long card for each, one under the other. With the editor's height at a laptop's size only the
+first dance shows; the second is out of view, so the idea that one song can carry several dances
+could not be seen at a glance.
+
+**Decided.** Each dance card in the song editor has an arrow button in its header. It folds the
+card to its header (the label, Default or Make default, and the ⋯ menu stay) and opens it again.
+
+- **My call: nothing is remembered.** All cards are open when a song is opened, and folding lasts
+  for that song and that visit to the editor (like the "Same as song" unlock in §3.5). It is not a
+  setting and nothing is saved, so no migration.
+- Folding hides the fields without removing them (`Collapse`), so a half-typed field is not lost
+  and saves on blur as before.
+- The button is labelled "Collapse <label>" / "Expand <label>" with `aria-expanded`, and the card
+  has `data-collapsed` while folded (the tour reads it).
+- Used by the Basic tour's "Fold a dance away" step.
+
+**Tests.** A card folds and opens on its own, the other card is untouched, and its fields are not
+visible while it is folded.
 
 ## 4. Data changes
 

@@ -265,6 +265,9 @@ async function doBasicTour(): Promise<void> {
   await expect(page.getByRole('group', { name: /Lesnoto/ })).toBeVisible()
   await next()
 
+  await onStep('Fold a dance away')
+  await page.getByRole('button', { name: 'Collapse Legnala Dana', exact: true }).click()
+
   await onStep('One dance, more than one tune')
   await song('Makedonsko Devojče').click()
 
@@ -296,8 +299,11 @@ async function doBasicTour(): Promise<void> {
   await dragUntil(() => dropInProgram(page, song('Hava Nagila')), 'When a song has two dances')
   await dragUntil(() => dropInProgram(page, song('Legnala Dana')), 'Which dance?')
   const dialog = page.getByRole('dialog', { name: 'Which dance?' })
-  await dialog.getByRole('radio').last().check()
+  await dialog.getByRole('radio', { name: /Lesnoto/ }).check()
   await dialog.getByRole('button', { name: 'Done' }).click()
+
+  await onStep('The dance’s name comes first')
+  await next()
 
   await onStep('Take something out')
   await page.getByRole('button', { name: /^Remove .*Legnala Dana/ }).click()
@@ -305,7 +311,14 @@ async function doBasicTour(): Promise<void> {
   await onStep('Holding')
   await dragUntil(() => dropInHolding(page, song('Korobushka')), 'From the shelf to the program')
   const held = page.getByRole('listbox', { name: 'Held songs' }).getByRole('option')
-  await dragUntil(() => dropInProgram(page, held.filter({ hasText: 'Korobushka' })), 'Favorites')
+  await dragUntil(
+    () => dropInProgram(page, held.filter({ hasText: 'Korobushka' })),
+    'One more dance'
+  )
+  await dragUntil(() => dropInProgram(page, song('Hora Mare')), 'A STOP marker')
+  await page.locator('[data-tour="program.options:Hora Mare"]').click() // the program's, not the library's
+  await page.getByRole('menuitem', { name: 'Insert STOP before' }).click()
+  await onStep('Favorites')
   await page.getByRole('button', { name: 'Add Zemer Atik to favorites' }).click()
 
   // Quick enough for a test: no countdown, and a one-second wait before the next song.

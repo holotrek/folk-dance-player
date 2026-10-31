@@ -106,4 +106,5 @@ Use a Mac whose Music library has local songs and playlists in a folder.
 - [ ] 44. With real music playing, start a tour: the real music stops, and the remote's media keys and File → Sync with Apple Music do nothing until the tour ends.
 - [ ] 45. Run the Basic tour with the window at its smallest size (1000×640 before the tour starts): every step shows, including "Two dances, one song" (the editor scrolls to the dances); popovers fit and no step is stuck behind something.
 - [ ] 46. Start a tour on a laptop screen: the window keeps its size, there is no flash at the first step and no scrollbars, and the Music page's editor scrolls itself to the Artist, Teacher and dance fields as steps need them.
+- [ ] 47. In the song editor, open a song with two dances (Legnala Dana in the practice library) and fold and unfold each dance's card with its arrow: the folded card keeps its header, Default badge and ⋯ menu, and the other card is unaffected. In the tour, "Fold a dance away" then shows both dances at once, and later in the Program the Legnala Dana row reads "Lesnoto ♪ Legnala Dana".
 

@@ -142,7 +142,7 @@ Each step has a **page**, a **target**, a **kind** and (for hands-on steps) a **
 condition on the real result. *Explain* steps have **Next**. The wording is the builder's, in plain
 language; this table fixes the content and order (the maintainer's list, 2026-10-30).
 
-### Basic (as built: 29 steps)
+### Basic (as built: 33 steps)
 
 The welcome (step 0, §2.1.1) is the intro screen shown before the tour is entered. "Page" is where
 the tour switches to; **explain** steps have **Next**; **do** steps end on the real result.
@@ -157,27 +157,31 @@ the tour switches to; **explain** steps have **Next**; **do** steps end on the r
 | 6 | `basic.select` | Music | do | Click Hava Nagila; its details open. |
 | 7 | `basic.two-dances-pick` | Music | do | Click Legnala Dana. |
 | 8 | `basic.two-dances` | Music | explain | "You can assign more than one dance to a song, when it makes sense to": Legnala Dana and Lesnoto. |
-| 9 | `basic.shared-pick` | Music | do | Click Makedonsko Devojče. |
-| 10 | `basic.shared-edit` | Music | do | Pick a Dance type for Lesnoto (done when it is saved, which choosing a suggestion does at once). |
-| 11 | `basic.shared-other` | Music | do | Click Legnala Dana: its Lesnoto card shows the same change, "edited once". |
-| 12 | `basic.who-owns-artist` | Music | explain | The artist belongs to the song. |
-| 13 | `basic.who-owns-teacher` | Music | explain | The teacher belongs to the dance and tune together. |
-| 14 | `basic.attachments` | Music | explain | A PDF of a dance's notes (a file picker can't run here). |
-| 15 | `basic.canva` | Music | explain | Canva slides and slide images for the projector. |
-| 16 | `basic.search` | Program | do | Type `hora` (the whole word) in the library search. |
-| 17 | `basic.search-clear` | Program | do | Clear the search. |
-| 18 | `basic.add` | Program | do | Drag Hava Nagila into the program (this starts one). |
-| 19 | `basic.pick-dance` | Program | do | Drag Legnala Dana in: the "Which dance?" dialog opens. |
-| 20 | `basic.pick-dance-answer` | Program | do | Choose a dance and press Done. |
-| 21 | `basic.remove` | Program | do | Remove Legnala Dana with ✕. |
-| 22 | `basic.hold` | Program | do | Drag Korobushka into Holding. |
-| 23 | `basic.hold-back` | Program | do | Drag it from Holding into the program (it moves). |
-| 24 | `basic.favorite` | Program | do | Star Zemer Atik. |
-| 25 | `basic.play` | Program | do | Press Play. Hava Nagila **repeats** from here (`tourAudio.setLoop`). |
-| 26 | `basic.speed` | Program | do | Move the speed slider: slower or faster, same pitch. |
-| 27 | `basic.volume` | Program | do | Move the volume slider. |
-| 28 | `basic.wait` | Program | explain | The repeat stops and the song **jumps to its last five seconds**; Korobushka starts while the card stays up, and **Next** moves on (the step does not end by itself, so the text can be read). Explains the wait, Auto-continue and STOP markers. |
-| 29 | `basic.end` | — | choice | "Would you like to learn about some more app features or start building your music library now?" **Learn more** / **Start now!** (§2.4). |
+| 9 | `basic.collapse-dance` | Music | do | Fold the first dance's card with its arrow, so the second is in view (0.3.0 spec §3.15). |
+| 10 | `basic.shared-pick` | Music | do | Click Makedonsko Devojče. |
+| 11 | `basic.shared-edit` | Music | do | Pick a Dance type for Lesnoto (done when it is saved, which choosing a suggestion does at once). |
+| 12 | `basic.shared-other` | Music | do | Click Legnala Dana: its Lesnoto card shows the same change, "edited once". |
+| 13 | `basic.who-owns-artist` | Music | explain | The artist belongs to the song. |
+| 14 | `basic.who-owns-teacher` | Music | explain | The teacher belongs to the dance and tune together. |
+| 15 | `basic.attachments` | Music | explain | A PDF of a dance's notes (a file picker can't run here). |
+| 16 | `basic.canva` | Music | explain | Canva slides and slide images for the projector. |
+| 17 | `basic.search` | Program | do | Type `hora` (the whole word) in the library search. |
+| 18 | `basic.search-clear` | Program | do | Clear the search. |
+| 19 | `basic.add` | Program | do | Drag Hava Nagila into the program (this starts one). |
+| 20 | `basic.pick-dance` | Program | do | Drag Legnala Dana in: the "Which dance?" dialog opens. |
+| 21 | `basic.pick-dance-answer` | Program | do | Choose **Lesnoto** and press Done (the step ends only with that choice, so the next step can show a different dance name). |
+| 22 | `basic.pick-dance-result` | Program | explain | The program lists "Lesnoto ♪ Legnala Dana": dance first, then song. |
+| 23 | `basic.remove` | Program | do | Remove Legnala Dana with ✕. |
+| 24 | `basic.hold` | Program | do | Drag Korobushka into Holding. |
+| 25 | `basic.hold-back` | Program | do | Drag it from Holding into the program (it moves). |
+| 26 | `basic.add-more` | Program | do | Drag Hora Mare into the program, below Korobushka. |
+| 27 | `basic.stop` | Program | do | Open Hora Mare's ⋯ menu and choose **Insert STOP before**. |
+| 28 | `basic.favorite` | Program | do | Star Zemer Atik. |
+| 29 | `basic.play` | Program | do | Press Play. Hava Nagila **repeats** from here (`tourAudio.setLoop`). |
+| 30 | `basic.speed` | Program | do | Move the speed slider: slower or faster, same pitch. |
+| 31 | `basic.volume` | Program | do | Move the volume slider. |
+| 32 | `basic.wait` | Program | explain | The repeat stops and the song **jumps to its last five seconds**; Korobushka starts while the card stays up, and **Next** moves on (the step does not end by itself, so the text can be read). Explains the wait ("to leave time to converse and line up for the next dance"), Auto-continue, and the STOP the person added, which halts after Korobushka. |
+| 33 | `basic.end` | — | choice | "Would you like to learn about some more app features or start building your music library now?" **Learn more** / **Start now!** (§2.4). |
 
 ### Advanced (as built: intro + 14 steps)
 
