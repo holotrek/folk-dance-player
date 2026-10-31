@@ -26,7 +26,7 @@ import type {
   ProgramSummary,
   RemoteStatus
 } from './program'
-import type { TourPart } from './tour'
+import type { TourPart, TourState } from './tour'
 import type {
   DisplayChoice,
   ProjectorProgress,
@@ -61,7 +61,7 @@ export interface InvokeContract {
   // The guided tour (tour spec §4.6). These are always served by the real handlers, also while a
   // window is on the practice library. `start` and `leave` reload the window.
   'tour:offer': { args: []; result: TourPart | null }
-  'tour:state': { args: []; result: { part: TourPart | null } }
+  'tour:state': { args: []; result: TourState }
   'tour:start': { args: [part: TourPart]; result: void }
   'tour:finish': { args: [part: TourPart]; result: void }
   'tour:hide': { args: [part: TourPart]; result: void }

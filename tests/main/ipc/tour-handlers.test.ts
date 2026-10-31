@@ -1,7 +1,7 @@
 import { describe, expect, test, vi } from 'vitest'
 import type { InvokeHandlers } from '@shared/contract'
 import { emptySummary } from '@shared/import'
-import type { TourPart } from '@shared/tour'
+import type { TourState } from '@shared/tour'
 import { createHandlers, type HandlerDeps } from '../../../src/main/ipc/handlers'
 import { PlayerSession } from '../../../src/main/session/player-session'
 import { createSessionPorts } from '../../../src/main/session/session-ports'
@@ -69,18 +69,18 @@ describe('tour handlers', () => {
   test('start, leave and state are the tour mode’s, when there is one', async () => {
     const start = vi.fn()
     const leave = vi.fn()
-    const state = vi.fn((): TourPart | null => 'advanced')
+    const state = vi.fn((): TourState => ({ part: 'advanced', landOn: null }))
     const { h } = setup({ start, leave, state })
     await h['tour:start']('basic')
     await h['tour:leave']()
     expect(start).toHaveBeenCalledWith('basic')
     expect(leave).toHaveBeenCalledTimes(1)
-    expect(await h['tour:state']()).toEqual({ part: 'advanced' })
+    expect(await h['tour:state']()).toEqual({ part: 'advanced', landOn: null })
   })
 
   test('without a tour mode, state reports none and start and leave do nothing', async () => {
     const { h } = setup()
-    expect(await h['tour:state']()).toEqual({ part: null })
+    expect(await h['tour:state']()).toEqual({ part: null, landOn: null })
     expect(await h['tour:start']('basic')).toBeUndefined()
     expect(await h['tour:leave']()).toBeUndefined()
   })

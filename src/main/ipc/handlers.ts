@@ -2,7 +2,7 @@ import type { AttachmentStore } from '../attachments/attachment-store'
 import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
 import type { RemoteStatus } from '@shared/program'
-import type { TourPart } from '@shared/tour'
+import type { TourPart, TourState } from '@shared/tour'
 import { appleSyncHandlers, type AppleSyncHandlerDeps } from './apple-sync-handlers'
 import { canvaHandlers, type CanvaDeps } from './canva-handlers'
 import { projectorHandlers, type ProjectorDeps } from './projector-handlers'
@@ -60,7 +60,7 @@ export interface HandlerDeps {
   tour?: {
     start(part: TourPart): void
     leave(): void
-    state(): TourPart | null
+    state(): TourState
   }
   // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void

@@ -11,7 +11,7 @@ export function tourHandlers(deps: HandlerDeps): Pick<InvokeHandlers, TourChanne
   return {
     'tour:offer': () =>
       tourOffer({ basic: settings.get('tour.basic'), advanced: settings.get('tour.advanced') }),
-    'tour:state': () => ({ part: tour?.state() ?? null }),
+    'tour:state': () => tour?.state() ?? { part: null, landOn: null },
     'tour:start': (part) => tour?.start(part),
     'tour:finish': (part) => settings.set(`tour.${part}`, 'done'),
     'tour:hide': (part) => settings.set(`tour.${part}`, 'hidden'),

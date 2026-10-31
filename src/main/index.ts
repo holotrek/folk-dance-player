@@ -17,7 +17,7 @@ import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { join } from 'path'
 import type { DatabaseSync } from 'node:sqlite'
-import type { EventChannel, EventContract, PageTarget } from '@shared/contract'
+import type { EventChannel, EventContract, InvokeHandlers, PageTarget } from '@shared/contract'
 import { MEDIA_SCHEME, parseDanceImageUrl, parseMediaUrl, parseSlideUrl } from '@shared/media'
 import { electronApp, is, optimizer } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
@@ -49,6 +49,9 @@ import { startUtilityWorker } from './import/utility-worker'
 import { createHandlers } from './ipc/handlers'
 import { createLogger } from './log/logger'
 import { mediaResponse } from './media/media-response'
+import { coalesced } from './coalesce'
+import { createPracticeContext } from './tour/practice-context'
+import { createTourMode } from './tour/tour-mode'
 import { menuTemplate, syncAppleMusicFromMenu } from './menu'
 import { KeepAwake } from './power/keep-awake'
 import { ActivityWatcher } from './projector/activity'
@@ -183,20 +186,13 @@ function createMainWindow(): BrowserWindow {
   return win
 }
 
-function broadcast<C extends EventChannel>(channel: C, payload: EventContract[C]): void {
-  for (const window of BrowserWindow.getAllWindows()) window.webContents.send(channel, payload)
-}
+// The window on the practice library (tour spec §4.1), set once the app has started: it hears only
+// the practice context's events, never the real ones.
+let touringWindowId: () => number | null = () => null
 
-// Runs `fn` once after the current task, however many times it was asked for in it.
-function coalesced(fn: () => void): () => void {
-  let pending = false
-  return () => {
-    if (pending) return
-    pending = true
-    queueMicrotask(() => {
-      pending = false
-      fn()
-    })
+function broadcast<C extends EventChannel>(channel: C, payload: EventContract[C]): void {
+  for (const window of BrowserWindow.getAllWindows()) {
+    if (window.id !== touringWindowId()) window.webContents.send(channel, payload)
   }
 }
 
@@ -305,6 +301,35 @@ function startApp(): void {
     }
   )
 
+  // The guided tour (tour spec §4): a practice library for one window, entered and left by
+  // reloading it. The real handlers are built below and asked for when a call arrives.
+  let realHandlers: InvokeHandlers | null = null
+  const sendTo =
+    (windowId: number) =>
+    <C extends EventChannel>(channel: C, payload: EventContract[C]): void => {
+      const window = BrowserWindow.fromId(windowId)
+      if (window && !window.isDestroyed()) window.webContents.send(channel, payload)
+    }
+  const tour = createTourMode({
+    realHandlers: () => realHandlers!,
+    tmpDir: app.getPath('temp'),
+    makeContext: (dir, send) =>
+      createPracticeContext({
+        dir,
+        tunePath: app.isPackaged
+          ? join(process.resourcesPath, 'hava-nagila.wav')
+          : join(app.getAppPath(), 'resources', 'tour', 'hava-nagila.wav'),
+        appVersion: app.getVersion(),
+        send
+      }),
+    sendToWindow: sendTo,
+    stopRealPlayer: () => player.stop(),
+    reload: (windowId) => BrowserWindow.fromId(windowId)?.webContents.reload()
+  })
+  touringWindowId = tour.touringWindowId
+  tour.sweepStale()
+  app.on('will-quit', () => tour.leave())
+
   // Sync with Apple Music (sync spec §3): the bundled helper, or a snapshot file in development and
   // end-to-end tests. macOS only.
   const appleLibraryFile = process.env['FDP_APPLE_LIBRARY']
@@ -365,6 +390,13 @@ function startApp(): void {
     const fileId = parseMediaUrl(request.url)
     const slide = parseSlideUrl(request.url)
     const danceImage = parseDanceImageUrl(request.url)
+    // During a tour the audio comes from the practice library; it has no slides or images.
+    if (tour.active()) {
+      return mediaResponse(
+        fileId !== null ? (tour.mediaPath(fileId) ?? null) : null,
+        request.headers.get('range')
+      )
+    }
     const path =
       fileId !== null
         ? trackPath(db, fileId)
@@ -408,7 +440,16 @@ function startApp(): void {
     }
   })
 
-  const mediaKeys = registerMediaKeys(globalShortcut, player)
+  // The keys control the real player; during a tour they do nothing (they would start real music).
+  const whenReal = (act: () => void) => () => {
+    if (!tour.active()) act()
+  }
+  const mediaKeys = registerMediaKeys(globalShortcut, {
+    toggle: whenReal(() => player.toggle()),
+    next: whenReal(() => player.next()),
+    restart: whenReal(() => player.restart()),
+    stop: whenReal(() => player.stop())
+  })
   // macOS delivers media keys only to an app trusted for Accessibility; other platforms don't ask.
   const trusted = (prompt: boolean) =>
     process.platform !== 'darwin' || systemPreferences.isTrustedAccessibilityClient(prompt)
@@ -447,11 +488,18 @@ function startApp(): void {
         revealLogs: reveal(log.dir),
         revealBackups: reveal(backupsDir),
         appleSync: appleSync.status().available,
-        syncAppleMusic: () =>
+        syncAppleMusic: () => {
+          if (tour.active()) return
           syncAppleMusicFromMenu(appleSync.status().state, {
             showPage,
             syncNow: () => void appleSync.syncNow()
           })
+        },
+        takeTour: (part) => {
+          if (tour.active()) return
+          mainWindow.show()
+          mainWindow.webContents.send('tour:intro', part)
+        }
       })
     )
   )
@@ -535,56 +583,60 @@ function startApp(): void {
   })
   const primaryId = () => screen.getPrimaryDisplay().id
 
-  registerHandlers(
-    ipcMain,
-    createHandlers({
-      db,
-      settings,
-      appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) }),
-      importer,
-      dialogs: importDialogs,
-      attachments,
-      openPath: (path) => shell.openPath(path),
-      player,
-      remote,
-      projector: {
-        status: () => controller.status(),
-        setEnabled: (on) => controller.setEnabled(on),
-        displays: () =>
-          screen.getAllDisplays().map((d) => ({
-            id: d.id,
-            label: toDisplay(d).label,
-            primary: d.id === primaryId(),
-            internal: d.internal
-          })),
-        displayChoiceChanged: () => controller.displayChoiceChanged(),
-        snapshot: () => feed.snapshot(),
-        progress: (progress) => feed.progress(progress)
-      },
-      canva: { service: canva, captureStatus: () => captures.current() },
-      appleSync: {
-        status: () => appleSync.status(),
-        preview: () => appleSync.preview(),
-        enable: (decisions, switchLibrary) => appleSync.enable(decisions, switchLibrary),
-        syncAnyway: () => appleSync.syncAnyway(),
-        disable: () => appleSync.disable(),
-        syncNow: () => appleSync.syncNow(),
-        switchLibrary: () => appleSync.switchLibrary(),
-        resolve: (ids, action) => appleSync.resolve(ids, action),
-        resolveAll: (action) => appleSync.resolveAll(action),
-        // System Settings → Privacy & Security → Media & Apple Music.
-        openPrivacySettings: () =>
-          void shell.openExternal(
-            'x-apple.systempreferences:com.apple.preference.security?Privacy_Media'
-          )
-      },
-      onLibraryChanged: () => {
-        player.refresh() // labels or missing flags of the next item may have changed
-        libraryChanged()
-      },
-      onProgramsChanged: programsChanged
-    })
-  )
+  realHandlers = createHandlers({
+    db,
+    settings,
+    appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) }),
+    importer,
+    dialogs: importDialogs,
+    attachments,
+    openPath: (path) => shell.openPath(path),
+    player,
+    remote,
+    projector: {
+      status: () => controller.status(),
+      setEnabled: (on) => controller.setEnabled(on),
+      displays: () =>
+        screen.getAllDisplays().map((d) => ({
+          id: d.id,
+          label: toDisplay(d).label,
+          primary: d.id === primaryId(),
+          internal: d.internal
+        })),
+      displayChoiceChanged: () => controller.displayChoiceChanged(),
+      snapshot: () => feed.snapshot(),
+      progress: (progress) => feed.progress(progress)
+    },
+    canva: { service: canva, captureStatus: () => captures.current() },
+    appleSync: {
+      status: () => appleSync.status(),
+      preview: () => appleSync.preview(),
+      enable: (decisions, switchLibrary) => appleSync.enable(decisions, switchLibrary),
+      syncAnyway: () => appleSync.syncAnyway(),
+      disable: () => appleSync.disable(),
+      syncNow: () => appleSync.syncNow(),
+      switchLibrary: () => appleSync.switchLibrary(),
+      resolve: (ids, action) => appleSync.resolve(ids, action),
+      resolveAll: (action) => appleSync.resolveAll(action),
+      // System Settings → Privacy & Security → Media & Apple Music.
+      openPrivacySettings: () =>
+        void shell.openExternal(
+          'x-apple.systempreferences:com.apple.preference.security?Privacy_Media'
+        )
+    },
+    onLibraryChanged: () => {
+      player.refresh() // labels or missing flags of the next item may have changed
+      libraryChanged()
+    },
+    tour: {
+      start: (part) => tour.start(mainWindow.id, part),
+      leave: () => tour.leave(),
+      // Per window: answered by the tour mode (see handlersFor).
+      state: () => ({ part: null, landOn: null })
+    },
+    onProgramsChanged: programsChanged
+  })
+  registerHandlers(ipcMain, (event) => tour.handlersFor(event.sender.id))
 
   // After sleep, displays come back renumbered and windows may have moved: re-check them, and make
   // sure the control window is showing.
