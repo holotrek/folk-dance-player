@@ -53,11 +53,31 @@ really be played), so the person tries everything for real and nothing of theirs
 ### 2.1 When it is offered
 
 - **First launch of 0.3.0, for everyone** (decided 2026-10-30: new users and people updating from
-  0.2.0 alike): a small welcome dialog, "Welcome to Folk Dance Player — take a quick tour?", with
-  **Start the tour**, **Not now** and **Don't show this again**.
+  0.2.0 alike): the **intro screen** of the Basic tour (§2.1.1), with **Start the tour**, **Not now**
+  and **Don't show this again**.
 - **Never forced.** Not now closes it and changes nothing.
 - **Replay any time:** Help → **Take the Basic Tour…** and Help → **Take the Advanced Tour…**,
-  whatever the flags say.
+  whatever the flags say. They open the part's intro screen first, with **Start the tour** and
+  **Not now** (no Don't show this again: it was asked for).
+
+### 2.1.1 Intro screens
+
+Each part begins with an **intro screen**: a centered card, no spotlight, that says what is coming
+before anything is asked of the person (decided 2026-10-30). One component serves everywhere.
+
+- **Basic intro ("Welcome"):** a few sentences on what Folk Dance Player is (build the running order
+  for a dance session from your music, play it with the wait and teaching stops, and show dancers a
+  large display of what's on) and what the tour will do: about ten minutes in a **practice
+  library**, doing each thing yourself, your real music untouched, leave any time.
+- **Advanced intro:** what Basic covered and what Advanced adds (the projector, managing programs
+  and playlists, settings), about five minutes in the same practice library, and that it is fine to
+  stop at any point.
+- **Where it shows.** Before entering a tour (the launch offer, and Help) it is shown **in the real
+  window**, so declining costs nothing (no reload); **Start the tour** then enters the practice
+  library straight into step 1. When the person chooses **Learn more** at the end of Basic, the
+  Advanced intro shows **inside the tour** as an interstitial with one button (**Let's go**), since
+  they have just chosen it.
+- It is plain text with a heading, in the app's own voice, and fits the minimum window size.
 
 ### 2.2 The flags
 
@@ -122,6 +142,7 @@ language; this table fixes the content and order (the maintainer's list, 2026-10
 
 | # | Topic | Page | Kind | What the person does / learns |
 |---|---|---|---|---|
+| 0 | Welcome | — | intro | The Basic intro screen (§2.1.1): shown before the tour is entered, so it is not a step inside the practice library. |
 | 1 | Import or sync | Music | explain | Points at **Add Music…** and the Apple Music sync switch: "this is how your music gets in" (a file picker and Music permission can't run in a practice library). |
 | 2 | Edit details | Music | do | Click a song; the editor opens. Done when a song is selected. |
 | 3 | Dance vs song | Music | explain + do | In the editor, a tune with **two dances**: "a song is the music; a dance is what you do to it. One tune can carry several dances." Then a dance **used by two tunes**: "…and one dance can be done to many tunes." |
@@ -143,6 +164,7 @@ language; this table fixes the content and order (the maintainer's list, 2026-10
 
 | # | Topic | Page | Kind | What the person does / learns |
 |---|---|---|---|---|
+| 16b | Advanced intro | — | intro | The Advanced intro screen (§2.1.1): shown in the real window when entered from the launch offer or Help, and inside the tour (one button, **Let's go**) after **Learn more**. |
 | 17 | Projector view | Program | explain | The **Projector** switch: "show dancers what's playing and next on a TV or projector". |
 | 18 | With only one screen | Program | explain | "With no second screen the view covers your laptop after a while without activity; the **Auto-show** box turns that off." |
 | 19 | How programs start | Program | explain | "Drop a song on an empty program and one is made for you, named for today." |
@@ -227,8 +249,11 @@ tour (the speed lock, auto-continue) leaks into the real ones.
 
 - Help menu: **Take the Basic Tour…**, **Take the Advanced Tour…** (`menu.ts`); both enter tour mode
   at the start of that part.
-- The welcome dialog is shown by the renderer on launch (after the first page loads) when main says
-  an offer is due (`tour:offer` returns `'basic' | 'advanced' | null`).
+- The intro screen (`TourIntro`) is shown by the renderer on launch (after the first page loads)
+  when main says an offer is due (`tour:offer` returns `'basic' | 'advanced' | null`), and by the
+  Help items (main sends the renderer a `tour:intro(part)` event); in the real window it offers
+  Start / Not now (/ Don't show this again on the launch offer). Inside the tour the same component
+  is the one-button interstitial (§2.1.1).
 
 ### 4.6 Channels
 
@@ -303,6 +328,7 @@ reach it), it shows a short "Not in the practice library" message.
 
 - **Engine (unit):** step order; done-when re-evaluated on each event; a step already satisfied
   completes at once; leaving; the flags table in §2.2 (finish, hide, leave part-way, quit).
+- **Intro screens:** the Basic and Advanced text appear; **Not now** closes without a reload and changes no flag; **Don't show this again** sets `hidden`; Help shows the intro without Don't show this again; **Start the tour** enters step 1; the in-tour interstitial has the single button.
 - **Overlay (renderer, fake API):** shows the popover at the target, dims the rest, passes clicks
   only through the cut-out, **Next** only on explain steps, Escape asks to leave, "Take me there"
   when the target is missing.
@@ -322,7 +348,7 @@ reach it), it shows a short "Not in the practice library" message.
 
 ## 9. Order of work
 
-1. The flags, the offer logic and the Help/offer wiring (no tour yet).
+1. The flags, the offer logic, the intro screens (`TourIntro`) and the Help/offer wiring (no tour yet).
 2. The demo library and the practice tune (with its script and provenance note).
 3. The practice context, routing, broadcasts, media and the reload in and out.
 4. The engine and overlay, with a two-step tour proving the loop.
