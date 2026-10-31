@@ -51,7 +51,7 @@ export const BASIC_STEPS: TourStep[] = [
     page: 'music',
     kind: 'explain',
     target: 'import.mapping',
-    placement: 'right',
+    placement: 'bottom',
     title: 'Which tag goes where',
     body: 'Every song file carries tags, and different collections fill them differently. “Populate Artist from” says which tag becomes the artist; the same goes for the teacher and the choreographer. Many folk dance collections keep the teacher in the Album Artist tag, so check yours. “Genre is Country” turns the Genre tag into the dance’s country.\n\nYour choices are remembered for next time, and you can re-apply them to songs you already have.'
   }),
@@ -70,7 +70,7 @@ export const BASIC_STEPS: TourStep[] = [
     page: 'music',
     kind: 'do',
     target: 'import.done',
-    placement: 'top',
+    placement: 'bottom',
     title: 'What happened',
     body: 'Every import ends with a summary of what was added, updated, or could not be read. Press Done.',
     done: () => !shown('import.summary') && !shown('import.mapping')
@@ -115,6 +115,7 @@ export const BASIC_STEPS: TourStep[] = [
     page: 'music',
     kind: 'do',
     target: 'editor.dance-type',
+    placement: 'left', // the suggestions open above or below the field
     title: 'Edit a dance once',
     body: 'This dance, Lesnoto, is done to another tune as well. Set its Dance type: pick Open Circle from the list.',
     done: async (ctx) =>

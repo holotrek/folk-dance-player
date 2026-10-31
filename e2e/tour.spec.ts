@@ -125,27 +125,6 @@ test('a tour shows the practice library, and leaving brings the real one back', 
   expect(await invoke('tour:state')).toEqual({ part: null, landOn: null })
 })
 
-test('a tour grows the window to fit, and leaving puts it back', async () => {
-  await running.page.getByRole('button', { name: 'Not now' }).click()
-  const size = (): Promise<{ w: number; h: number; availH: number }> =>
-    running.page.evaluate(() => ({
-      w: window.outerWidth,
-      h: window.outerHeight,
-      availH: screen.availHeight
-    }))
-  const before = await size()
-  await enter('basic')
-  const during = await size()
-  // 1200 high, or as high as the screen allows (tour spec §2.3).
-  expect(during.h).toBeGreaterThanOrEqual(Math.min(1200, during.availH) - 40)
-  expect(during.h).toBeGreaterThanOrEqual(before.h)
-  expect(during.w).toBeGreaterThanOrEqual(before.w)
-  await leave()
-  const after = await size()
-  expect(Math.abs(after.h - before.h)).toBeLessThanOrEqual(2)
-  expect(Math.abs(after.w - before.w)).toBeLessThanOrEqual(2)
-})
-
 test('the practice tune really plays', async () => {
   const { invoke } = running
   await enter('basic')
@@ -209,6 +188,30 @@ const onStep = async (title: string): Promise<void> => {
       .getByText(title, { exact: true })
       .first()
   ).toBeVisible()
+  // A step is only shown if its card is on screen: no popover cut off by the window's edge.
+  const card = running.page
+    .locator('.mantine-Popover-dropdown', {
+      has: running.page.getByText(title, { exact: true })
+    })
+    .first()
+  if (await card.count()) {
+    await expect
+      .poll(async () => {
+        const box = await card.boundingBox()
+        const view = await running.page.evaluate(() => ({
+          width: window.innerWidth,
+          height: window.innerHeight
+        }))
+        return (
+          box !== null &&
+          box.x >= 0 &&
+          box.y >= 0 &&
+          box.x + box.width <= view.width &&
+          box.y + box.height <= view.height
+        )
+      })
+      .toBe(true)
+  }
 }
 // The tour switches pages itself, a moment after showing a step: wait for it before using the page.
 const onPage = async (name: 'Music' | 'Program' | 'Settings'): Promise<void> => {

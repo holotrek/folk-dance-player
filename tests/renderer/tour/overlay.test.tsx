@@ -1,8 +1,8 @@
 import { MantineProvider } from '@mantine/core'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, test, vi } from 'vitest'
-import TourOverlay, { useHoles, type Hole } from '@renderer/tour/TourOverlay'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import TourOverlay, { sideFor, useHoles, type Hole } from '@renderer/tour/TourOverlay'
 import type { TourStep } from '@renderer/tour/steps'
 import { testTheme } from '../test-theme'
 
@@ -85,6 +85,63 @@ describe('measuring a step’s target', () => {
     expect(seen[0]).toBeUndefined() // not null: nothing says the target is missing yet
     expect(seen.at(-1)).toEqual([{ x: 94, y: 74, w: 212, h: 52 }])
     expect(seen).not.toContain(null)
+  })
+})
+
+describe('bringing a target into view', () => {
+  beforeEach(() => vi.mocked(Element.prototype.scrollIntoView).mockClear())
+
+  function probe(): { holes: () => Hole[] | null | undefined } {
+    let latest: Hole[] | null | undefined
+    function Probe(): null {
+      latest = useHoles('song')
+      return null
+    }
+    render(<Probe />)
+    return { holes: () => latest }
+  }
+
+  test('scrolls a target that is below the fold into view, since the person cannot scroll', () => {
+    const el = target('song', { left: 100, top: window.innerHeight + 200, width: 200, height: 40 })
+    probe()
+    expect(el.scrollIntoView).toHaveBeenCalled()
+  })
+
+  test('scrolls a target taller than its panel to its top, so its start is what shows', () => {
+    const el = target('song', { left: 100, top: 300, width: 200, height: window.innerHeight * 2 })
+    probe()
+    expect(el.scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: 'start' }))
+  })
+
+  test('does not scroll a target that is already in view', () => {
+    const el = target('song')
+    probe()
+    expect(el.scrollIntoView).not.toHaveBeenCalled()
+  })
+
+  test('lights only the part of a tall target that shows, so its popover is on screen', () => {
+    target('song', { left: 100, top: 100, width: 200, height: window.innerHeight * 2 })
+    const { holes } = probe()
+    const [hole] = holes() as Hole[]
+    expect(hole.y + hole.h).toBeLessThanOrEqual(window.innerHeight + 6)
+  })
+})
+
+describe('which side the card opens on', () => {
+  const at = (y: number): Hole => ({ x: 400, y, w: 200, h: 40 })
+
+  test('keeps the step’s side when the card fits there', () => {
+    expect(sideFor('bottom', at(100))).toBe('bottom')
+    expect(sideFor('top', at(500))).toBe('top')
+  })
+
+  test('opens above when there is no room below, and below when there is none above', () => {
+    expect(sideFor('bottom', at(window.innerHeight - 60))).toBe('top')
+    expect(sideFor('top', at(20))).toBe('bottom')
+  })
+
+  test('keeps the step’s side when neither side has room', () => {
+    expect(sideFor('bottom', { x: 0, y: 0, w: 100, h: window.innerHeight })).toBe('bottom')
   })
 })
 

@@ -210,7 +210,7 @@ Done-when conditions (read the real stores / API, per spec §3): a song is selec
 
 ### Round 2 (the maintainer's feedback after trying the tour)
 
-- **The tour grows the window** (min of 1200 and the work area high, at least 1280 wide) and restores it on leaving, rather than splitting steps for small screens only; the Artist and Teacher step is now two steps.
+- **The tour scrolls instead of resizing the window.** Round 2 grew the window to 1200 high; hardware showed it could not on a small screen and the dances step never appeared. Round 3 removed `window-size.ts` and has `useHoles` scroll each target into view (top-aligned when taller than its panel) and light only the visible part. The Artist and Teacher step stays two steps.
 - **No flash at the first step:** `useHoles` reports "not measured yet" (`undefined`) separately from "target missing" (`null`), and only a target missing for 700 ms centers the card. Scrolling is locked (wheel, touch and scrollbars) unless a step sets `scroll`.
 - **Choosing a suggestion saves at once** (`SuggestField` `onOptionSubmit`), so Open Circle finishes its step without clicking elsewhere. The search step waits for the whole word.
 - **Wording:** "A song is not a dance" became "You can assign more than one dance to a song, when it makes sense to". Legnala Dana (Legnala Dana + Lesnoto) replaced Misirlou; Pusti Me Mamo and Ali Pasa left the practice library.

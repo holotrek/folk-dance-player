@@ -14,6 +14,67 @@ export interface Hole {
   h: number
 }
 
+const MAX_SCROLLS = 6 // tries to bring a target into view before leaving it as it is
+
+interface Box {
+  left: number
+  top: number
+  right: number
+  bottom: number
+}
+
+const box = (r: DOMRect): Box => ({ left: r.left, top: r.top, right: r.right, bottom: r.bottom })
+
+// The part of `el` that can actually be seen: its box cut down to the window and to every ancestor
+// that scrolls or clips, so a tall panel half below the fold is lit only where it shows.
+function visibleBox(el: HTMLElement): Box {
+  let seen = box(el.getBoundingClientRect())
+  const view = { left: 0, top: 0, right: window.innerWidth, bottom: window.innerHeight }
+  const cut = (b: Box): void => {
+    seen = {
+      left: Math.max(seen.left, b.left),
+      top: Math.max(seen.top, b.top),
+      right: Math.min(seen.right, b.right),
+      bottom: Math.min(seen.bottom, b.bottom)
+    }
+  }
+  cut(view)
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const { overflowX, overflowY } = getComputedStyle(p)
+    if (/(auto|scroll|hidden|clip)/.test(overflowX + overflowY)) cut(box(p.getBoundingClientRect()))
+  }
+  return seen
+}
+
+// Whole in view, or as much as fits: a target taller than its panel is in view once it fills it.
+function inView(el: HTMLElement): boolean {
+  const full = el.getBoundingClientRect()
+  const seen = visibleBox(el)
+  const shown = Math.max(0, seen.bottom - seen.top)
+  const wanted = Math.min(full.height, window.innerHeight)
+  return shown >= wanted - 2 && seen.right > seen.left
+}
+
+const CARD_H = 260 // about as tall as a card gets, with its arrow and gap
+const CARD_W = 380
+
+// The side the card opens on: the step's choice (below by default) when the card fits there,
+// otherwise the opposite side if it fits, since a card past the window's edge cannot be scrolled
+// into view. Left alone when neither fits.
+export function sideFor(want: NonNullable<TourStep['placement']>, hole: Hole): typeof want {
+  const room = {
+    top: hole.y,
+    bottom: window.innerHeight - (hole.y + hole.h),
+    left: hole.x,
+    right: window.innerWidth - (hole.x + hole.w)
+  }
+  const need = (side: typeof want): number =>
+    side === 'top' || side === 'bottom' ? CARD_H : CARD_W
+  const opposite = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' } as const
+  if (room[want] >= need(want)) return want
+  return room[opposite[want]] >= need(want) ? opposite[want] : want
+}
+
 const ids = (target: TourStep['target']): string[] =>
   target === undefined ? [] : Array.isArray(target) ? target : [target]
 
@@ -26,7 +87,7 @@ export function useHoles(target: TourStep['target']): Hole[] | null | undefined 
   // for a target that is merely about to be found, or the previous step's outline.
   useLayoutEffect(() => {
     setHoles(undefined)
-    let scrolled = false
+    let scrolls = 0
     let lastSeen = Date.now()
     // Missing now: keep what we have for a moment, so a re-render doesn't flip the step to "not on
     // screen" (whose card would sit over the screen and catch the pointer).
@@ -41,16 +102,23 @@ export function useHoles(target: TourStep['target']): Hole[] | null | undefined 
       const rects = found.map((el) => el!.getBoundingClientRect())
       if (rects.some((r) => r.width === 0 && r.height === 0)) return missing()
       lastSeen = Date.now()
-      if (!scrolled) {
-        scrolled = true
-        found[0]!.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
+      // The tour locks the person's scrolling, so it scrolls the target into view itself: to its top
+      // when it is taller than its panel (the dances, say), else only as far as needed.
+      const first = found[0]!
+      if (scrolls < MAX_SCROLLS && !inView(first)) {
+        scrolls++
+        const tall = first.getBoundingClientRect().height > window.innerHeight * 0.6
+        first.scrollIntoView?.({ block: tall ? 'start' : 'nearest', inline: 'nearest' })
       }
-      const next = rects.map((r) => ({
-        x: Math.round(r.left - MARGIN),
-        y: Math.round(r.top - MARGIN),
-        w: Math.round(r.width + 2 * MARGIN),
-        h: Math.round(r.height + 2 * MARGIN)
-      }))
+      const next = found.map((el) => {
+        const b = visibleBox(el!)
+        return {
+          x: Math.round(b.left - MARGIN),
+          y: Math.round(b.top - MARGIN),
+          w: Math.round(b.right - b.left + 2 * MARGIN),
+          h: Math.round(b.bottom - b.top + 2 * MARGIN)
+        }
+      })
       setHoles((old) => (old && JSON.stringify(old) === JSON.stringify(next) ? old : next))
     }
     measure()
@@ -187,9 +255,11 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
       {lit && step.kind !== 'choice' && step.kind !== 'intro' && (
         <Popover
           opened={!dragging}
-          position={props.placement ?? 'bottom'}
+          position={sideFor(props.placement ?? 'bottom', holes[0])}
           withArrow
           offset={16}
+          // Whichever side has room: a card past the window's edge cannot be scrolled into view.
+          middlewares={{ flip: { padding: 8 }, shift: { padding: 8 } }}
           zIndex={400}
           shadow="lg"
           transitionProps={{ duration: 0 }}

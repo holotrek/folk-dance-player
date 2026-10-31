@@ -15,9 +15,6 @@ export interface TourModeDeps {
   sendToWindow(windowId: number): PracticeOptions['send']
   stopRealPlayer(): void
   reload(windowId: number): void
-  // Enlarges the window for the tour, and puts it back (tour spec §2.3).
-  resize(windowId: number): void
-  restoreSize(windowId: number): void
 }
 
 export interface TourMode {
@@ -55,9 +52,7 @@ export function createTourMode(deps: TourModeDeps): TourMode {
 
   return {
     start(windowId, part) {
-      const wasTouring = active !== null
       dispose()
-      if (!wasTouring) deps.resize(windowId)
       deps.stopRealPlayer()
       const dir = mkdtempSync(join(deps.tmpDir, PREFIX))
       const context = deps.makeContext(dir, deps.sendToWindow(windowId))
@@ -70,7 +65,6 @@ export function createTourMode(deps: TourModeDeps): TourMode {
       const { windowId } = active
       dispose()
       landing = windowId
-      deps.restoreSize(windowId)
       deps.reload(windowId)
     },
     active: () => active !== null,

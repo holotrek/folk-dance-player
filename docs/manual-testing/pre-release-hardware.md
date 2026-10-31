@@ -104,6 +104,6 @@ Use a Mac whose Music library has local songs and playlists in a folder.
 - [ ] 42. Press Esc during a step and choose **Leave**: the real library shows on the Music tab with no banner. Then quit with ⌘Q in the middle of a tour and relaunch: the real library shows, and no `fdp-tour-*` folder is left in the temporary folder.
 - [ ] 43. Launch this version over a 0.2.0 library: the Basic intro is offered once. **Not now** brings it back next launch; **Don't show this again** stops it. After finishing Basic, the Advanced intro is offered on the next launch.
 - [ ] 44. With real music playing, start a tour: the real music stops, and the remote's media keys and File → Sync with Apple Music do nothing until the tour ends.
-- [ ] 45. Run the Basic tour with the window at its smallest size (1000×640 before the tour starts): the tour grows the window itself where the screen allows; popovers fit and no step is stuck behind something.
-- [ ] 46. Start a tour on a laptop screen: the window grows taller (up to 1200 points, as far as the screen allows) with no flash at the first step and no scrollbars, and leaving puts it back to its old size and place.
+- [ ] 45. Run the Basic tour with the window at its smallest size (1000×640 before the tour starts): every step shows, including "Two dances, one song" (the editor scrolls to the dances); popovers fit and no step is stuck behind something.
+- [ ] 46. Start a tour on a laptop screen: the window keeps its size, there is no flash at the first step and no scrollbars, and the Music page's editor scrolls itself to the Artist, Teacher and dance fields as steps need them.
 

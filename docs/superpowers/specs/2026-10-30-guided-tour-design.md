@@ -102,7 +102,7 @@ Two settings, `tour.basic` and `tour.advanced`, each `'unseen'` (the default), `
 
 ### 2.2a The tour's window
 
-A tour needs room for the Music page's columns and the song editor together, so entering one **grows the window to at least 1280 × 1200 points, or as large as the screen's work area allows**, and sets that as its minimum size; leaving restores the size and position it had (`src/main/tour/window-size.ts`). Scrolling is locked during a step unless the step asks for it, and the first step never shows centered before moving to its target.
+The tour does not resize the window (a first version grew it to 1200 high; on a smaller screen that could not work, and a step whose target sat below the fold never showed). Instead, **each step scrolls its target into view itself** (to its top when the target is taller than its panel, otherwise only as far as needed), and the hole and popover follow only the part that is visible. Scrolling by the person is locked during a step unless the step asks for it, and the first step never shows centered before moving to its target.
 
 ### 2.3 A step
 
