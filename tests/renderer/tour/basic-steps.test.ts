@@ -226,9 +226,9 @@ describe('the Basic tour’s conditions read the real result', () => {
     expect(await isDone('basic.volume', ctx)).toBe(true)
   })
 
-  test('the first song repeats from Play until the wait step, which jumps to its end and waits for Korobushka', async () => {
+  test('the first song repeats from Play until the wait step, which jumps to its end and waits for Next', () => {
     tourAudio.reset()
-    const { ctx, program } = context()
+    const { ctx } = context()
     const jumped = vi.fn()
     const stop = tourAudio.onJump(jumped)
     step('basic.play').begin!(ctx)
@@ -237,16 +237,8 @@ describe('the Basic tour’s conditions read the real result', () => {
     expect(tourAudio.loop()).toBe(false)
     expect(jumped).toHaveBeenCalledTimes(1)
     stop()
-
-    const playingNow = (title: string) =>
-      ({
-        ...IDLE_PLAYER_STATE,
-        status: 'playing',
-        current: { track: { title } }
-      }) as unknown as typeof IDLE_PLAYER_STATE
-    program.setState({ player: playingNow('Hava Nagila') })
-    expect(await isDone('basic.wait', ctx)).toBe(false)
-    program.setState({ player: playingNow('Korobushka') })
-    expect(await isDone('basic.wait', ctx)).toBe(true)
+    // The next song starting must not end the step: the person may still be reading it.
+    expect(step('basic.wait').kind).toBe('explain')
+    expect(step('basic.wait').done).toBeUndefined()
   })
 })

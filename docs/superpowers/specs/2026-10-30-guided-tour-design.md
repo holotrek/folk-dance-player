@@ -176,7 +176,7 @@ the tour switches to; **explain** steps have **Next**; **do** steps end on the r
 | 25 | `basic.play` | Program | do | Press Play. Hava Nagila **repeats** from here (`tourAudio.setLoop`). |
 | 26 | `basic.speed` | Program | do | Move the speed slider: slower or faster, same pitch. |
 | 27 | `basic.volume` | Program | do | Move the volume slider. |
-| 28 | `basic.wait` | Program | do | The repeat stops and the song **jumps to its last five seconds**; the step ends when Korobushka starts. Explains the wait, Auto-continue and STOP markers. |
+| 28 | `basic.wait` | Program | explain | The repeat stops and the song **jumps to its last five seconds**; Korobushka starts while the card stays up, and **Next** moves on (the step does not end by itself, so the text can be read). Explains the wait, Auto-continue and STOP markers. |
 | 29 | `basic.end` | — | choice | "Would you like to learn about some more app features or start building your music library now?" **Learn more** / **Start now!** (§2.4). |
 
 ### Advanced (as built: intro + 14 steps)

@@ -328,6 +328,7 @@ async function doBasicTour(): Promise<void> {
   await expect(running.page.getByTestId('player-title')).toContainText('Korobushka', {
     timeout: 30_000
   })
+  await next()
   await onStep('That is the basics')
   await expect(page.getByText(new RegExp(`Step ${STEP_COUNT} of ${STEP_COUNT}$`))).toBeVisible()
 }

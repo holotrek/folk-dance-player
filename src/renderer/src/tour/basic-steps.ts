@@ -274,16 +274,15 @@ export const BASIC_STEPS: TourStep[] = [
   step({
     id: 'basic.wait',
     page: 'program',
-    kind: 'do',
+    kind: 'explain',
     target: 'player.wait',
     placement: 'top',
     title: 'The wait between songs',
-    body: 'When a song ends, the next one starts after a few seconds, so dancers can change partners. We have jumped to the end of this song: watch the next one begin. Set the wait here, or untick Auto-continue to start each song yourself. A STOP marker in the program also pauses everything while you teach.',
+    body: 'When a song ends, the next one starts after a few seconds, so dancers can change partners. We have jumped to the end of this song: watch the next one begin, then press Next when you have read this. Set the wait here, or untick Auto-continue to start each song yourself. A STOP marker in the program also pauses everything while you teach.',
     begin: () => {
       tourAudio.setLoop(false)
       tourAudio.jumpNearEnd()
-    },
-    done: (ctx) => ctx.program.getState().player.current?.track.title === 'Korobushka'
+    }
   }),
   step({
     id: 'basic.end',
