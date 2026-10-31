@@ -88,7 +88,7 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
   )
 
   return (
-    <Stack p="md" gap="lg" maw={640}>
+    <Stack p="md" gap="lg" maw={640} data-tour="settings.page">
       <Title order={2}>Settings</Title>
       {error && (
         <Alert color="red" role="alert">

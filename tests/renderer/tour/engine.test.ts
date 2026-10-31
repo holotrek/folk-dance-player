@@ -44,6 +44,65 @@ function setup(steps = BASIC) {
   return { engine, finished, ended }
 }
 
+describe('a step’s begin hook', () => {
+  const ctx = (): StepContext => ({ memo: {} }) as unknown as StepContext
+  const calls: string[] = []
+  const stepWith = (
+    id: string,
+    kind: TourStep['kind'],
+    extra: Partial<TourStep> = {}
+  ): TourStep => ({
+    ...base,
+    id,
+    part: 'basic',
+    kind,
+    target: 'x',
+    begin: () => void calls.push(id),
+    ...extra
+  })
+
+  test('runs when the tour starts, and the moment each step arrives, once', async () => {
+    calls.length = 0
+    const steps = [
+      stepWith('one', 'do', { done: () => true }),
+      stepWith('two', 'explain'),
+      stepWith('three', 'do', { done: () => false })
+    ]
+    const engine = createTourEngine(steps, {
+      advanced: [],
+      onFinishPart: vi.fn(),
+      onEnd: vi.fn(),
+      context: ctx
+    })
+    expect(calls).toEqual(['one'])
+    await engine.evaluate(ctx()) // one is done: two arrives
+    expect(calls).toEqual(['one', 'two'])
+    await engine.evaluate(ctx())
+    expect(calls).toEqual(['one', 'two']) // not again
+    engine.next() // three arrives, at once, without waiting for an evaluation
+    expect(calls).toEqual(['one', 'two', 'three'])
+  })
+
+  test('a begin that throws does not stop the tour', async () => {
+    const steps = [
+      stepWith('a', 'explain', {
+        begin: () => {
+          throw new Error('boom')
+        }
+      }),
+      stepWith('b', 'explain')
+    ]
+    const engine = createTourEngine(steps, {
+      advanced: [],
+      onFinishPart: vi.fn(),
+      onEnd: vi.fn(),
+      context: ctx
+    })
+    engine.next()
+    expect(engine.state().step.id).toBe('b')
+  })
+})
+
 describe('the tour engine', () => {
   test('starts on the first step and counts them', () => {
     const { engine } = setup()

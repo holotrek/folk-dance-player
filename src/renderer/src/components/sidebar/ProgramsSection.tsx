@@ -36,6 +36,7 @@ function ProgramEntry(props: {
     >
       <NavLink
         label={p.name}
+        data-tour={`sidebar.program:${p.name}`}
         description={
           <>
             <Text span inherit display="block">
@@ -117,6 +118,7 @@ export default function ProgramsSection(): React.JSX.Element {
           variant="subtle"
           size="sm"
           aria-label="New program"
+          data-tour="sidebar.programs.add"
           onClick={() => setCreating(true)}
         >
           +
@@ -131,7 +133,7 @@ export default function ProgramsSection(): React.JSX.Element {
         onValueChange={setText}
       />
       <ScrollArea className={classes.programs}>
-        <div role="group" aria-label="Programs">
+        <div role="group" aria-label="Programs" data-tour="sidebar.programs">
           {programs.length === 0 && (
             <Text size="sm" c="dimmed">
               {text ? 'No matching programs' : 'No programs yet'}

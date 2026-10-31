@@ -16,6 +16,9 @@ export interface StepContext {
   library: LibraryStore
   program: ProgramStore
   page: Page
+  // Shared by every condition for the length of the tour: where something started (for example how
+  // many programs there were), kept the first time a condition looks.
+  memo: Record<string, unknown>
 }
 
 export interface TourChoice {
@@ -30,8 +33,14 @@ export interface TourStep {
   kind: StepKind
   // The data-tour ids to light up: one, or [from, to] for a drag. None for intro and choice steps.
   target?: string | [from: string, to: string]
+  // Which side of the target the popover opens on (below by default); steps whose target opens a
+  // menu or a dialog choose a side that stays clear of it.
+  placement?: 'top' | 'bottom' | 'left' | 'right'
   title: string
   body: string
+  // Runs the instant the step arrives (not when its condition is first looked at, which can be
+  // after the person has already acted): the place to note where something started.
+  begin?: (ctx: StepContext) => void
   done?: (ctx: StepContext) => boolean | Promise<boolean> // 'do' steps
   choices?: TourChoice[] // 'choice' steps
 }

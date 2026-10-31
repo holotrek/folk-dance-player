@@ -26,6 +26,8 @@ export interface EngineOptions {
   onFinishPart(part: TourPart): void
   // The tour is over: the app returns to the real library.
   onEnd(): void
+  // The context a step's `begin` hook runs with when it arrives by Next or a choice.
+  context?: () => StepContext
 }
 
 // The tour as a state machine over its steps (tour spec §4.3). It knows nothing about the screen.
@@ -34,10 +36,21 @@ export function createTourEngine(initial: TourStep[], opts: EngineOptions): Tour
   let index = 0
   const listeners = new Set<() => void>()
   const changed = (): void => listeners.forEach((l) => l())
+  // A step has just become the current one.
+  const arrived = (ctx: StepContext | undefined): void => {
+    if (!ctx) return
+    try {
+      steps[index].begin?.(ctx)
+    } catch {
+      // a hook that fails must not stop the tour
+    }
+  }
   const go = (to: number): void => {
     index = Math.min(to, steps.length - 1)
+    arrived(opts.context?.())
     changed()
   }
+  arrived(opts.context?.())
 
   return {
     state: () => ({ index, step: steps[index], total: steps.length }),
@@ -52,6 +65,7 @@ export function createTourEngine(initial: TourStep[], opts: EngineOptions): Tour
         }
         if (!done) break
         index++
+        arrived(ctx)
         moved = true
       }
       if (moved) changed()

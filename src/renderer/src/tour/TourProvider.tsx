@@ -40,6 +40,7 @@ export function TourProvider(props: {
   const [, redraw] = useReducer((n: number) => n + 1, 0)
   const pageRef = useRef(page)
   pageRef.current = page
+  const memo = useRef<Record<string, unknown>>({})
 
   // On load: are we touring? Land on Music after one? Is the offer due?
   useEffect(() => {
@@ -55,7 +56,14 @@ export function TourProvider(props: {
           createTourEngine(list, {
             advanced,
             onFinishPart: (part) => void api.invoke('tour:finish', part),
-            onEnd: () => void api.invoke('tour:leave')
+            onEnd: () => void api.invoke('tour:leave'),
+            context: () => ({
+              api,
+              library,
+              program,
+              page: pageRef.current,
+              memo: memo.current
+            })
           })
         )
         return
@@ -75,7 +83,13 @@ export function TourProvider(props: {
   // Follow the engine, and look at the current step after anything that could have completed it.
   useEffect(() => {
     if (!engine) return
-    const context = (): StepContext => ({ api, library, program, page: pageRef.current })
+    const context = (): StepContext => ({
+      api,
+      library,
+      program,
+      page: pageRef.current,
+      memo: memo.current
+    })
     let timer: ReturnType<typeof setTimeout> | undefined
     const check = (): void => {
       clearTimeout(timer)
@@ -119,6 +133,7 @@ export function TourProvider(props: {
           step={current.step}
           index={current.index}
           total={current.total}
+          placement={current.step.placement}
           onNext={() => engine.next()}
           onChoose={(choice) => engine.choose(choice)}
           onLeave={() => void api.invoke('tour:leave')}

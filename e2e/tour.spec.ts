@@ -180,39 +180,45 @@ test('quitting during a tour leaves the real library showing next launch, and sw
 
 const STEP_COUNT = BASIC_STEPS.length
 
-test('the Basic tour can be completed by doing each step in the real UI', async () => {
-  test.setTimeout(120_000)
+// The step's title, inside the tour's own popover or card (a heading elsewhere can match too).
+const onStep = async (title: string): Promise<void> => {
+  await expect(
+    running.page
+      .locator('.mantine-Popover-dropdown, .mantine-Modal-content')
+      .getByText(title, { exact: true })
+      .first()
+  ).toBeVisible()
+}
+// The tour switches pages itself, a moment after showing a step: wait for it before using the page.
+const onPage = async (name: 'Music' | 'Program' | 'Settings'): Promise<void> => {
+  await expect(running.page.getByRole('tab', { name, selected: true })).toBeVisible()
+}
+const next = (): Promise<void> => running.page.getByRole('button', { name: 'Next step' }).click()
+
+// A lost drop is a known quirk of driving HTML5 drag and drop with a synthetic mouse (AGENTS.md).
+// Like a person, drag again if the tour has not moved on.
+const dragUntil = async (drag: () => Promise<void>, nextTitle: string): Promise<void> => {
+  await drag()
+  try {
+    await onStep(nextTitle)
+  } catch {
+    await drag()
+    await onStep(nextTitle)
+  }
+}
+
+// Starts the Basic tour from the launch offer and does every step, stopping at the closing choice.
+async function doBasicTour(): Promise<void> {
   const { page } = running
   const songs = page.getByRole('table', { name: 'Songs' })
   const song = (title: string) => songs.getByRole('row').filter({ hasText: title })
-  const next = () => page.getByRole('button', { name: 'Next step' }).click()
-  // The step's title, inside the tour's own popover or card (a heading elsewhere can match too).
-  const onStep = async (title: string): Promise<void> => {
-    await expect(
-      page
-        .locator('.mantine-Popover-dropdown, .mantine-Modal-content')
-        .getByText(title, { exact: true })
-        .first()
-    ).toBeVisible()
-  }
-
-  // A lost drop is a known quirk of driving HTML5 drag and drop with a synthetic mouse (AGENTS.md).
-  // Like a person, drag again if the tour has not moved on.
-  const dragUntil = async (drag: () => Promise<void>, nextTitle: string): Promise<void> => {
-    await drag()
-    try {
-      await onStep(nextTitle)
-    } catch {
-      await drag()
-      await onStep(nextTitle)
-    }
-  }
 
   await welcome().getByRole('button', { name: 'Start the tour' }).click()
   await page.getByText('Practice library: your real music is safe').waitFor()
   await expect(page.getByText(new RegExp(`Step 1 of ${STEP_COUNT}$`))).toBeVisible()
 
   await onStep('Getting your music in')
+  await onPage('Music')
   await next()
 
   await onStep('Open a song’s details')
@@ -244,6 +250,7 @@ test('the Basic tour can be completed by doing each step in the real UI', async 
 
   // The Program page.
   await onStep('Find songs')
+  await onPage('Program')
   await page.getByRole('searchbox', { name: 'Search music' }).fill('hora')
   await onStep('Clear the search')
   await page.getByRole('button', { name: 'Clear search' }).click()
@@ -281,13 +288,96 @@ test('the Basic tour can be completed by doing each step in the real UI', async 
 
   await onStep('That is the basics')
   await expect(page.getByText(new RegExp(`Step ${STEP_COUNT} of ${STEP_COUNT}$`))).toBeVisible()
-  await page.getByRole('button', { name: 'Start now!' }).click()
+}
 
-  // Back in the real library, on the Music tab, with Basic done and Advanced still to come.
-  await page.getByRole('tab', { name: 'Music', selected: true }).waitFor()
-  await expect(page.getByText('Practice library: your real music is safe')).toBeHidden()
+// Does every Advanced step after its intro, ending on the closing choice's Done.
+async function doAdvancedTour(): Promise<void> {
+  const { page } = running
+  await onStep('Showing dancers what is playing')
+  await next()
+  await onStep('With only one screen')
+  await next()
+  await onStep('Programs make themselves')
+  await next()
+
+  await onStep('Start another program')
+  await page.getByRole('button', { name: 'New program', exact: true }).click()
+  const naming = page.getByRole('dialog', { name: 'New program' })
+  await naming.getByLabel('Name').fill('Saturday')
+  await naming.getByRole('button', { name: 'Create' }).click()
+
+  await onStep('Renaming and deleting')
+  await next()
+
+  await onStep('Load another program')
+  await page.getByText('Friday warm-up').first().click()
+  const confirm = page.getByRole('dialog', { name: 'Load another program?' })
+  // A song may still be loaded from the Basic tour; then the app asks first.
+  await confirm
+    .getByRole('button', { name: 'Load' })
+    .click({ timeout: 2000 })
+    .catch(() => undefined)
+
+  await onStep('Playlists')
+  await onPage('Music')
+  await next()
+  await onStep('Folders from Music')
+  await page.getByText('Festival 2026').first().click()
+  await onStep('Changing a synced playlist')
+  await page.getByRole('button', { name: 'Options for Balkan night' }).click()
+  await page.getByRole('menuitem', { name: 'Duplicate as my playlist' }).click()
+
+  await onStep('Settings')
+  await next()
+  await onStep('That is everything')
+  await page.getByRole('button', { name: 'Done' }).click()
+}
+
+const lands = async (): Promise<void> => {
+  await running.page.getByRole('tab', { name: 'Music', selected: true }).waitFor()
+  await expect(running.page.getByText('Practice library: your real music is safe')).toBeHidden()
   await expect.poll(titles).toEqual(['Hora', 'Kolo'])
-  const settings = await running.invoke<Record<string, unknown>>('settings:getAll')
+}
+const flags = async (): Promise<Record<string, unknown>> =>
+  running.invoke<Record<string, unknown>>('settings:getAll')
+
+test('the Basic tour can be completed by doing each step in the real UI', async () => {
+  test.setTimeout(120_000)
+  await doBasicTour()
+  await running.page.getByRole('button', { name: 'Start now!' }).click()
+  await lands()
+  const settings = await flags()
   expect(settings['tour.basic']).toBe('done')
   expect(settings['tour.advanced']).toBe('unseen')
+})
+
+test('Learn more goes on into the Advanced tour, which can be completed the same way', async () => {
+  test.setTimeout(180_000)
+  await doBasicTour()
+  await running.page.getByRole('button', { name: 'Learn more' }).click()
+  // The Advanced intro, inside the tour: one button.
+  await expect(
+    running.page.getByRole('dialog', { name: 'Ready for the advanced features?' })
+  ).toBeVisible()
+  await running.page.getByRole('button', { name: 'Let’s go' }).click()
+  await doAdvancedTour()
+  await lands()
+  const settings = await flags()
+  expect(settings['tour.basic']).toBe('done')
+  expect(settings['tour.advanced']).toBe('done')
+})
+
+test('an Advanced tour from the launch offer starts after its intro and can be completed', async () => {
+  test.setTimeout(120_000)
+  await running.invoke('settings:set', 'tour.basic', 'done')
+  await relaunch()
+  const intro = running.page.getByRole('dialog', { name: 'Ready for the advanced features?' })
+  await expect(intro).toBeVisible()
+  await intro.getByRole('button', { name: 'Start the tour' }).click()
+  await running.page.getByText('Practice library: your real music is safe').waitFor()
+  await doAdvancedTour()
+  await lands()
+  const settings = await flags()
+  expect(settings['tour.basic']).toBe('done')
+  expect(settings['tour.advanced']).toBe('done')
 })

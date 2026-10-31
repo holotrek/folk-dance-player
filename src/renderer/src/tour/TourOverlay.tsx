@@ -73,6 +73,7 @@ const clip = (holes: Hole[]): string | undefined =>
 
 export interface TourOverlayProps {
   step: TourStep
+  placement?: TourStep['placement']
   index: number
   total: number
   onNext(): void
@@ -164,7 +165,7 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
       {lit && step.kind !== 'choice' && step.kind !== 'intro' && (
         <Popover
           opened={!dragging}
-          position="bottom"
+          position={props.placement ?? 'bottom'}
           withArrow
           offset={16}
           zIndex={400}

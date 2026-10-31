@@ -22,7 +22,7 @@ function context(options: { holding?: string[]; detail?: Partial<SongDetail> } =
   })
   const library = createLibraryStore(fake.api)
   const program = createProgramStore(fake.api)
-  const ctx: StepContext = { api: fake.api, library, program, page: 'music' }
+  const ctx: StepContext = { api: fake.api, library, program, page: 'music', memo: {} }
   const select = (...titles: string[]) => {
     const rows = [
       row(1, 'Hava Nagila'),
