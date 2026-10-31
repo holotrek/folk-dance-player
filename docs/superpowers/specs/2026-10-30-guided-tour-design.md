@@ -190,9 +190,9 @@ the tour switches to; **explain** steps have **Next**; **do** steps end on the r
 | 4 | `advanced.add-program` | Program | do | Press **+**, name a program, Create. |
 | 5 | `advanced.delete` | Program | explain | Rename, Duplicate and Delete in a program's ⋯ menu (Delete is not run here). |
 | 6 | `advanced.load` | Program | do | Load Friday warm-up from the sidebar (the app asks first if a song is loaded). |
-| 7 | `advanced.playlists` | any | do | Click Easy circle dances. The sidebar is on every page, so the tour no longer switches pages. |
-| 8 | `advanced.open-folder` | any | do | Open the Festival 2026 folder. |
-| 9 | `advanced.mirror` | any | do | On the synced playlist Balkan night, **Duplicate as my playlist**. |
+| 7 | `advanced.playlists` | Program | do | Click Easy circle dances in the sidebar. The tour stays on the Program page until the click, then moves to Music for the next step. |
+| 8 | `advanced.open-folder` | Music | do | Open the Festival 2026 folder. |
+| 9 | `advanced.mirror` | Music | do | On the synced playlist Balkan night, **Duplicate as my playlist**. |
 | 10–13 | `advanced.settings-appearance`, `-import`, `-remote`, `-about` | Settings | explain | One control at a time: light or dark, the import defaults, the remote's media keys, About. |
 | 14 | `advanced.end` | — | choice | **Done**, then the Music tab of the real library. |
 

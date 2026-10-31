@@ -80,7 +80,7 @@ export const ADVANCED_STEPS: TourStep[] = [
   }),
   step({
     id: 'advanced.playlists',
-    page: null,
+    page: 'program',
     kind: 'do',
     target: 'sidebar.playlist:Easy circle dances',
     placement: 'right',
@@ -94,7 +94,7 @@ export const ADVANCED_STEPS: TourStep[] = [
   }),
   step({
     id: 'advanced.open-folder',
-    page: null,
+    page: 'music',
     kind: 'do',
     target: 'sidebar.folder:Festival 2026',
     placement: 'right',
@@ -105,7 +105,7 @@ export const ADVANCED_STEPS: TourStep[] = [
   }),
   step({
     id: 'advanced.mirror',
-    page: null,
+    page: 'music',
     kind: 'do',
     target: 'sidebar.playlist-options:Balkan night',
     placement: 'top',

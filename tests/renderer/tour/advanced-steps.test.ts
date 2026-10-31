@@ -72,17 +72,12 @@ describe('the Advanced tour’s steps', () => {
     expect(body).not.toMatch(/untick/i)
   })
 
-  test('the sidebar steps stay on whatever page the person is on, instead of switching to Music', () => {
-    for (const id of [
-      'advanced.playlists',
-      'advanced.open-folder',
-      'advanced.mirror',
-      'advanced.load'
-    ]) {
-      expect(step(id).page === null || id === 'advanced.load', id).toBe(true)
-    }
+  test('Load and Playlists stay on the Program page; the tour goes to Music only after a playlist is clicked', () => {
     expect(step('advanced.load').page).toBe('program')
+    expect(step('advanced.playlists').page).toBe('program')
     expect(step('advanced.playlists').kind).toBe('do')
+    expect(step('advanced.open-folder').page).toBe('music')
+    expect(step('advanced.mirror').page).toBe('music')
   })
 
   test('playlists: done once the person has opened a playlist of their own', async () => {
