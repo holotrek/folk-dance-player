@@ -632,7 +632,8 @@ function startApp(): void {
       start: (part) => tour.start(mainWindow.id, part),
       leave: () => tour.leave(),
       // Per window: answered by the tour mode (see handlersFor).
-      state: () => ({ part: null, landOn: null })
+      state: () => ({ part: null, landOn: null }),
+      offerEnabled: process.env['FDP_TOUR_OFFER'] !== 'off'
     },
     onProgramsChanged: programsChanged
   })

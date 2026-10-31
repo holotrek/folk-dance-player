@@ -61,6 +61,8 @@ export interface HandlerDeps {
     start(part: TourPart): void
     leave(): void
     state(): TourState
+    // False in the end-to-end tests (FDP_TOUR_OFFER=off), so the launch offer doesn't cover the app.
+    offerEnabled?: boolean
   }
   // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void

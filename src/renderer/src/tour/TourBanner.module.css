@@ -1,0 +1,6 @@
+.banner {
+  padding: 2px var(--mantine-spacing-sm);
+  background: var(--mantine-primary-color-filled);
+  color: var(--mantine-color-white);
+  font-weight: 600;
+}

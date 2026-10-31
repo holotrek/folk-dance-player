@@ -10,12 +10,13 @@ const SONGS = [
   { title: 'Kolo', genre: 'Serbia' }
 ]
 
+const TOUR_ENV = { FDP_TOUR_OFFER: 'on' } // unlike the other specs, these want the launch offer
 let space: ReturnType<typeof workspace>
 let running: Running
 
 test.beforeEach(async () => {
   space = workspace(SONGS)
-  running = await launch(space.userData)
+  running = await launch(space.userData, TOUR_ENV)
   await running.invoke('import:start', { kind: 'paths', paths: [space.music] })
 })
 
@@ -56,8 +57,57 @@ const ignoreNavigation = (err: unknown): void => {
 const practiceFolders = (): string[] =>
   readdirSync(tmpdir()).filter((name) => name.startsWith('fdp-tour-'))
 
+const welcome = () => running.page.getByRole('dialog', { name: 'Welcome to Folk Dance Player' })
+const relaunch = async (): Promise<void> => {
+  await running.app.close()
+  running = await launch(space.userData, TOUR_ENV)
+}
+
+test('the launch offer appears; Not now changes nothing, so it comes back next launch', async () => {
+  await expect(welcome()).toBeVisible()
+  await welcome().getByRole('button', { name: 'Not now' }).click()
+  await expect(welcome()).toBeHidden()
+  expect((await running.invoke<Record<string, unknown>>('settings:getAll'))['tour.basic']).toBe(
+    'unseen'
+  )
+  await relaunch()
+  await expect(welcome()).toBeVisible()
+})
+
+test('Don’t show this again stops the offer for good', async () => {
+  await welcome().getByRole('button', { name: 'Don’t show this again' }).click()
+  await expect(welcome()).toBeHidden()
+  await relaunch()
+  await running.page.getByRole('tab', { name: 'Program' }).waitFor()
+  await expect(welcome()).toBeHidden()
+  expect((await running.invoke<Record<string, unknown>>('settings:getAll'))['tour.basic']).toBe(
+    'hidden'
+  )
+})
+
+test('Start the tour enters the practice library with a banner, and Leave returns to Music', async () => {
+  const { page } = running
+  await welcome().getByRole('button', { name: 'Start the tour' }).click()
+  await page.getByText('Practice library: your real music is safe').waitFor()
+  await expect(page.getByTestId('tour-blocker')).toBeVisible()
+  await expect(page.getByText(/Step 1 of \d+/)).toBeVisible()
+
+  await page.keyboard.press('Escape')
+  await page
+    .getByRole('dialog', { name: 'Leave the tour?' })
+    .getByRole('button', { name: 'Leave' })
+    .click()
+  await page.getByRole('tab', { name: 'Music', selected: true }).waitFor()
+  await expect(page.getByText('Practice library: your real music is safe')).toBeHidden()
+  await expect.poll(titles).toEqual(['Hora', 'Kolo'])
+  expect((await running.invoke<Record<string, unknown>>('settings:getAll'))['tour.basic']).toBe(
+    'unseen'
+  )
+})
+
 test('a tour shows the practice library, and leaving brings the real one back', async () => {
   const { invoke } = running
+  await running.page.getByRole('button', { name: 'Not now' }).click() // the launch offer
   await expect.poll(titles).toEqual(['Hora', 'Kolo'])
 
   await enter('basic')
@@ -69,8 +119,8 @@ test('a tour shows the practice library, and leaving brings the real one back', 
 
   await leave()
   expect(await titles()).toEqual(['Hora', 'Kolo'])
-  // The window is told once to land on the Music tab; then nothing.
-  expect(await invoke('tour:state')).toEqual({ part: null, landOn: 'music' })
+  // The reloaded window consumed the one-shot instruction to land on the Music tab.
+  await expect(running.page.getByRole('tab', { name: 'Music', selected: true })).toBeVisible()
   expect(await invoke('tour:state')).toEqual({ part: null, landOn: null })
 })
 
@@ -119,7 +169,7 @@ test('quitting during a tour leaves the real library showing next launch, and sw
   const stale = join(tmpdir(), 'fdp-tour-stale-from-a-crash')
   mkdirSync(stale, { recursive: true })
   await running.app.close() // quitting mid-tour
-  running = await launch(space.userData)
+  running = await launch(space.userData, TOUR_ENV)
   expect(await running.invoke('tour:state')).toEqual({ part: null, landOn: null })
   await expect.poll(titles).toEqual(['Hora', 'Kolo'])
   expect(existsSync(stale)).toBe(false)

@@ -1,0 +1,44 @@
+/* The tour's dimming layer: the whole window except a hole around what to use (a clip-path, so
+   clicks pass through the hole only), a pulsing ring on that, and the popover that points at it. */
+.blocker {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.ring {
+  position: fixed;
+  z-index: 151;
+  pointer-events: none;
+  box-sizing: border-box;
+  border: 3px solid var(--mantine-primary-color-filled);
+  border-radius: var(--mantine-radius-md);
+  animation: ring 1.4s ease-in-out infinite;
+}
+
+@keyframes ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--mantine-primary-color-filled) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--mantine-primary-color-filled) 0%, transparent);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ring {
+    animation: none;
+  }
+}
+
+/* The invisible box the popover points at. */
+.anchor {
+  position: fixed;
+  pointer-events: none;
+}
+
+.popover {
+  max-width: 340px;
+}

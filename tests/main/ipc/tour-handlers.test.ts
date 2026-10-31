@@ -50,6 +50,16 @@ describe('tour handlers', () => {
     expect(await h['tour:offer']()).toBeNull()
   })
 
+  test('the launch offer can be switched off (end-to-end tests turn it off)', async () => {
+    const { h } = setup({
+      start: vi.fn(),
+      leave: vi.fn(),
+      state: () => ({ part: null, landOn: null }),
+      offerEnabled: false
+    })
+    expect(await h['tour:offer']()).toBeNull()
+  })
+
   test('tour:finish and tour:hide set the real flags', async () => {
     const { h, settings } = setup()
     await h['tour:finish']('basic')
