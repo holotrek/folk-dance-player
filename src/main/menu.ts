@@ -1,6 +1,7 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import type { AppleSyncState } from '@shared/apple-sync'
 import type { PageTarget } from '@shared/contract'
+import type { TourPart } from '@shared/tour'
 
 // The macOS menu bar (spec §10.1: Help → Reveal logs). Settings… opens the Settings page; the
 // File menu has Sync with Apple Music (⌘⇧S) where sync is available; the Edit menu gives text fields copy, paste and undo; Window gives Minimize (⌘M) and Zoom. There is
@@ -14,6 +15,7 @@ export function menuTemplate(o: {
   revealBackups: () => void
   appleSync: boolean // Sync with Apple Music is available (macOS)
   syncAppleMusic: () => void
+  takeTour: (part: TourPart) => void
 }): MenuItemConstructorOptions[] {
   return [
     {
@@ -65,6 +67,9 @@ export function menuTemplate(o: {
     {
       role: 'help',
       submenu: [
+        { label: 'Take the Basic Tour…', click: () => o.takeTour('basic') },
+        { label: 'Take the Advanced Tour…', click: () => o.takeTour('advanced') },
+        { type: 'separator' },
         { label: 'Reveal Logs in Finder', click: o.revealLogs },
         { label: 'Reveal Library Backups in Finder', click: o.revealBackups }
       ]

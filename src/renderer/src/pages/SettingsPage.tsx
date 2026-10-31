@@ -88,7 +88,7 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
   )
 
   return (
-    <Stack p="md" gap="lg" maw={640}>
+    <Stack p="md" gap="lg" maw={640} data-tour="settings.page">
       <Title order={2}>Settings</Title>
       {error && (
         <Alert color="red" role="alert">
@@ -99,6 +99,7 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
         <Title order={4}>Appearance</Title>
         <SegmentedControl
           aria-label="Appearance"
+          data-tour="settings.appearance"
           w="fit-content"
           data={[
             { value: 'light', label: 'Light' },
@@ -112,7 +113,7 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
           }}
         />
       </Stack>
-      <Stack gap="xs">
+      <Stack gap="xs" data-tour="settings.import">
         <Title order={4}>Import</Title>
         <Text size="sm" c="dimmed">
           The defaults for the mapping step shown before every import.
@@ -135,10 +136,12 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
         {number('autoContinue.seconds', 'Auto-continue after (seconds)', 0, 600)}
         {number('countdown.seconds', 'Countdown before first song (seconds)', 0, 60)}
       </Stack>
-      <RemoteSection api={api} />
+      <div data-tour="settings.remote">
+        <RemoteSection api={api} />
+      </div>
       <ProjectorDisplay api={api} value={settings['projector.displayId']} onSaved={reload} />
       {info && (
-        <Stack gap={4}>
+        <Stack gap={4} data-tour="settings.about">
           <Title order={4}>About</Title>
           <Group gap="sm" wrap="nowrap">
             <Logo size={48} />
@@ -146,6 +149,10 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
           </Group>
           <Text size="sm">Library database (schema {info.schemaVersion}):</Text>
           <Code>{info.dbPath}</Code>
+          <Text size="xs" c="dimmed" mt="xs">
+            The tour’s practice tunes are synthesized renditions of the traditional melodies “Hava
+            Nagila” and “Korobushka”.
+          </Text>
         </Stack>
       )}
     </Stack>

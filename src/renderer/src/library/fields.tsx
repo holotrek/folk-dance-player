@@ -9,6 +9,7 @@ interface FieldProps {
   value: string | null
   onSave: (value: string) => void
   disabled?: boolean
+  tour?: string // the guided tour's target id
 }
 
 // The field's text while editing, and a blur handler that saves it once if it changed. A value
@@ -20,12 +21,13 @@ function useDraft(value: string | null, onSave: (v: string) => void) {
     setDraft(value ?? '')
     saved.current = value ?? ''
   }, [value])
-  const onBlur = (): void => {
-    if (draft === saved.current) return
-    saved.current = draft
-    onSave(draft)
+  // Saves `value` unless it is what was saved.
+  const save = (value: string): void => {
+    if (value === saved.current) return
+    saved.current = value
+    onSave(value)
   }
-  return { draft, setDraft, onBlur }
+  return { draft, setDraft, onBlur: () => save(draft), save }
 }
 
 export function TextField(props: FieldProps): React.JSX.Element {
@@ -33,6 +35,7 @@ export function TextField(props: FieldProps): React.JSX.Element {
   return (
     <TextInput
       label={props.label}
+      wrapperProps={props.tour ? { 'data-tour': props.tour } : undefined}
       value={draft}
       disabled={props.disabled}
       flex={1}
@@ -43,13 +46,16 @@ export function TextField(props: FieldProps): React.JSX.Element {
 }
 
 export function SuggestField(props: FieldProps & { suggestions: string[] }): React.JSX.Element {
-  const { draft, setDraft, onBlur } = useDraft(props.value, props.onSave)
+  const { draft, setDraft, onBlur, save } = useDraft(props.value, props.onSave)
   return (
     <Autocomplete
       label={props.label}
+      wrapperProps={props.tour ? { 'data-tour': props.tour } : undefined}
       data={props.suggestions}
       value={draft}
       onChange={setDraft}
+      // Picking a suggestion is a decision: save it now, not when the field is left.
+      onOptionSubmit={save}
       onBlur={onBlur}
       limit={8}
     />

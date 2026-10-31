@@ -21,6 +21,7 @@
     "build:helper": "sh scripts/build-helper.sh",
     "dist": "npm run build && npm run build:helper && env -u ELECTRON_RUN_AS_NODE electron-builder --mac --publish never",
     "icon": "env -u ELECTRON_RUN_AS_NODE electron scripts/make-icon.cjs",
+    "tour:tune": "node scripts/make-tour-tune.mts",
     "postinstall": "install-electron"
   },
   "dependencies": {

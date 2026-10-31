@@ -26,6 +26,7 @@ import type {
   ProgramSummary,
   RemoteStatus
 } from './program'
+import type { TourPart, TourState } from './tour'
 import type {
   DisplayChoice,
   ProjectorProgress,
@@ -57,6 +58,14 @@ export interface LibraryStats {
 // Every renderer → main request. Add a channel here, to INVOKE_CHANNELS, and to createHandlers.
 export interface InvokeContract {
   'app:getInfo': { args: []; result: AppInfo }
+  // The guided tour (tour spec §4.6). These are always served by the real handlers, also while a
+  // window is on the practice library. `start` and `leave` reload the window.
+  'tour:offer': { args: []; result: TourPart | null }
+  'tour:state': { args: []; result: TourState }
+  'tour:start': { args: [part: TourPart]; result: void }
+  'tour:finish': { args: [part: TourPart]; result: void }
+  'tour:hide': { args: [part: TourPart]; result: void }
+  'tour:leave': { args: []; result: void }
   'settings:getAll': { args: []; result: Settings }
   'settings:set': { args: [key: SettingKey, value: unknown]; result: Settings }
   'import:pickMusic': { args: []; result: string[] }
@@ -213,6 +222,12 @@ export type InvokeResult<C extends InvokeChannel> = InvokeContract[C]['result']
 
 export const INVOKE_CHANNELS = [
   'app:getInfo',
+  'tour:offer',
+  'tour:state',
+  'tour:start',
+  'tour:finish',
+  'tour:hide',
+  'tour:leave',
   'settings:getAll',
   'settings:set',
   'import:pickMusic',
@@ -353,6 +368,8 @@ export interface EventContract {
   'appleSync:state': AppleSyncStatus
   // To the control window: a toast or notice, once per occurrence (sync spec §6.5).
   'appleSync:notice': AppleSyncNotice
+  // To the control window: show a tour part's intro screen (Help → Take the … Tour).
+  'tour:intro': TourPart
 }
 
 export type EventChannel = keyof EventContract
@@ -368,7 +385,8 @@ export const EVENT_CHANNELS = [
   'canva:captureStatus',
   'app:showPage',
   'appleSync:state',
-  'appleSync:notice'
+  'appleSync:notice',
+  'tour:intro'
 ] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>

@@ -40,7 +40,13 @@ export async function launch(
   userData: string,
   extraEnv: Record<string, string> = {}
 ): Promise<Running> {
-  const env = { ...process.env, FDP_USER_DATA: userData, ...extraEnv } as Record<string, string>
+  // The tour's launch offer would cover the app on a fresh library; only the tour specs want it.
+  const env = {
+    ...process.env,
+    FDP_USER_DATA: userData,
+    FDP_TOUR_OFFER: 'off',
+    ...extraEnv
+  } as Record<string, string>
   delete env['ELECTRON_RUN_AS_NODE'] // set by VS Code's terminal; Electron would run as Node
   const app = await electron.launch(
     PACKAGED ? { executablePath: PACKAGED, args: [], env } : { args: ['.'], env }

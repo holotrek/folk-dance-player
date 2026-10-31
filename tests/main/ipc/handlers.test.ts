@@ -158,4 +158,18 @@ describe('registerHandlers', () => {
     }
     expect(settings['countdown.seconds']).toBe(3)
   })
+
+  test('a function picks the handlers for the window that asked', async () => {
+    type Listener = Parameters<IpcMain['handle']>[1]
+    const registered = new Map<string, Listener>()
+    const a = makeHandlers()
+    const b = { ...makeHandlers(), 'library:stats': () => ({ fileCount: 99 }) }
+    registerHandlers({ handle: (ch, fn) => void registered.set(ch, fn) }, (event) =>
+      event.sender.id === 2 ? b : a
+    )
+    const ask = (id: number) =>
+      registered.get('library:stats')!({ sender: { id } } as unknown as IpcMainInvokeEvent)
+    expect(await ask(1)).toEqual({ fileCount: 0 })
+    expect(await ask(2)).toEqual({ fileCount: 99 })
+  })
 })

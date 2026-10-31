@@ -74,6 +74,7 @@ export function FolderEntry(props: {
   return (
     <NavLink
       label={node.folder.name}
+      data-tour={`sidebar.folder:${node.folder.name}`}
       opened={id !== null && open.has(id)}
       onChange={() => id !== null && onToggle(id)}
       childrenOffset="sm"

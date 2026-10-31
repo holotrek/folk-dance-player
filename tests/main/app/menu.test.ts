@@ -7,7 +7,8 @@ function setup(dev = false, appleSync = false) {
     showSettings: vi.fn(),
     revealLogs: vi.fn(),
     revealBackups: vi.fn(),
-    syncAppleMusic: vi.fn()
+    syncAppleMusic: vi.fn(),
+    takeTour: vi.fn()
   }
   return {
     actions,
@@ -42,6 +43,14 @@ describe('the app menu', () => {
       'windowMenu',
       'help'
     ])
+  })
+
+  test('Help offers the Basic and the Advanced tour', () => {
+    const { menu, actions } = setup()
+    const help = submenu(menu, 'help')
+    click(item(help, 'Take the Basic Tour…'))
+    click(item(help, 'Take the Advanced Tour…'))
+    expect(actions.takeTour.mock.calls).toEqual([['basic'], ['advanced']])
   })
 
   test('Help reveals the logs and the library backups in Finder', () => {
