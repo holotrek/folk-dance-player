@@ -32,7 +32,7 @@ export default function DanceChoiceDialog(props: {
 
   return (
     <Modal opened={props.choices.length > 0} onClose={props.onClose} title="Which dance?">
-      <Stack>
+      <Stack data-tour="program.dance-dialog">
         {props.choices.map((c) => (
           <Radio.Group
             key={c.item.id}

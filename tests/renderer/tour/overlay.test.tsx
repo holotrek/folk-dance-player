@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import TourOverlay from '@renderer/tour/TourOverlay'
@@ -95,16 +95,28 @@ describe('the tour overlay', () => {
   test('a do step has no Next; an explain step does', async () => {
     target('song')
     const { onNext } = setup(explain)
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.queryByRole('button', { name: 'Next step' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Next step' }))
     expect(onNext).toHaveBeenCalled()
+  })
+
+  test('the popover steps aside while something is being dragged, so it never covers a drop', async () => {
+    target('song')
+    target('drop', { left: 400, top: 300, width: 100, height: 100 })
+    setup(dragStep)
+    expect(await screen.findByText('Pick a song')).toBeInTheDocument()
+    act(() => void fireEvent.dragStart(document.body))
+    // Gone at once, not fading: a drop can happen within a fade, and land on the popover.
+    expect(document.querySelector('.mantine-Popover-dropdown')).toBeNull()
+    act(() => void fireEvent.dragEnd(document.body))
+    expect(await screen.findByText('Pick a song')).toBeInTheDocument()
   })
 
   test('a do step has no Next button', async () => {
     target('song')
     setup(doStep)
     await screen.findByText('Pick a song')
-    expect(screen.queryByRole('button', { name: 'Next' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Next step' })).toBeNull()
   })
 
   test('the blocker eats clicks: nothing under it hears them', async () => {
@@ -144,6 +156,25 @@ describe('the tour overlay', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Take me there' }))
     expect(onGoThere).toHaveBeenCalled()
     expect(screen.getByTestId('tour-blocker').dataset.holes).toBe('')
+  })
+
+  test('a target that is gone for a moment keeps its hole; only a lasting absence shows the card', async () => {
+    const el = target('song')
+    setup(doStep)
+    await screen.findByText('Pick a song')
+    el.remove() // a re-render swaps the element out
+    await new Promise((resolve) => setTimeout(resolve, 300))
+    expect(screen.queryByRole('button', { name: 'Take me there' })).toBeNull()
+    expect(screen.getByTestId('tour-blocker').dataset.holes).not.toBe('')
+    expect(
+      await screen.findByRole('button', { name: 'Take me there' }, { timeout: 2000 })
+    ).toBeInTheDocument()
+  })
+
+  test('the cards have no overlay of their own to catch the pointer: the dim layer does that', async () => {
+    setup(choice)
+    await screen.findByText('What now?')
+    expect(document.querySelector('.mantine-Modal-overlay')).toBeNull()
   })
 
   test('a choice step shows its buttons', async () => {

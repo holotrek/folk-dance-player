@@ -9,6 +9,7 @@ interface FieldProps {
   value: string | null
   onSave: (value: string) => void
   disabled?: boolean
+  tour?: string // the guided tour's target id
 }
 
 // The field's text while editing, and a blur handler that saves it once if it changed. A value
@@ -33,6 +34,7 @@ export function TextField(props: FieldProps): React.JSX.Element {
   return (
     <TextInput
       label={props.label}
+      wrapperProps={props.tour ? { 'data-tour': props.tour } : undefined}
       value={draft}
       disabled={props.disabled}
       flex={1}
@@ -47,6 +49,7 @@ export function SuggestField(props: FieldProps & { suggestions: string[] }): Rea
   return (
     <Autocomplete
       label={props.label}
+      wrapperProps={props.tour ? { 'data-tour': props.tour } : undefined}
       data={props.suggestions}
       value={draft}
       onChange={setDraft}

@@ -2,7 +2,8 @@ import { existsSync, mkdirSync, readdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { launch, workspace, type Running } from './app'
+import { BASIC_STEPS } from '../src/renderer/src/tour/basic-steps'
+import { dropInHolding, dropInProgram, launch, workspace, type Running } from './app'
 
 // The guided tour's practice library, entered and left in the real app (tour spec §4.2, §8).
 const SONGS = [
@@ -173,4 +174,120 @@ test('quitting during a tour leaves the real library showing next launch, and sw
   expect(await running.invoke('tour:state')).toEqual({ part: null, landOn: null })
   await expect.poll(titles).toEqual(['Hora', 'Kolo'])
   expect(existsSync(stale)).toBe(false)
+})
+
+// --- the whole Basic tour, done step by step in the real UI ---------------------------------
+
+const STEP_COUNT = BASIC_STEPS.length
+
+test('the Basic tour can be completed by doing each step in the real UI', async () => {
+  test.setTimeout(120_000)
+  const { page } = running
+  const songs = page.getByRole('table', { name: 'Songs' })
+  const song = (title: string) => songs.getByRole('row').filter({ hasText: title })
+  const next = () => page.getByRole('button', { name: 'Next step' }).click()
+  // The step's title, inside the tour's own popover or card (a heading elsewhere can match too).
+  const onStep = async (title: string): Promise<void> => {
+    await expect(
+      page
+        .locator('.mantine-Popover-dropdown, .mantine-Modal-content')
+        .getByText(title, { exact: true })
+        .first()
+    ).toBeVisible()
+  }
+
+  // A lost drop is a known quirk of driving HTML5 drag and drop with a synthetic mouse (AGENTS.md).
+  // Like a person, drag again if the tour has not moved on.
+  const dragUntil = async (drag: () => Promise<void>, nextTitle: string): Promise<void> => {
+    await drag()
+    try {
+      await onStep(nextTitle)
+    } catch {
+      await drag()
+      await onStep(nextTitle)
+    }
+  }
+
+  await welcome().getByRole('button', { name: 'Start the tour' }).click()
+  await page.getByText('Practice library: your real music is safe').waitFor()
+  await expect(page.getByText(new RegExp(`Step 1 of ${STEP_COUNT}$`))).toBeVisible()
+
+  await onStep('Getting your music in')
+  await next()
+
+  await onStep('Open a song’s details')
+  await song('Hava Nagila').click()
+
+  await onStep('One tune, more than one dance')
+  await song('Misirlou').click()
+
+  await onStep('A song is not a dance')
+  await next()
+
+  await onStep('One dance, more than one tune')
+  await song('Makedonsko Devojče').click()
+
+  await onStep('Edit a dance once')
+  const danceType = page.getByRole('combobox', { name: 'Dance type' })
+  await danceType.fill('Open Circle')
+  await danceType.press('Tab') // leaving the field saves it
+
+  await onStep('Now the other tune')
+  await song('Pusti Me Mamo').click()
+
+  await onStep('Who belongs to what')
+  await next()
+  await onStep('Notes for a dance')
+  await next()
+  await onStep('Slides for the projector')
+  await next()
+
+  // The Program page.
+  await onStep('Find songs')
+  await page.getByRole('searchbox', { name: 'Search music' }).fill('hora')
+  await onStep('Clear the search')
+  await page.getByRole('button', { name: 'Clear search' }).click()
+
+  await onStep('Build your program')
+  await dragUntil(() => dropInProgram(page, song('Hora Mare')), 'When a song has two dances')
+  await dragUntil(() => dropInProgram(page, song('Misirlou')), 'Which dance?')
+  const dialog = page.getByRole('dialog', { name: 'Which dance?' })
+  await dialog.getByRole('radio').last().check()
+  await dialog.getByRole('button', { name: 'Done' }).click()
+
+  await onStep('Take something out')
+  await page.getByRole('button', { name: /^Remove Hora Mare/ }).click()
+
+  await onStep('Holding')
+  await dragUntil(() => dropInHolding(page, song('Ali Pasa')), 'From the shelf to the program')
+  const held = page.getByRole('listbox', { name: 'Held songs' }).getByRole('option')
+  await dragUntil(() => dropInProgram(page, held.filter({ hasText: 'Ali Pasa' })), 'Favorites')
+  await page.getByRole('button', { name: 'Add Zemer Atik to favorites' }).click()
+
+  await onStep('Play it')
+  await page.getByRole('button', { name: 'Play', exact: true }).click()
+
+  await onStep('Slower or faster')
+  const speed = page.getByLabel('Speed', { exact: true }).getByRole('slider')
+  await speed.focus()
+  await speed.press('ArrowLeft')
+  await onStep('Volume')
+  const volume = page.getByLabel('Volume', { exact: true }).getByRole('slider')
+  await volume.focus()
+  await volume.press('ArrowLeft')
+
+  await onStep('The wait between songs')
+  await next()
+
+  await onStep('That is the basics')
+  await expect(page.getByText(new RegExp(`Step ${STEP_COUNT} of ${STEP_COUNT}$`))).toBeVisible()
+  await page.getByRole('button', { name: 'Start now!' }).click()
+
+  // Back in the real library, on the Music tab, with Basic done and Advanced still to come.
+  await page.getByRole('tab', { name: 'Music', selected: true }).waitFor()
+  await expect(page.getByText('Practice library: your real music is safe')).toBeHidden()
+  await expect.poll(titles).toEqual(['Hora', 'Kolo'])
+  const settings = await running.invoke<Record<string, unknown>>('settings:getAll')
+  expect(settings['tour.basic']).toBe('done')
+  expect(settings['tour.advanced']).toBe('unseen')
 })

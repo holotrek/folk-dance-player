@@ -79,7 +79,9 @@ export default function MusicPage(): React.JSX.Element {
         </div>
         <Group>
           <SlidesRefreshButton state={slides} />
-          <Button onClick={flow.addMusic}>Add Music…</Button>
+          <Button onClick={flow.addMusic} data-tour="music.add">
+            Add Music…
+          </Button>
           {/* While Apple Music sync is on, Music is read directly (sync spec §5.7). */}
           {!syncOn && (
             <Button variant="default" onClick={flow.importFromApple}>

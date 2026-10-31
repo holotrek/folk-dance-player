@@ -5,6 +5,7 @@ import classes from './TourOverlay.module.css'
 
 const MARGIN = 6 // the hole is a little larger than what it lights up
 const POLL_MS = 150 // layout moves (a dialog opens, a list scrolls): follow it
+const GONE_MS = 700 // a target missing for less than this is a re-render, not a missing target
 
 interface Hole {
   x: number
@@ -22,13 +23,20 @@ function useHoles(target: TourStep['target']): Hole[] | null {
   const [holes, setHoles] = useState<Hole[] | null>(null)
   useEffect(() => {
     let scrolled = false
+    let lastSeen = Date.now()
+    // Missing now: keep the last hole for a moment, so a re-render doesn't flip the step to "not on
+    // screen" (whose card would sit over the screen and catch the pointer).
+    const missing = (): void => {
+      if (Date.now() - lastSeen > GONE_MS) setHoles(null)
+    }
     const measure = (): void => {
       const found = ids(target).map((id) =>
         document.querySelector<HTMLElement>(`[data-tour="${id}"]`)
       )
-      if (found.length === 0 || found.some((el) => el === null)) return setHoles(null)
+      if (found.length === 0 || found.some((el) => el === null)) return missing()
       const rects = found.map((el) => el!.getBoundingClientRect())
-      if (rects.some((r) => r.width === 0 && r.height === 0)) return setHoles(null)
+      if (rects.some((r) => r.width === 0 && r.height === 0)) return missing()
+      lastSeen = Date.now()
       if (!scrolled) {
         scrolled = true
         found[0]!.scrollIntoView?.({ block: 'nearest', inline: 'nearest' })
@@ -87,6 +95,20 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
   const { step } = props
   const holes = useHoles(step.target)
   const [asking, setAsking] = useState(false)
+  // While the person drags something, the popover steps aside: it could be over the drop.
+  const [dragging, setDragging] = useState(false)
+  useEffect(() => {
+    const start = (): void => setDragging(true)
+    const stop = (): void => setDragging(false)
+    document.addEventListener('dragstart', start, true)
+    document.addEventListener('dragend', stop, true)
+    document.addEventListener('drop', stop, true)
+    return () => {
+      document.removeEventListener('dragstart', start, true)
+      document.removeEventListener('dragend', stop, true)
+      document.removeEventListener('drop', stop, true)
+    }
+  }, [])
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') setAsking(true)
@@ -114,7 +136,7 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
         <Group gap="xs">
           {leave}
           {step.kind === 'explain' && (
-            <Button size="compact-sm" onClick={props.onNext}>
+            <Button size="compact-sm" aria-label="Next step" onClick={props.onNext}>
               Next
             </Button>
           )}
@@ -140,7 +162,15 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
       ))}
 
       {lit && step.kind !== 'choice' && step.kind !== 'intro' && (
-        <Popover opened position="bottom" withArrow offset={16} zIndex={400} shadow="lg">
+        <Popover
+          opened={!dragging}
+          position="bottom"
+          withArrow
+          offset={16}
+          zIndex={400}
+          shadow="lg"
+          transitionProps={{ duration: 0 }}
+        >
           <Popover.Target>
             <div
               className={classes.anchor}
@@ -165,7 +195,8 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
         closeOnEscape={false}
         closeOnClickOutside={false}
         zIndex={400}
-        overlayProps={{ opacity: 0 }}
+        withOverlay={false}
+        styles={{ inner: { pointerEvents: 'none' }, content: { pointerEvents: 'auto' } }}
       >
         <Stack gap="sm">
           {paragraphs(step.body)}

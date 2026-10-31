@@ -46,6 +46,7 @@ function RowStar({ row }: { row: LibraryRow }): React.JSX.Element {
       label={row.label}
       isFavorite={row.isFavorite}
       targets={useTargets(row)}
+      tour={`star:${row.title}`}
     />
   )
 }
@@ -406,6 +407,7 @@ export default function LibraryTable({
               <div
                 key={r.songId}
                 role="row"
+                data-tour={`song:${r.title}`}
                 aria-selected={chosen.has(r.songId)}
                 className={`${classes.item} ${r.isMissing ? classes.missing : ''} ${
                   dropTarget === r.songId ? classes.dropBefore : ''

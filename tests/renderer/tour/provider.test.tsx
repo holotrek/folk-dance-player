@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { afterEach, describe, expect, test, vi } from 'vitest'
 import type { TourPart, TourState } from '@shared/tour'
 import type { TourStep } from '@renderer/tour/steps'
+import { useLibraryStore } from '@renderer/library/LibraryProvider'
 import { TourProvider, useTour } from '@renderer/tour/TourProvider'
 import { createFakeApi } from '../fake-api'
 import { renderWithLibrary } from '../library/render-library'
@@ -111,7 +112,7 @@ describe('the tour provider while touring', () => {
     await screen.findByText('First')
     addProgram()
     act(() => fake.emit('programs:changed', null))
-    await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Next step' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Start now!' }))
     await waitFor(() => expect(fake.callsTo('tour:leave')).toEqual([[]]))
     expect(fake.callsTo('tour:finish')).toEqual([['basic']])
@@ -122,7 +123,7 @@ describe('the tour provider while touring', () => {
     await screen.findByText('First')
     addProgram()
     act(() => fake.emit('programs:changed', null))
-    await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Next step' }))
     await userEvent.click(await screen.findByRole('button', { name: 'Learn more' }))
     expect(await screen.findByText('Advanced intro')).toBeInTheDocument()
     expect(fake.callsTo('tour:finish')).toEqual([['basic']])
@@ -149,6 +150,91 @@ describe('the tour provider while touring', () => {
     setup({ state: { part: 'advanced', landOn: null } })
     expect(await screen.findByText('The end')).toBeInTheDocument()
     expect(screen.queryByText('Advanced intro')).toBeNull()
+  })
+})
+
+describe('the tour provider and the stores', () => {
+  test('a change that only shows up in a store re-checks the step (typing in the search box)', async () => {
+    let store: ReturnType<typeof useLibraryStore> | null = null
+    function Grab(): null {
+      store = useLibraryStore()
+      return null
+    }
+    const searchSteps: TourStep[] = [
+      {
+        ...base,
+        id: 'q',
+        kind: 'do',
+        title: 'Type a search',
+        target: 'first',
+        done: (ctx) => ctx.library.getState().search !== ''
+      },
+      { ...base, id: 'r', kind: 'explain', title: 'Searched', target: 'first' }
+    ]
+    const fake = createFakeApi({
+      'tour:state': { part: 'basic', landOn: null },
+      'tour:offer': null,
+      'library:list': []
+    })
+    const el = document.createElement('div')
+    el.dataset.tour = 'first'
+    document.body.appendChild(el)
+    renderWithLibrary(
+      <TourProvider
+        page="program"
+        setPage={() => undefined}
+        stepsFor={() => ({ steps: searchSteps, advanced: [] })}
+      >
+        <Grab />
+      </TourProvider>,
+      fake.api
+    )
+    await screen.findByText('Type a search')
+    await new Promise((resolve) => setTimeout(resolve, 200)) // the first check has come and gone
+    await act(async () => {
+      await store!.getState().setSearch('hora')
+    })
+    expect(await screen.findByText('Searched')).toBeInTheDocument()
+  })
+})
+
+describe('the tour provider and the screen', () => {
+  test('a step that waits for something to leave the screen is re-checked on its own', async () => {
+    const gone: TourStep[] = [
+      {
+        ...base,
+        id: 'g',
+        kind: 'do',
+        title: 'Close it',
+        target: 'first',
+        done: () => document.querySelector('[data-test-open]') === null
+      },
+      { ...base, id: 'h', kind: 'explain', title: 'Closed', target: 'first' }
+    ]
+    const fake = createFakeApi({
+      'tour:state': { part: 'basic', landOn: null },
+      'tour:offer': null
+    })
+    const el = document.createElement('div')
+    el.dataset.tour = 'first'
+    document.body.appendChild(el)
+    const open = document.createElement('div')
+    open.dataset.testOpen = ''
+    document.body.appendChild(open)
+    renderWithLibrary(
+      <TourProvider
+        page="program"
+        setPage={() => undefined}
+        stepsFor={() => ({ steps: gone, advanced: [] })}
+      >
+        <span />
+      </TourProvider>,
+      fake.api
+    )
+    await screen.findByText('Close it')
+    await new Promise((resolve) => setTimeout(resolve, 200))
+    open.remove() // no event, no store change: it just fades out
+    expect(await screen.findByText('Closed', undefined, { timeout: 2000 })).toBeInTheDocument()
   })
 })
 

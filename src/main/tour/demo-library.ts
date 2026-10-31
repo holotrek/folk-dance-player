@@ -101,6 +101,11 @@ export function buildDemoLibrary(dir: string, tunePath: string): DemoLibrary {
   })
   const bySong = (title: string) => saved.find((s) => s.title === title)!
 
+  // Import names each song's dance after the song; these are the real dances.
+  for (const song of saved) {
+    if (song.dance !== song.title) updateDance(db, song.danceId, { name: song.dance })
+  }
+
   // One dance used by two tunes: Lesnoto, each tune keeping its own teacher.
   const lesnoto = bySong('Makedonsko Devojče')
   mergeDances(db, lesnoto.danceId, bySong('Pusti Me Mamo').danceId)

@@ -96,6 +96,7 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
       />
       <TextField
         label="Artist"
+        tour="editor.artist"
         value={song.artist}
         onSave={(artist) => run(() => api.invoke('library:updateSong', songId, { artist }))}
       />
@@ -150,157 +151,177 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
         )
       })}
 
-      {song.dances.map((d) => (
-        <Paper key={d.danceId} withBorder p="sm" role="group" aria-label={d.label}>
-          <Stack gap="xs">
-            <Group justify="space-between" wrap="nowrap">
-              <Text fw={600} size="sm" truncate>
-                {d.label}
-              </Text>
-              <Group gap={4} wrap="nowrap">
-                {d.isDefault ? (
-                  <Badge size="sm" variant="light">
-                    ★ Default
-                  </Badge>
-                ) : (
+      <Stack gap="sm" data-tour="editor.dances">
+        {song.dances.map((d) => (
+          <Paper
+            key={d.danceId}
+            withBorder
+            p="sm"
+            role="group"
+            aria-label={d.label}
+            data-tour="editor.dance-card"
+          >
+            <Stack gap="xs">
+              <Group justify="space-between" wrap="nowrap">
+                <Text fw={600} size="sm" truncate>
+                  {d.label}
+                </Text>
+                <Group gap={4} wrap="nowrap">
+                  {d.isDefault ? (
+                    <Badge size="sm" variant="light">
+                      ★ Default
+                    </Badge>
+                  ) : (
+                    <Button
+                      size="compact-xs"
+                      variant="subtle"
+                      onClick={() =>
+                        run(() => api.invoke('library:setDefaultDance', songId, d.danceId))
+                      }
+                    >
+                      Make default
+                    </Button>
+                  )}
+                  <Menu position="bottom-end">
+                    <Menu.Target>
+                      <ActionIcon variant="subtle" size="sm" aria-label="Dance options">
+                        ⋯
+                      </ActionIcon>
+                    </Menu.Target>
+                    <Menu.Dropdown>
+                      <Menu.Item onClick={() => setPicker({ mode: 'merge', dance: d })}>
+                        Merge into another dance…
+                      </Menu.Item>
+                      <Menu.Item
+                        color="red"
+                        onClick={() =>
+                          run(() => api.invoke('library:unlinkDance', songId, d.danceId))
+                        }
+                      >
+                        Unlink from this song
+                      </Menu.Item>
+                    </Menu.Dropdown>
+                  </Menu>
+                </Group>
+              </Group>
+              {d.songCount > 1 && (
+                <Text size="xs" c="dimmed">
+                  Also used by {d.songCount - 1} other {d.songCount === 2 ? 'song' : 'songs'}:
+                  changes apply to all of them.
+                </Text>
+              )}
+              {/* 0.3.0 spec §3.5: the default dance of one song can follow the song's name. While it
+                does, its name is greyed out (disabled) so it's clear it can't be typed in. */}
+              <Group align="flex-end" wrap="nowrap" gap="sm" data-same-as-song-row>
+                <TextField
+                  label="Dance name"
+                  value={d.name}
+                  disabled={d.sameAsSong && !unlocked.has(d.danceId)}
+                  onSave={(name) =>
+                    run(() => api.invoke('library:updateDance', d.danceId, { name }))
+                  }
+                />
+                {d.isDefault && d.songCount === 1 && (
+                  <Checkbox
+                    size="xs"
+                    label="Same as song"
+                    mb={8}
+                    styles={{ label: { whiteSpace: 'nowrap' } }}
+                    checked={d.sameAsSong && !unlocked.has(d.danceId)}
+                    onChange={(e) => {
+                      const next = new Set(unlocked)
+                      if (e.currentTarget.checked) {
+                        next.delete(d.danceId)
+                        // Main names the dance as its song is named now, even for a title just saved.
+                        if (!d.sameAsSong) {
+                          void run(() =>
+                            api.invoke('library:updateDance', d.danceId, { sameAsSong: true })
+                          )
+                        }
+                      } else next.add(d.danceId)
+                      setUnlocked(next)
+                    }}
+                  />
+                )}
+              </Group>
+              <SuggestField
+                label="Country"
+                tour="editor.country"
+                value={d.country}
+                suggestions={suggestions.countries}
+                onSave={(country) =>
+                  run(() => api.invoke('library:updateDance', d.danceId, { country }))
+                }
+              />
+              <SuggestField
+                label="Choreographer"
+                value={d.choreographer}
+                suggestions={suggestions.people}
+                onSave={(choreographer) =>
+                  run(() => api.invoke('library:updateDance', d.danceId, { choreographer }))
+                }
+              />
+              <SuggestField
+                label="Teacher"
+                tour="editor.teacher"
+                value={d.teacher}
+                suggestions={suggestions.people}
+                onSave={(teacher) =>
+                  run(() => api.invoke('library:setTeacher', d.pairingId, teacher))
+                }
+              />
+              <SuggestField
+                label="Dance type"
+                tour="editor.dance-type"
+                value={d.danceType}
+                suggestions={suggestions.danceTypes}
+                onSave={(danceType) =>
+                  run(() => api.invoke('library:updateDance', d.danceId, { danceType }))
+                }
+              />
+              <Group gap="xs">
+                <Text size="sm">Difficulty</Text>
+                <Rating
+                  value={d.difficulty ?? 0}
+                  onChange={(difficulty) =>
+                    run(() => api.invoke('library:updateDance', d.danceId, { difficulty }))
+                  }
+                />
+                {d.difficulty !== null && (
                   <Button
                     size="compact-xs"
                     variant="subtle"
                     onClick={() =>
-                      run(() => api.invoke('library:setDefaultDance', songId, d.danceId))
+                      run(() => api.invoke('library:updateDance', d.danceId, { difficulty: null }))
                     }
                   >
-                    Make default
+                    Clear
                   </Button>
                 )}
-                <Menu position="bottom-end">
-                  <Menu.Target>
-                    <ActionIcon variant="subtle" size="sm" aria-label="Dance options">
-                      ⋯
-                    </ActionIcon>
-                  </Menu.Target>
-                  <Menu.Dropdown>
-                    <Menu.Item onClick={() => setPicker({ mode: 'merge', dance: d })}>
-                      Merge into another dance…
-                    </Menu.Item>
-                    <Menu.Item
-                      color="red"
-                      onClick={() =>
-                        run(() => api.invoke('library:unlinkDance', songId, d.danceId))
-                      }
-                    >
-                      Unlink from this song
-                    </Menu.Item>
-                  </Menu.Dropdown>
-                </Menu>
               </Group>
-            </Group>
-            {d.songCount > 1 && (
-              <Text size="xs" c="dimmed">
-                Also used by {d.songCount - 1} other {d.songCount === 2 ? 'song' : 'songs'}: changes
-                apply to all of them.
-              </Text>
-            )}
-            {/* 0.3.0 spec §3.5: the default dance of one song can follow the song's name. While it
-                does, its name is greyed out (disabled) so it's clear it can't be typed in. */}
-            <Group align="flex-end" wrap="nowrap" gap="sm" data-same-as-song-row>
-              <TextField
-                label="Dance name"
-                value={d.name}
-                disabled={d.sameAsSong && !unlocked.has(d.danceId)}
-                onSave={(name) => run(() => api.invoke('library:updateDance', d.danceId, { name }))}
-              />
-              {d.isDefault && d.songCount === 1 && (
-                <Checkbox
-                  size="xs"
-                  label="Same as song"
-                  mb={8}
-                  styles={{ label: { whiteSpace: 'nowrap' } }}
-                  checked={d.sameAsSong && !unlocked.has(d.danceId)}
-                  onChange={(e) => {
-                    const next = new Set(unlocked)
-                    if (e.currentTarget.checked) {
-                      next.delete(d.danceId)
-                      // Main names the dance as its song is named now, even for a title just saved.
-                      if (!d.sameAsSong) {
-                        void run(() =>
-                          api.invoke('library:updateDance', d.danceId, { sameAsSong: true })
-                        )
-                      }
-                    } else next.add(d.danceId)
-                    setUnlocked(next)
-                  }}
-                />
-              )}
-            </Group>
-            <SuggestField
-              label="Country"
-              value={d.country}
-              suggestions={suggestions.countries}
-              onSave={(country) =>
-                run(() => api.invoke('library:updateDance', d.danceId, { country }))
-              }
-            />
-            <SuggestField
-              label="Choreographer"
-              value={d.choreographer}
-              suggestions={suggestions.people}
-              onSave={(choreographer) =>
-                run(() => api.invoke('library:updateDance', d.danceId, { choreographer }))
-              }
-            />
-            <SuggestField
-              label="Teacher"
-              value={d.teacher}
-              suggestions={suggestions.people}
-              onSave={(teacher) =>
-                run(() => api.invoke('library:setTeacher', d.pairingId, teacher))
-              }
-            />
-            <SuggestField
-              label="Dance type"
-              value={d.danceType}
-              suggestions={suggestions.danceTypes}
-              onSave={(danceType) =>
-                run(() => api.invoke('library:updateDance', d.danceId, { danceType }))
-              }
-            />
-            <Group gap="xs">
-              <Text size="sm">Difficulty</Text>
-              <Rating
-                value={d.difficulty ?? 0}
-                onChange={(difficulty) =>
-                  run(() => api.invoke('library:updateDance', d.danceId, { difficulty }))
+              <NotesField
+                label="Notes"
+                value={d.notes}
+                onSave={(notes) =>
+                  run(() => api.invoke('library:updateDance', d.danceId, { notes }))
                 }
               />
-              {d.difficulty !== null && (
-                <Button
-                  size="compact-xs"
-                  variant="subtle"
-                  onClick={() =>
-                    run(() => api.invoke('library:updateDance', d.danceId, { difficulty: null }))
-                  }
-                >
-                  Clear
-                </Button>
-              )}
-            </Group>
-            <NotesField
-              label="Notes"
-              value={d.notes}
-              onSave={(notes) => run(() => api.invoke('library:updateDance', d.danceId, { notes }))}
-            />
-            <NotesPdfField danceId={d.danceId} pdf={d.notesPdf} />
-            <DanceSlideField
-              danceId={d.danceId}
-              danceName={d.name}
-              slide={d.slide}
-              image={d.slideImage}
-              shows={d.slideShows}
-            />
-          </Stack>
-        </Paper>
-      ))}
+              <div data-tour="editor.pdf">
+                <NotesPdfField danceId={d.danceId} pdf={d.notesPdf} />
+              </div>
+              <div data-tour="editor.slide">
+                <DanceSlideField
+                  danceId={d.danceId}
+                  danceName={d.name}
+                  slide={d.slide}
+                  image={d.slideImage}
+                  shows={d.slideShows}
+                />
+              </div>
+            </Stack>
+          </Paper>
+        ))}
+      </Stack>
 
       <DancePicker
         opened={picker !== null}

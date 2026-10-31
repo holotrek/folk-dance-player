@@ -12,6 +12,7 @@ export default function FavoriteToggle(props: {
   label: string
   isFavorite: boolean
   targets?: Pick<RowTarget, 'fileId'>[]
+  tour?: string // the guided tour's target id
 }): React.JSX.Element {
   const api = useLibraryApi()
   const { isFavorite } = props
@@ -21,6 +22,7 @@ export default function FavoriteToggle(props: {
       size="sm"
       color={isFavorite ? 'yellow' : 'gray'}
       className={isFavorite ? undefined : classes.unstarred}
+      data-tour={props.tour}
       aria-label={
         isFavorite ? `Remove ${props.label} from favorites` : `Add ${props.label} to favorites`
       }

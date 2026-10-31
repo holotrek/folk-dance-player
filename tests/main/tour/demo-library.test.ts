@@ -58,6 +58,24 @@ describe('the practice library', () => {
     expect(new Set(teachers).size).toBe(2)
   })
 
+  test('names its dances for real dances, not after the tunes', () => {
+    const { db } = buildDemoLibrary(dir, TUNE_PATH)
+    const names = db
+      .prepare('SELECT name FROM dances ORDER BY name')
+      .all()
+      .map((r) => r.name)
+    expect(names).toContain('Lesnoto')
+    expect(names).toContain('Misirlou')
+    expect(names).toContain('Misirlou Mixer')
+    expect(names).toContain('Pravo Rhodopsko')
+    // The two tunes of Lesnoto are labelled as that dance in the library.
+    const labels = listLibrary(db, all)
+      .filter((r) => r.title === 'Makedonsko Devojče' || r.title === 'Pusti Me Mamo')
+      .map((r) => r.label)
+      .sort()
+    expect(labels).toEqual(['Lesnoto ♪ Makedonsko Devojče', 'Lesnoto ♪ Pusti Me Mamo'])
+  })
+
   test('has a favorite, a local playlist, a synced playlist in a folder, and a saved program', () => {
     const { db } = buildDemoLibrary(dir, TUNE_PATH)
     expect(

@@ -20,6 +20,7 @@ const defaultStepsFor = (): { steps: TourStep[]; advanced: TourStep[] } => ({
 })
 
 const EVALUATE_DELAY_MS = 60 // after an event, let the state settle before looking at it
+const RECHECK_MS = 400 // and now and then regardless: a dialog fading out sends no event
 
 // The guided tour in the control window (tour spec §4.3): asks main whether this window is touring,
 // runs the engine over the part's steps, re-checks the current step after anything that could have
@@ -85,6 +86,9 @@ export function TourProvider(props: {
         redraw()
         check()
       }),
+      // State the person changes without any event from main (the search box, a selection).
+      library.subscribe(check),
+      program.subscribe(check),
       api.on('library:changed', check),
       api.on('programs:changed', check),
       api.on('player:state', check)
@@ -92,8 +96,10 @@ export function TourProvider(props: {
     const dom = ['input', 'click', 'change', 'drop', 'dragend', 'keyup']
     dom.forEach((type) => document.addEventListener(type, check, true))
     check()
+    const poll = setInterval(check, RECHECK_MS)
     return () => {
       clearTimeout(timer)
+      clearInterval(poll)
       stops.forEach((stop) => stop())
       dom.forEach((type) => document.removeEventListener(type, check, true))
     }
