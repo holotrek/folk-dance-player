@@ -279,6 +279,12 @@ async function doBasicTour(): Promise<void> {
   await onStep('Now the other tune')
   await song('Legnala Dana').click()
 
+  await onStep('The same change, here too')
+  await expect(page.getByRole('group', { name: /Lesnoto/ }).getByLabel('Dance type')).toHaveValue(
+    'Open Circle'
+  )
+  await next()
+
   await onStep('The artist belongs to the song')
   await next()
   await onStep('The teacher belongs to the dance and tune together')

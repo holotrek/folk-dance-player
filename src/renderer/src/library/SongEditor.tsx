@@ -299,7 +299,7 @@ export default function SongEditor({ songId }: { songId: number }): React.JSX.El
                     />
                     <SuggestField
                       label="Dance type"
-                      tour="editor.dance-type"
+                      tour={`editor.dance-type:${d.name}`}
                       value={d.danceType}
                       suggestions={suggestions.danceTypes}
                       onSave={(danceType) =>

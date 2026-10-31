@@ -67,7 +67,7 @@ const detail = (): SongDetail =>
     dances: [11, 12].map((n) => ({
       danceId: n,
       pairingId: n + 10,
-      name: `Dance ${n}`,
+      name: n === 12 ? 'Lesnoto' : `Dance ${n}`,
       country: 'Greece',
       choreographer: null,
       danceType: null,
@@ -109,7 +109,8 @@ describe('the tour’s targets exist on the screen', () => {
       'editor.dance-toggle',
       'editor.artist',
       'editor.teacher',
-      'editor.dance-type',
+      'editor.dance-type:Dance 11',
+      'editor.dance-type:Lesnoto',
       'editor.country',
       'editor.pdf',
       'editor.slide'

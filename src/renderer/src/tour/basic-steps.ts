@@ -131,7 +131,7 @@ export const BASIC_STEPS: TourStep[] = [
     id: 'basic.shared-edit',
     page: 'music',
     kind: 'do',
-    target: 'editor.dance-type',
+    target: 'editor.dance-type:Lesnoto',
     placement: 'left', // the suggestions open above or below the field
     title: 'Edit a dance once',
     body: 'This dance, Lesnoto, is done to another tune as well. Set its Dance type: pick Open Circle from the list.',
@@ -144,8 +144,17 @@ export const BASIC_STEPS: TourStep[] = [
     kind: 'do',
     target: 'song:Legnala Dana',
     title: 'Now the other tune',
-    body: 'Click Legnala Dana again. Its Lesnoto card has the same dance type: it is one dance, so you only edit it once.',
+    body: 'Click Legnala Dana again.',
     done: (ctx) => selected(ctx, 'Legnala Dana')
+  }),
+  step({
+    id: 'basic.shared-result',
+    page: 'music',
+    kind: 'explain',
+    target: 'editor.dance-type:Lesnoto',
+    placement: 'left',
+    title: 'The same change, here too',
+    body: 'Here is Lesnoto under Legnala Dana: its Dance type is now Open Circle, the value you picked on the other tune. It is one dance, so there is only one place to change it.'
   }),
   step({
     id: 'basic.who-owns-artist',
