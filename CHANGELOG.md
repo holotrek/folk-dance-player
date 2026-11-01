@@ -8,6 +8,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-11-01
+
 ### Added
 
 - The app now finds new versions by itself, downloads them in the background, and shows **Version X is ready — Restart to Update** in a banner at the top. **Check for Updates…** is in the app menu, and **Check for updates automatically** is in Settings. A copy older than this release has no updater, so it needs one last manual download.
