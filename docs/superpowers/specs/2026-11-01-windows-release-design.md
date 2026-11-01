@@ -12,7 +12,7 @@ The four things already named, plus everything else I found:
 
 1. Apple Music sync is disabled and hidden on Windows, and the tour adjusts (§3).
 2. The site shows the right things and the right download for the visitor's system (§4).
-3. A MITPlayer importer, if the file format can be had, which could take Apple Music's place in the tour (§5).
+3. A MITPlayer importer was considered and dropped (§5).
 4. In-place updates on Windows (§6).
 5. The unglamorous rest: installer, code signing, projector window, menus, paths, CI, release flow (§7–§10).
 
@@ -74,7 +74,7 @@ Most of this already works: `AppleSync` takes `available`, and `AppleSyncSwitch`
 
 ### 3.3 The `Library.xml` import is a separate feature
 
-"Import from Apple Music…" reads an exported `Library.xml` file; it needs no Apple software, and `fileURLToPath` already handles Windows paths. Windows users with iTunes for Windows, or an export brought over from a Mac, could use it. But the paths inside such a file point at the other machine's disk. **Decided (Q5):** keep it on Windows, and build a **relocate songs** tool in this release: replace a folder prefix across the library's file paths (preview the count first; songs whose new path doesn't exist stay missing). The same remap step serves the Library.xml import and the MITPlayer importer, so build it once as a shared piece (§9.5).
+"Import from Apple Music…" reads an exported `Library.xml` file; it needs no Apple software, and `fileURLToPath` already handles Windows paths. Windows users with iTunes for Windows, or an export brought over from a Mac, could use it. But the paths inside such a file point at the other machine's disk. **Decided (Q5):** keep it on Windows, and build a **relocate songs** tool in this release: replace a folder prefix across the library's file paths (preview the count first; songs whose new path doesn't exist stay missing). The same remap step serves the Library.xml import and the everyday "I moved my music" case, so build it once as a shared piece (§9.5).
 
 ### 3.4 The tour
 
@@ -84,7 +84,7 @@ The tour is data (`src/renderer/src/tour/*-steps.ts`), with a practice library b
 - **Advanced tour, playlists** (`advanced-steps.ts:88–113`): three steps about read-only Apple playlists, a folder (`Festival 2026`), and "Duplicate as my playlist". On Windows the practice library should not contain Apple mirrors, and these steps are replaced by local-playlist steps (a folder-less playlist, drag a song onto it). The duplicate-playlist action is still worth teaching, but only if something can be a mirror on Windows; otherwise it is dropped.
 - **The pretend import** (`Add Music…` runs a pretend import over the practice library) is unaffected.
 
-If §5 happens, the Music step's Apple sentence becomes a MITPlayer sentence ("Coming from MITPlayer? Import from MITPlayer… brings your dances across"). Like the other real-world actions, that step explains rather than does, because the practice library has no real files.
+On Windows the Music step's Apple sentence is simply removed; nothing takes its place (a MITPlayer sentence was planned and dropped with the importer, §5).
 
 Tests: the existing tour end-to-end specs run with `FDP_PLATFORM=windows` as well, and a unit test walks both step lists and fails if the Windows one mentions "Apple", "Mac", "Finder" or "⌘".
 
@@ -114,31 +114,17 @@ Mechanism: the script sets `data-os="mac|windows|other"` on `<html>`; the CSS hi
 | "Beyond Apple Music" section + sync screenshot | shown | **hidden entirely** (decided, Q6) | shown |
 | Hero copy, `<meta description>`, `og:*` | "…for folk dance organizers" — drop "Mac" from the shared copy | same | same |
 | Screenshots | existing (macOS window chrome, traffic lights) | Windows captures, retaken on your Windows desktop (decided, Q7) | Mac ones |
-| MITPlayer section | unchanged, plus an "Import from MITPlayer" mention if §5 ships | the same, prominently | |
+| MITPlayer section | unchanged (the credit and link stay) | the same | the same |
 
 **Release assets.** `main.js` must pick the asset by platform: `.dmg` for Mac, `Folk-Dance-Player-Setup-*.exe` for Windows (never `.blockmap`, `.zip`, `.yml`). Failure cases to handle: the latest release lacks one platform's asset (a partial publish, or a Windows-only hotfix) → that button falls back to the Releases page; GitHub API rate limit (60/hour/IP, existing cache of 10 minutes stays) → buttons keep the Releases link. The Windows note is deleted.
 
 **Not changing:** hosting (Azure Static Web App), the CSP's `connect-src`.
 
-## 5. Importing from MITPlayer (blocked on a sample)
+## 5. Importing from MITPlayer (dropped)
 
-I know nothing reliable about MITPlayer's files, and I won't design against a guess. The first step is a **spike, not a build**: get a real MITPlayer data folder from you (or a user), and write `docs/spikes/mitplayer-format.md` answering:
+**Decided:** there is no MITPlayer importer. MITPlayer's data file is a CSV with no header row, so most columns could only be guessed, and a wrong guess would put wrong teachers, countries or notes into someone's library without their noticing. We would rather not import than import fields we are guessing at.
 
-1. Where does MITPlayer keep its data (install folder, `%APPDATA%`, next to the music)? One file or many? Text (INI/CSV/XML), a Jet `.mdb`, or something binary?
-2. Encoding of text (ANSI code page vs UTF-8) — folk dance names carry diacritics (Balkan, Israeli, Scandinavian dances), so a wrong guess garbles exactly the data people care about.
-3. Which fields exist per dance and per tune: name, country, choreographer, teacher, difficulty, notes, formation, tune file reference(s), slide/image reference, "played" counts, ratings.
-4. How tunes are referenced: absolute Windows paths, paths relative to a root, or by name. This decides whether the import needs a "where did your music go?" remapping step (certain if the user is on a Mac, likely on a moved Windows disk).
-5. Are dances and tunes separate (many-to-many as in our model) or one record each?
-6. Are there playlists / programs / session history to bring over?
-7. Image references: are they paths to image files (we'd copy them, as the dance-image feature does) or embedded blobs?
-
-**Where it could land in our model** (hypothesis to check against the sample): MITPlayer's dance → `dances` (+ `dance_prefs`: difficulty, notes, slide image), its tune file → `files` + `songs`, the pair → `dance_songs` with `dance_song_prefs` (teacher). Images go through `AttachmentStore`'s image path (copied into `slide-images/`, `slide_source = 'image'`). This is why the importer has to run in the import worker with a main-side writer like the other imports (import design, AGENTS.md 2026-10-13), and why it gets the mapping-style summary screen ("142 dances, 160 tunes, 12 missing files, 9 images").
-
-It is a pure parser plus mapping, so it works on any OS; Mac users with a copied folder can use it too. Placement: Music page, next to Add Music… and the Apple import; on Windows it gets the Apple import's place in the tour (§3.4).
-
-**Legal/ethical check:** reading a user's own data file is fine; we use no MITPlayer code or assets. The credit to MITPlayer (spec 2026-10-13 §12) already exists.
-
-**Decided (Q3):** the importer is required for the first Windows release **if a sample can be obtained**; if not, the release ships without it and nothing else depends on it. Getting the sample is therefore on the critical path and should start now (Q15 says MITPlayer users and general organizers matter equally, so the importer and the projector run as parallel spikes). The whole site and tour wording for the importer waits on the spike's result.
+Consequences, all of them removals from earlier drafts: no MITPlayer format spike, no sample-hunting, no import entry on the Music page, no MITPlayer sentence in the tour, nothing about it on the site beyond the existing credit and link. **Revisit only if** a documented column layout turns up (from MITPlayer's author or its documentation); then a headerless-CSV import with a user-confirmed column mapping, like the existing tag-mapping step, would be the shape to design, as a post-release feature.
 
 ## 6. In-place updates on Windows
 
@@ -253,7 +239,7 @@ The macOS implementation encodes hard-won hardware lessons (AGENTS.md 2026-10-13
 
 - **Path model.** `files.path` is stored as-is. Windows paths are case-insensitive and may differ by drive-letter case or slash direction; `samePath` normalizes NFC/NFD (a macOS concern) but not these. Decide the canonical form (`path.normalize` + drive-letter uppercase) and make the unique index and "same path" matching agree. Apple sync's NFC/NFD logic is irrelevant but harmless.
 - **Long paths and odd locations:** Node handles `\\?\` paths, but verify a >260-character path imports and plays; test a UNC share (`\\nas\music`) and a mapped drive; network drives that are offline at launch must produce the existing "missing" state, not a hang (`stat` with a timeout?).
-- **Removable/changed drive letters:** a USB stick becomes `E:` today and `F:` tomorrow; every song reads as missing. Same as moving files on a Mac, but much more common on Windows laptops. **In scope (decided, Q5):** a "relocate songs" tool (a path-prefix remap with a preview of how many files it would find), shared by Library.xml import, the MITPlayer importer (§5) and the everyday "I moved my music" case. It belongs in this release and in its own plan.
+- **Removable/changed drive letters:** a USB stick becomes `E:` today and `F:` tomorrow; every song reads as missing. Same as moving files on a Mac, but much more common on Windows laptops. **In scope (decided, Q5):** a "relocate songs" tool (a path-prefix remap with a preview of how many files it would find), shared by the Library.xml import and the everyday "I moved my music" case. It belongs in this release and in its own plan.
 - **Hidden-file rules.** `scan.ts` skips names starting with `.` (macOS resource forks). On Windows also skip entries with the hidden/system attribute, `$RECYCLE.BIN`, `System Volume Information` (readdir errors are already swallowed), and `Thumbs.db` is harmless.
 - **File locking.** Windows won't delete or rename an open file. `AttachmentStore` replaces/deletes PDFs and images and the media protocol streams audio and images; the startup backup (`VACUUM INTO`) writes a new file; log rollover renames. Each needs checking against `EBUSY`/`EPERM`, plus antivirus scanning briefly holding new files. Retry-with-backoff on delete/rename is the usual cure.
 - **SQLite:** `node:sqlite` is the same engine. WAL mode on a roaming profile or network home folder is risky (WAL needs shared memory; it fails on some network filesystems). Electron's default `userData` on Windows is `%APPDATA%` (Roaming), which in managed environments (schools, community centers) can be a network-synced profile, and our folder holds a database plus copies of images/PDFs. **Decided (Q11): the Windows data folder is `%LOCALAPPDATA%\Folk Dance Player`**, set with `app.setPath('userData', …)` before the app is ready, in the same place `userDataOverride` (`src/main/user-data.ts`) already chooses folders; `FDP_USER_DATA` still wins and the dev folder rule is unchanged. This must be settled before the first release, because moving real libraries later needs a migration. The logs folder follows `userData`.
@@ -264,7 +250,7 @@ The macOS implementation encodes hard-won hardware lessons (AGENTS.md 2026-10-13
 
 ### 9.6 Audio formats
 
-Chromium plays MP3, AAC/M4A, FLAC, WAV, OGG/Opus on Windows as on macOS. Unplayable: ALAC (already flagged), AIFF (already), and **WMA**, which is already in the unsupported list but likely to show up often in older Windows libraries (iTunes-for-Windows and MITPlayer-era collections). Make sure the "unsupported format" summary on import is clear and offers the file list, since a MITPlayer user may find a third of their tunes flagged.
+Chromium plays MP3, AAC/M4A, FLAC, WAV, OGG/Opus on Windows as on macOS. Unplayable: ALAC (already flagged), AIFF (already), and **WMA**, which is already in the unsupported list but likely to show up often in older Windows libraries (iTunes-for-Windows and other older collections). Make sure the "unsupported format" summary on import is clear and offers the file list, since a Windows user may find a sizeable share of their tunes flagged.
 
 ### 9.7 Canva
 
@@ -293,7 +279,6 @@ High-contrast themes, system text scaling, and the system dark/light switch (`na
 - Platform differences go in one `platform.ts` capability module with an `FDP_PLATFORM` test override (§3.1).
 - Site: no-JS shows everything; detection only picks emphasis (§4).
 - Rebase onto `main` after the updater merges, and do site work from `main`.
-- The importer is spiked before it is designed (§5).
 - Mac-only features are hidden on Windows, not greyed out (consistent with how sync already works).
 - The signing recommendation in §7.2 (SignPath first if the license qualifies, Azure in parallel).
 
@@ -304,7 +289,7 @@ High-contrast themes, system text scaling, and the system dark/light switch (`na
 | # | Decision |
 | --- | --- |
 | Q2 | Test hardware: a Windows desktop with a TV as second display (§10). No laptop. |
-| Q3 | MITPlayer importer is required for the first Windows release **if a sample can be obtained** (§5). |
+| Q3 | MITPlayer importer: **dropped** — its data file is a headerless CSV and the fields would be guesses (§5). |
 | Q4 | x64 only (§7.3). |
 | Q5 | Keep the Library.xml import on Windows, and build a shared "relocate songs" tool in this release (§3.3, §9.5). |
 | Q6 | Hide the Apple Music sections entirely from Windows visitors on the site (§4.2). |
@@ -315,24 +300,22 @@ High-contrast themes, system text scaling, and the system dark/light switch (`na
 | Q11 | Windows data lives in `%LOCALAPPDATA%\Folk Dance Player` (§9.5). |
 | Q12 | First Windows release is labeled "Windows (beta)" and shares the next minor version (§7.1). |
 | Q13 | Windows 10 or later (§7.4). |
-| Q15 | Audience: MITPlayer users and general organizers equally, so the projector and the importer run as parallel spikes (§13). |
+| Q15 | Audience: MITPlayer users and general organizers equally. With the importer dropped, projector reliability and parity lead the work (§13). |
 
 ### Still open
 
 1. **Signing (Q1, §7.2).** Research is in §7.2. Your move: check the repository has an OSI-approved `LICENSE` and, if so, apply to SignPath Foundation; check whether your Azure account type and country qualify for Artifact Signing. Which route do you want to pursue first? (Calendar time: start now.)
-2. **MITPlayer sample (Q3, §5).** Where could a sample come from (your own MITPlayer install, someone in your dance community)? Do you have permission to use a real organizer's library for tests, or should tests use a synthetic file we build from the format?
-3. **Scope check (Q14, §9).** Anything in §9 you'd cut or pull forward (a taskbar play/pause toolbar, an audio-output picker for projector audio, a WMA hint)? Default if you say nothing: all of §9 stays as verification work, none of the "nice later" items are built.
+2. **Scope check (Q14, §9).** Anything in §9 you'd cut or pull forward (a taskbar play/pause toolbar, an audio-output picker for projector audio, a WMA hint)? Default if you say nothing: all of §9 stays as verification work, none of the "nice later" items are built.
 
 ## 13. Order of work (proposal, before the plan)
 
-1. Start now, in parallel with everything else: the **signing application** (§7.2) and the **MITPlayer sample** (§5). Both have waiting time outside our control.
-2. Spikes, in parallel, on the Windows desktop + TV: the projector window (§9.1) and media keys (§9.4). The MITPlayer format spike runs as soon as the sample exists. Each writes `docs/spikes/*.md`; the results decide the plan.
+1. Start now, in parallel with everything else: the **signing application** (§7.2), which has waiting time outside our control.
+2. Spikes, in parallel, on the Windows desktop + TV: the projector window (§9.1) and media keys (§9.4). Each writes `docs/spikes/*.md`; the results decide the plan.
 3. The capability module, the Windows menu, wording, and the tour changes, tested on macOS with `FDP_PLATFORM=windows`.
 4. Cross-platform scripts, `.gitattributes`, Windows in the PR Gate (unit + e2e), fixing what that finds (paths, locking, the `%LOCALAPPDATA%` data folder).
 5. Relocate songs (shared tool) as its own plan.
 6. Packaging: NSIS, icon, resources, signing, the generalized `check-feed`, Create Release matrix, a dry run.
 7. Updater verification (local-feed rehearsal, then a real two-release check).
-8. The MITPlayer importer, if the sample arrived, as its own plan; its tour and site wording follows it.
-9. Site changes (from `main`), after the first Windows installer exists, with Windows screenshots.
+8. Site changes (from `main`), after the first Windows installer exists, with Windows screenshots.
 
-Each of 3–9 becomes a plan under `docs/superpowers/plans/` when reached, as is the habit here.
+Each of 3–8 becomes a plan under `docs/superpowers/plans/` when reached, as is the habit here.
