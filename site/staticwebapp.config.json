@@ -1,0 +1,11 @@
+{
+  "globalHeaders": {
+    "Content-Security-Policy": "default-src 'self'; connect-src 'self' https://api.github.com; img-src 'self' data: https://cdn.buymeacoffee.com; style-src 'self'; style-src-attr 'unsafe-inline'; script-src 'self' https://cdnjs.buymeacoffee.com; frame-src https://www.buymeacoffee.com https://buymeacoffee.com; base-uri 'none'; form-action 'none'; frame-ancestors 'none'",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "strict-origin-when-cross-origin"
+  },
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*.{png,jpg,jpeg,webp,svg}", "*.{css,js}"]
+  }
+}
