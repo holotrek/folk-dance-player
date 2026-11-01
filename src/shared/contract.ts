@@ -27,6 +27,7 @@ import type {
   RemoteStatus
 } from './program'
 import type { TourPart, TourState } from './tour'
+import type { UpdateCheckResult, UpdateState } from './updates'
 import type {
   DisplayChoice,
   ProjectorProgress,
@@ -66,6 +67,10 @@ export interface InvokeContract {
   'tour:finish': { args: [part: TourPart]; result: void }
   'tour:hide': { args: [part: TourPart]; result: void }
   'tour:leave': { args: []; result: void }
+  // In-place updates (updates spec §5). Served by the real handlers; the practice library answers idle.
+  'updates:getState': { args: []; result: UpdateState }
+  'updates:check': { args: []; result: UpdateCheckResult }
+  'updates:install': { args: []; result: void }
   'settings:getAll': { args: []; result: Settings }
   'settings:set': { args: [key: SettingKey, value: unknown]; result: Settings }
   'import:pickMusic': { args: []; result: string[] }
@@ -228,6 +233,9 @@ export const INVOKE_CHANNELS = [
   'tour:finish',
   'tour:hide',
   'tour:leave',
+  'updates:getState',
+  'updates:check',
+  'updates:install',
   'settings:getAll',
   'settings:set',
   'import:pickMusic',
@@ -370,6 +378,8 @@ export interface EventContract {
   'appleSync:notice': AppleSyncNotice
   // To the control window: show a tour part's intro screen (Help → Take the … Tour).
   'tour:intro': TourPart
+  // To the control window: the updater's state changed (updates spec §3.1).
+  'updates:state': UpdateState
 }
 
 export type EventChannel = keyof EventContract
@@ -386,7 +396,8 @@ export const EVENT_CHANNELS = [
   'app:showPage',
   'appleSync:state',
   'appleSync:notice',
-  'tour:intro'
+  'tour:intro',
+  'updates:state'
 ] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>

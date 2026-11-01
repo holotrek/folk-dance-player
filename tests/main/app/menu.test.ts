@@ -8,7 +8,8 @@ function setup(dev = false, appleSync = false) {
     revealLogs: vi.fn(),
     revealBackups: vi.fn(),
     syncAppleMusic: vi.fn(),
-    takeTour: vi.fn()
+    takeTour: vi.fn(),
+    checkForUpdates: vi.fn()
   }
   return {
     actions,
@@ -32,6 +33,15 @@ describe('the app menu', () => {
     click(settings)
     expect(actions.showSettings).toHaveBeenCalled()
     expect(app.at(-1)!.role).toBe('quit')
+  })
+
+  test('Check for Updates… sits right after About in the app menu', () => {
+    const { menu, actions } = setup()
+    const app = submenu(menu, 'Folk Dance Player')
+    expect(app[0].role).toBe('about')
+    expect(app[1].label).toBe('Check for Updates…')
+    click(app[1])
+    expect(actions.checkForUpdates).toHaveBeenCalledTimes(1)
   })
 
   test('Edit and Window are the standard ones, so copy, paste and ⌘M work', () => {

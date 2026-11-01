@@ -22,7 +22,7 @@ coming up — while you keep programming on your laptop.
 
 ## Install
 
-1. Download `Folk Dance Player-<version>-universal.dmg` from the [Releases](https://github.com/holotrek/folk-dance-player/releases) page (it runs on Apple silicon and Intel Macs).
+1. Download `Folk-Dance-Player-<version>-universal.dmg` from the [Releases](https://github.com/holotrek/folk-dance-player/releases) page (it runs on Apple silicon and Intel Macs).
 2. Open it and drag **Folk Dance Player** to **Applications**.
 3. Open the app. The first time, macOS says it's from an unidentified developer, because the app
    isn't signed with an Apple Developer ID yet: open **System Settings → Privacy & Security** and

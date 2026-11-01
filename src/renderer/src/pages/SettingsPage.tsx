@@ -24,7 +24,7 @@ import ImportMappingFields from '../import/ImportMappingFields'
 import { errorMessage } from '../ipc-error'
 
 type NumberKey = 'autoContinue.seconds' | 'countdown.seconds'
-type BooleanKey = 'autoContinue.enabled'
+type BooleanKey = 'autoContinue.enabled' | 'updates.check'
 
 export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.Element {
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -149,6 +149,7 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
           </Group>
           <Text size="sm">Library database (schema {info.schemaVersion}):</Text>
           <Code>{info.dbPath}</Code>
+          {toggle('updates.check', 'Check for updates automatically')}
           <Text size="xs" c="dimmed" mt="xs">
             The tour’s practice tunes are synthesized renditions of the traditional melodies “Hava
             Nagila” and “Korobushka”.

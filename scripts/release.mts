@@ -2,9 +2,12 @@
 // Node 24, which runs TypeScript directly:
 //   node scripts/release.mts prepare <major|minor|patch|x.y.z>   bump the version, date the notes
 //   node scripts/release.mts check [notes-file]                  may this version be released?
+//   node scripts/release.mts check-feed [dist-dir]               is the update feed right?
 // The pure functions below are unit-tested; the commands at the bottom wire them to the files.
 import { execFileSync } from 'node:child_process'
-import { appendFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { appendFileSync, existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 
 const VERSION = /^(\d+)\.(\d+)\.(\d+)$/
@@ -86,6 +89,43 @@ export function checkRelease(input: {
   return { ok: true, notes }
 }
 
+// The in-app updater reads latest-mac.yml from the release. A release whose feed is wrong would
+// strand every installed copy, so Create Release checks it before publishing: the feed is for this
+// version, names a file that is in the release, and carries that file's real checksum. electron-
+// builder writes the first `files:` entry as the zip the updater downloads.
+export type FeedCheck = { ok: true } | { ok: false; error: string }
+
+export function checkUpdateFeed(input: {
+  yml: string
+  version: string
+  files: Record<string, Buffer | string>
+}): FeedCheck {
+  const { yml, version, files } = input
+  const feedVersion = /^version:\s*(\S+)\s*$/m.exec(yml)?.[1]
+  if (!feedVersion) return { ok: false, error: 'latest-mac.yml has no version.' }
+  if (feedVersion !== version) {
+    return {
+      ok: false,
+      error: `latest-mac.yml is for version ${feedVersion}, but this release is ${version}.`
+    }
+  }
+  const entry = /^files:\s*\n\s*-\s*url:\s*(.+?)\s*\n\s*sha512:\s*(\S+)\s*$/m.exec(yml)
+  if (!entry) return { ok: false, error: 'latest-mac.yml names no file to download.' }
+  const [, url, sha512] = entry
+  const bytes = files[url]
+  if (bytes === undefined) {
+    return { ok: false, error: `latest-mac.yml names ${url}, which is not in the release.` }
+  }
+  const actual = createHash('sha512').update(bytes).digest('base64')
+  if (actual !== sha512) {
+    return {
+      ok: false,
+      error: `The sha512 checksum of ${url} in latest-mac.yml doesn’t match the file.`
+    }
+  }
+  return { ok: true }
+}
+
 // --- Commands ------------------------------------------------------------------------------
 
 const readVersion = (): string =>
@@ -123,9 +163,26 @@ function main(args: string[]): void {
     }
     if (arg) writeFileSync(arg, `${result.notes}\n`)
     output('version', version)
+  } else if (command === 'check-feed') {
+    const dir = arg ?? 'dist'
+    const ymlPath = join(dir, 'latest-mac.yml')
+    if (!existsSync(ymlPath)) {
+      console.error(`::error::${ymlPath} is missing: installed copies could not update.`)
+      process.exit(1)
+    }
+    const yml = readFileSync(ymlPath, 'utf8')
+    const name = /^files:\s*\n\s*-\s*url:\s*(.+?)\s*$/m.exec(yml)?.[1]
+    const files: Record<string, Buffer> = {}
+    if (name && existsSync(join(dir, name))) files[name] = readFileSync(join(dir, name))
+    const result = checkUpdateFeed({ yml, version: readVersion(), files })
+    if (!result.ok) {
+      console.error(`::error::${result.error}`)
+      process.exit(1)
+    }
+    console.log(`latest-mac.yml is good for ${readVersion()}`)
   } else {
     console.error(
-      'Usage: node scripts/release.mts prepare <major|minor|patch|x.y.z> | check [notes-file]'
+      'Usage: node scripts/release.mts prepare <major|minor|patch|x.y.z> | check [notes-file] | check-feed [dist-dir]'
     )
     process.exit(2)
   }

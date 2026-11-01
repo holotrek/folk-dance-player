@@ -44,6 +44,8 @@ export interface Settings {
   // The guided tour's two parts: not finished, finished, or "don't show this again" (tour spec §2.2).
   'tour.basic': TourFlag
   'tour.advanced': TourFlag
+  // Look for new versions by itself (updates spec §3.5); Check for Updates… still works when off.
+  'updates.check': boolean
 }
 
 export type SettingKey = keyof Settings
@@ -81,7 +83,8 @@ export const DEFAULT_SETTINGS: Settings = {
   'library.columns.music': [],
   'library.columns.program': [],
   'tour.basic': 'unseen',
-  'tour.advanced': 'unseen'
+  'tour.advanced': 'unseen',
+  'updates.check': true
 }
 
 export const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS) as readonly SettingKey[]
@@ -140,7 +143,8 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'library.columns.music': isColumnOrder,
   'library.columns.program': isColumnOrder,
   'tour.basic': isTourFlag,
-  'tour.advanced': isTourFlag
+  'tour.advanced': isTourFlag,
+  'updates.check': isBool
 }
 
 export function isSettingKey(key: unknown): key is SettingKey {
