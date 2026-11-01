@@ -131,6 +131,9 @@ more app features or start building your music library now?" with two buttons:
 natural place to start adding music. This is true of every way out of a tour (finishing, **Start
 now!**, or leaving part-way); the Program tab is not where they land.
 
+Wherever a tour ends or is declined (the leave question, the launch offer and Help intro, and the
+closing step of each part) it says: "You can take either tour again any time from the Help menu."
+
 ### 2.5 A visible reminder
 
 While a tour runs, a slim banner at the top says "Practice library: your real music is safe", so

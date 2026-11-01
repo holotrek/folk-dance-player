@@ -1,6 +1,6 @@
 import { Button, Group, Modal, Stack, Text } from '@mantine/core'
 import type { TourPart } from '@shared/tour'
-import { INTRO } from './text'
+import { HELP_NOTE, INTRO } from './text'
 
 // A part's intro screen in the real window (tour spec §2.1.1): the launch offer, or Help. Declining
 // costs nothing (no reload). The launch offer also lets the person turn the offer off for good.
@@ -25,6 +25,9 @@ export default function TourIntro(props: {
         {text.paragraphs.map((p, i) => (
           <Text key={i}>{p}</Text>
         ))}
+        <Text size="sm" c="dimmed">
+          {HELP_NOTE}
+        </Text>
         <Group justify="space-between" mt="sm">
           {props.mode === 'offer' && props.onHide ? (
             <Button variant="subtle" color="gray" onClick={props.onHide}>

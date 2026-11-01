@@ -351,7 +351,7 @@ export const BASIC_STEPS: TourStep[] = [
     page: null,
     kind: 'choice',
     title: 'That is the basics',
-    body: 'Would you like to learn about some more app features or start building your music library now?',
+    body: 'Would you like to learn about some more app features or start building your music library now?\n\nYou can take either tour again any time from the Help menu.',
     choices: [
       { id: 'learn-more', label: 'Learn more' },
       { id: 'start-now', label: 'Start now!' }

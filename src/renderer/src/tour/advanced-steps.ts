@@ -155,7 +155,7 @@ export const ADVANCED_STEPS: TourStep[] = [
     page: null,
     kind: 'choice',
     title: 'That is everything',
-    body: 'You have seen all the features. Your real library is next: start with Add Music…',
+    body: 'You have seen all the features. Your real library is next: start with Add Music…\n\nYou can take either tour again any time from the Help menu.',
     choices: [{ id: 'done', label: 'Done' }]
   })
 ]

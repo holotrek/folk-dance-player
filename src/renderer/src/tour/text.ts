@@ -2,6 +2,9 @@ import type { TourPart } from '@shared/tour'
 
 // The two intro screens (tour spec §2.1.1): shown before a part begins, in the real window (the
 // launch offer, Help) and, for Advanced, inside the tour after "Learn more". Plain words.
+// Said wherever a tour ends or is declined, so nobody thinks it is gone for good.
+export const HELP_NOTE = 'You can take either tour again any time from the Help menu.'
+
 export const INTRO: Record<TourPart, { title: string; paragraphs: string[] }> = {
   basic: {
     title: 'Welcome to Folk Dance Player',

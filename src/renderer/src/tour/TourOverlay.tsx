@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
 import { Button, Group, Modal, Popover, Stack, Text } from '@mantine/core'
 import type { TourStep } from './steps'
+import { HELP_NOTE } from './text'
 import classes from './TourOverlay.module.css'
 
 const MARGIN = 6 // the hole is a little larger than what it lights up
@@ -332,6 +333,7 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
       >
         <Stack>
           <Text size="sm">Your practice library is thrown away. Your real music is untouched.</Text>
+          <Text size="sm">{HELP_NOTE}</Text>
           <Group justify="flex-end">
             <Button variant="default" onClick={() => setAsking(false)}>
               Keep going

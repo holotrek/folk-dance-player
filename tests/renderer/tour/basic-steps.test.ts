@@ -204,6 +204,10 @@ describe('the Basic tour’s conditions read the real result', () => {
     expect(await isDone('basic.stop', ctx)).toBe(true)
   })
 
+  test('the closing choice says the tours can be taken again from the Help menu', () => {
+    expect(step('basic.end').body).toContain('take either tour again any time from the Help menu')
+  })
+
   test('the wait text speaks of conversation and lining up, not partners, and the STOP the person added', () => {
     const body = step('basic.wait').body
     expect(body).toContain('leave time to converse and line up for the next dance')

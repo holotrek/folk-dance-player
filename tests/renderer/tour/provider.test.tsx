@@ -257,6 +257,10 @@ describe('the tour provider when not touring', () => {
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Start the tour' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Not now' })).toBeInTheDocument()
+    // Declining is not final: the Help menu has the tours.
+    expect(
+      screen.getByText(/take either tour again any time from the Help menu/)
+    ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Don’t show this again' })).toBeInTheDocument()
   })
 

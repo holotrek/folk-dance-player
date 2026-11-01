@@ -161,4 +161,10 @@ describe('the Advanced tour’s steps', () => {
     })
     expect(await isDone('advanced.mirror', ctx)).toBe(true)
   })
+
+  test('the closing step says the tours can be taken again from the Help menu', () => {
+    expect(step('advanced.end').body).toContain(
+      'take either tour again any time from the Help menu'
+    )
+  })
 })

@@ -241,6 +241,16 @@ describe('the tour overlay', () => {
     expect(onLeave).toHaveBeenCalledTimes(1)
   })
 
+  test('the leave question says the tour can be taken again from the Help menu', async () => {
+    target('song')
+    setup(doStep)
+    await userEvent.click(await screen.findByRole('button', { name: 'Leave the tour' }))
+    const ask = await screen.findByRole('dialog', { name: 'Leave the tour?' })
+    expect(
+      within(ask).getByText(/take either tour again any time from the Help menu/)
+    ).toBeVisible()
+  })
+
   test('Escape asks to leave', async () => {
     target('song')
     setup(doStep)
