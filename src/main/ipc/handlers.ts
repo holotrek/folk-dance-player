@@ -3,6 +3,7 @@ import type { DatabaseSync } from 'node:sqlite'
 import type { AppInfo, InvokeHandlers } from '@shared/contract'
 import type { RemoteStatus } from '@shared/program'
 import type { TourPart, TourState } from '@shared/tour'
+import type { UpdateCheckResult, UpdateState } from '@shared/updates'
 import { appleSyncHandlers, type AppleSyncHandlerDeps } from './apple-sync-handlers'
 import { canvaHandlers, type CanvaDeps } from './canva-handlers'
 import { projectorHandlers, type ProjectorDeps } from './projector-handlers'
@@ -12,6 +13,7 @@ import type { PlayerSession } from '../session/player-session'
 import { libraryHandlers } from './library-handlers'
 import { programHandlers } from './program-handlers'
 import { tourHandlers } from './tour-handlers'
+import { updateHandlers } from './update-handlers'
 import type { SettingsStore } from '../settings/settings-store'
 
 export interface Dialogs {
@@ -64,6 +66,12 @@ export interface HandlerDeps {
     // False in the end-to-end tests (FDP_TOUR_OFFER=off), so the launch offer doesn't cover the app.
     offerEnabled?: boolean
   }
+  // The in-app updater (updates spec §5); idle and unsupported when absent.
+  updates?: {
+    getState(): UpdateState
+    checkNow(): Promise<UpdateCheckResult>
+    install(): void
+  }
   // Called after every change to songs, dances, playlists, favorites or holding.
   onLibraryChanged: () => void
   // Called after every change to programs or their items.
@@ -88,6 +96,7 @@ export function createHandlers(deps: HandlerDeps): InvokeHandlers {
     ...libraryHandlers(deps),
     ...programHandlers(deps),
     ...tourHandlers(deps),
+    ...updateHandlers(deps),
     ...projectorHandlers(deps),
     ...canvaHandlers(deps),
     ...appleSyncHandlers(deps)

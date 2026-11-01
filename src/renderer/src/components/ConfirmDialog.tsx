@@ -5,6 +5,7 @@ export default function ConfirmDialog(props: {
   title: string
   message: React.ReactNode
   confirmLabel: string
+  cancelLabel?: string
   danger?: boolean
   onConfirm: () => void
   onClose: () => void
@@ -15,7 +16,7 @@ export default function ConfirmDialog(props: {
         <Text>{props.message}</Text>
         <Group justify="flex-end">
           <Button variant="default" onClick={props.onClose}>
-            Cancel
+            {props.cancelLabel ?? 'Cancel'}
           </Button>
           <Button
             color={props.danger ? 'red' : undefined}

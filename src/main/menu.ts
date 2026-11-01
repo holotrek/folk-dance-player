@@ -16,12 +16,14 @@ export function menuTemplate(o: {
   appleSync: boolean // Sync with Apple Music is available (macOS)
   syncAppleMusic: () => void
   takeTour: (part: TourPart) => void
+  checkForUpdates: () => void
 }): MenuItemConstructorOptions[] {
   return [
     {
       label: o.appName,
       submenu: [
         { role: 'about' },
+        { label: 'Check for Updates…', click: o.checkForUpdates },
         { type: 'separator' },
         { label: 'Settings…', accelerator: 'CmdOrCtrl+,', click: o.showSettings },
         { type: 'separator' },

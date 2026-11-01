@@ -47,6 +47,8 @@ import { ImportBusyError, ImportService, savedMapping } from './import/import-se
 import { findEditedApplePlaylists } from './import/save-playlists'
 import { startUtilityWorker } from './import/utility-worker'
 import { createHandlers } from './ipc/handlers'
+import { createElectronUpdater } from './updates/electron-updater'
+import { checkForUpdatesFromMenu, UpdateService } from './updates/update-service'
 import { createLogger } from './log/logger'
 import { mediaResponse } from './media/media-response'
 import { coalesced } from './coalesce'
@@ -330,6 +332,22 @@ function startApp(): void {
   tour.sweepStale()
   app.on('will-quit', () => tour.leave())
 
+  // In-app updates (updates spec): look for a new release in the background, download it, and let
+  // the banner offer the restart. FDP_UPDATE_URL points the check at a directory of files instead of
+  // the GitHub release (tests, and the signed rehearsal).
+  const updates = new UpdateService(
+    createElectronUpdater({ log, feedUrl: process.env['FDP_UPDATE_URL'] }),
+    {
+      autoCheck: () => settings.get('updates.check'),
+      touring: () => tour.active(),
+      timers: { setTimeout, clearTimeout: (handle) => clearTimeout(handle as NodeJS.Timeout) },
+      log,
+      onState: (state) => broadcast('updates:state', state)
+    }
+  )
+  updates.start()
+  app.on('will-quit', () => updates.stop())
+
   // Sync with Apple Music (sync spec §3): the bundled helper, or a snapshot file in development and
   // end-to-end tests. macOS only.
   const appleLibraryFile = process.env['FDP_APPLE_LIBRARY']
@@ -495,6 +513,31 @@ function startApp(): void {
             syncNow: () => void appleSync.syncNow()
           })
         },
+        checkForUpdates: () => {
+          if (tour.active()) return
+          void checkForUpdatesFromMenu(
+            updates,
+            {
+              tell: (message, detail) =>
+                void dialog.showMessageBox(mainWindow, { type: 'info', message, detail }),
+              askRestart: async (version) =>
+                (
+                  await dialog.showMessageBox(mainWindow, {
+                    type: 'question',
+                    message: `Version ${version} is ready.`,
+                    detail:
+                      player.getState().status === 'playing'
+                        ? 'Music is playing. Restarting stops it.'
+                        : undefined,
+                    buttons: ['Restart to Update', 'Later'],
+                    defaultId: 0,
+                    cancelId: 1
+                  })
+                ).response === 0
+            },
+            app.getVersion()
+          )
+        },
         takeTour: (part) => {
           if (tour.active()) return
           mainWindow.show()
@@ -628,6 +671,7 @@ function startApp(): void {
       player.refresh() // labels or missing flags of the next item may have changed
       libraryChanged()
     },
+    updates,
     tour: {
       start: (part) => tour.start(mainWindow.id, part),
       leave: () => tour.leave(),

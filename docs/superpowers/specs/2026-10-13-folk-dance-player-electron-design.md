@@ -621,7 +621,7 @@ Approach A (chosen): **the main process owns all state; the control window plays
   - **State:** Zustand, for UI-local state only (selection, search text)
   - **Drag and drop:** native HTML5 drag and drop, with the app's own data types (songs, program items). dnd-kit wasn't needed.
   - **Libraries:** `node:sqlite` (built in), music-metadata, plist
-  - **Packaging:** electron-builder 26 (`npm run dist`) makes one Universal `.dmg` (Apple silicon and Intel, about 230 MB). `npm run dist` is **ad-hoc signed** (`identity: '-'`) so it builds without a certificate; a release is signed with a Developer ID and the `.dmg` notarized and stapled, so a downloaded copy opens normally. CONTRIBUTING.md has the steps.
+  - **Packaging:** electron-builder 26 (`npm run dist`) makes one Universal `.dmg` (Apple silicon and Intel, about 230 MB). `npm run dist` is **ad-hoc signed** (`identity: '-'`) so it builds without a certificate; a release is signed with a Developer ID and the `.dmg` notarized and stapled, so a downloaded copy opens normally. CONTRIBUTING.md has the steps. Each release also carries a Universal `.zip` and `latest-mac.yml`, which the installed app uses to update itself in place (2026-11-01 in-place updates design); artifact names have no spaces, so the feed's file names match the uploaded assets.
   - **App icon:** the logo in white on the app's red tile (`build/icon/icon.html`). `npm run icon` renders it into `build/icon.png`, `build/icon.icns` (for the `.dmg`) and `resources/icon.png` (the Dock when unpackaged).
 - **Dev gotcha:** VS Code's terminal sets `ELECTRON_RUN_AS_NODE=1`, so npm scripts run Electron with that variable unset.
 
@@ -796,6 +796,7 @@ The repo is public, so GitHub's standard hosted runners (Linux, Windows and macO
 - **Create Release** (manual, main only), as three jobs, so a release is all or nothing:
   1. **Check the version** (Linux): `scripts/release.mts check` refuses a version that isn't higher than the latest `vx.y.z` tag, or that has no CHANGELOG section.
   2. **Build (<os>)**, a matrix: the unit tests, `npm run dist` (electron-builder never publishes by itself: `--publish never`), the end-to-end tests on the packaged app, and the installer kept as an artifact. Today: `macos-latest`, the Universal `.dmg`. Windows joins as `{ os: windows-latest, installer: 'dist/*.exe' }`, with its electron-builder target and a cross-platform `dist` script (`env -u` is Unix-only).
+  2a. The macOS build also runs `scripts/release.mts check-feed dist` (dry runs included): `latest-mac.yml` must be for this version and name a zip whose sha512 matches, or the release stops before publishing.
   3. **Publish** (Linux), once every build has passed: tags `vx.y.z` at the commit and publishes one GitHub release, "Folk Dance Player x.y.z", with every installer and the version's CHANGELOG section as its notes. It uses the workflow's own token (`contents: write`); no personal access token is needed.
   - **A dry run** (a checkbox; any branch) does everything but publish: a failed version check is reported but doesn't stop it, and the installers are kept as workflow artifacts for a week.
   - **Signing in CI:** the certificate and Apple's notarization credentials become repo secrets for the build job (CONTRIBUTING.md has the electron-builder options).

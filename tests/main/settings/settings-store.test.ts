@@ -12,6 +12,13 @@ beforeEach(() => {
 })
 
 describe('SettingsStore', () => {
+  test('checking for updates is on by default, and only a boolean is accepted', () => {
+    expect(store.get('updates.check')).toBe(true)
+    store.set('updates.check', false)
+    expect(new SettingsStore(db).get('updates.check')).toBe(false)
+    expect(() => store.set('updates.check', 'yes')).toThrow(InvalidSettingError)
+  })
+
   test('returns defaults when nothing is stored', () => {
     expect(store.getAll()).toEqual(DEFAULT_SETTINGS)
     expect(store.get('autoContinue.enabled')).toBe(true)

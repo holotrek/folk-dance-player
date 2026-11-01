@@ -1,0 +1,5 @@
+.banner {
+  padding: 2px var(--mantine-spacing-sm);
+  background: var(--mantine-color-default-hover);
+  border-bottom: 1px solid var(--mantine-color-default-border);
+}

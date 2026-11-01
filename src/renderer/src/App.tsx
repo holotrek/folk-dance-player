@@ -15,6 +15,7 @@ import ProgramPage from './pages/ProgramPage'
 import SettingsPage from './pages/SettingsPage'
 import { TourProvider, useTour } from './tour/TourProvider'
 import TourBanner from './tour/TourBanner'
+import UpdateBanner from './updates/UpdateBanner'
 import classes from './App.module.css'
 
 type Page = 'program' | 'music' | 'settings'
@@ -46,6 +47,7 @@ export default function App(): React.JSX.Element {
                 <AppShell.Header px="sm">
                   <div ref={header.ref} className={classes.header}>
                     <TourBannerSlot />
+                    <UpdateBanner />
                     <PlayerBar />
                     <Group gap="sm" wrap="nowrap">
                       <Logo

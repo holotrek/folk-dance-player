@@ -75,6 +75,15 @@ describe('SettingsPage', () => {
     expect(document.documentElement).toHaveAttribute('data-mantine-color-scheme', 'light')
   })
 
+  test('Check for updates automatically is on by default and saves when switched off', async () => {
+    const { api, calls } = fakeApi()
+    renderWithMantine(<SettingsPage api={api} />)
+    const toggle = await screen.findByLabelText('Check for updates automatically')
+    expect(toggle).toBeChecked()
+    await userEvent.click(toggle)
+    expect(calls).toContainEqual(['settings:set', 'updates.check', false])
+  })
+
   test('saves a toggled setting', async () => {
     const { api, calls } = fakeApi()
     renderWithMantine(<SettingsPage api={api} />)

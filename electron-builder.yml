@@ -13,7 +13,13 @@ mac:
   target:
     - target: dmg
       arch: universal
+    # The zip is what the in-app updater downloads (macOS updates cannot use the dmg).
+    - target: zip
+      arch: universal
   category: public.app-category.music
+  # No spaces: GitHub renames an uploaded "Folk Dance Player-…" to "Folk.Dance.Player-…", but
+  # latest-mac.yml names the file with hyphens, so the updater would 404 on a name with spaces.
+  artifactName: Folk-Dance-Player-${version}-${arch}.${ext}
   icon: build/icon.icns
   # Ad-hoc signed until there's a Developer ID: Apple silicon needs a signature, and a consistent
   # one lets macOS offer "Open Anyway" for a downloaded copy. See CONTRIBUTING.md to sign and
@@ -37,3 +43,8 @@ mac:
     NSAppleMusicUsageDescription: Folk Dance Player reads your Music library to keep its songs and playlists in step with Apple Music.
 dmg:
   title: Folk Dance Player
+# Written into the app as app-update.yml: where the in-app updater looks for new releases.
+publish:
+  provider: github
+  owner: holotrek
+  repo: folk-dance-player

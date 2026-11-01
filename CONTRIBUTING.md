@@ -34,7 +34,7 @@ npm run dev
 | `npm run format`        | Prettier                                        |
 | `npm run icon`          | Rebuild the app icon from the logo (macOS)      |
 | `npm run build:helper`  | Build the Music library helper (macOS, Swift)   |
-| `npm run dist`          | Build the Universal .dmg into `dist/`           |
+| `npm run dist`          | Build the Universal .dmg and .zip into `dist/`  |
 | `npm run test:e2e`      | End-to-end tests (Playwright) on the build      |
 | `npm run test:e2e:dist` | The same tests on the packaged app              |
 
@@ -78,7 +78,7 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 1. **Actions → Prepare Release → Run workflow** on main, with `major`, `minor`, `patch` or an exact version (for the very first release, `0.1.0`). It opens a **draft** "Release vX.Y.Z" pull request that bumps the version and dates the CHANGELOG's Unreleased notes. Its description carries the hardware checklist from [`docs/manual-testing/pre-release-hardware.md`](docs/manual-testing/pre-release-hardware.md). On the pull request, click **Approve workflows to run**: GitHub holds the PR Gate of a pull request opened by a workflow until someone approves it.
 2. While it's a draft, build the `.dmg` with a **Create Release** dry run on the release branch (or `npm run dist`), install it, and tick the checklist in the description as you go. If something fails, close the pull request and delete its `release/vX.Y.Z` branch (Prepare Release can't push over it), fix the problem on main, and start again from step 1.
 3. Check the version and notes, then click **Ready for review** (it starts nothing) and merge once the PR Gate's checks pass.
-4. **Actions → Create Release → Run workflow** on main. It refuses a version that isn't higher than the last release or has no CHANGELOG section; otherwise it tests, builds the `.dmg`, checks it with the end-to-end tests, and publishes the GitHub release `vX.Y.Z` with the `.dmg` and the notes.
+4. **Actions → Create Release → Run workflow** on main. It refuses a version that isn't higher than the last release or has no CHANGELOG section; otherwise it tests, builds the `.dmg` and the `.zip`, checks the update feed (`latest-mac.yml`) and the `.dmg` with the end-to-end tests, and publishes the GitHub release `vX.Y.Z` with the `.dmg`, the `.zip`, `latest-mac.yml` and the notes.
 5. To try a release without publishing, tick **Dry run** (any branch): the `.dmg` is kept as a workflow artifact for a week.
 
 ### Signing and notarizing
@@ -97,11 +97,24 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 4. Notarize the `.dmg` with `notarytool`, which shows progress and can be checked later (electron-builder's own notarize step is silent while it waits on Apple). Store credentials once with `xcrun notarytool store-credentials "Folk Dance Player"`, then:
 
    ```bash
-   xcrun notarytool submit "dist/Folk Dance Player-<version>-universal.dmg" --keychain-profile "Folk Dance Player" --no-wait
+   xcrun notarytool submit "dist/Folk-Dance-Player-<version>-universal.dmg" --keychain-profile "Folk Dance Player" --no-wait
    xcrun notarytool info <submission-id> --keychain-profile "Folk Dance Player"   # Accepted / Invalid
-   xcrun stapler staple "dist/Folk Dance Player-<version>-universal.dmg"
+   xcrun stapler staple "dist/Folk-Dance-Player-<version>-universal.dmg"
    ```
 
    An account's first submission can take hours. Don't use `notarytool wait` in a terminal you need. The ticket is stapled to the `.dmg`, not the app inside it; check the app by mounting the dmg and running `spctl -a -t exec -vv` on it ("Notarized Developer ID"). `spctl` on the dmg itself says "no usable signature", which is normal: only the app is signed.
 
 In CI, the certificate (as `CSC_LINK` and `CSC_KEY_PASSWORD`) and the notarization credentials become repo secrets, passed to Create Release's build job.
+
+### Updates
+
+An installed copy updates itself: it reads the newest GitHub release's `latest-mac.yml`, downloads the `.zip` it names in the background, and offers **Restart to Update** in a banner (the in-place updates design, `docs/superpowers/specs/2026-11-01-in-place-updates-design.md`). Each release therefore carries the `.dmg` (for a first install), the `.zip`, its `.blockmap` and `latest-mac.yml`, and Create Release refuses to publish unless `node scripts/release.mts check-feed dist` passes. Artifact names have no spaces on purpose: GitHub turns spaces in an uploaded name into dots, which would no longer match the names in `latest-mac.yml`.
+
+Only a build signed with the Developer ID can swap itself in place, so a development run can check and download (with `FDP_UPDATE_URL`, below) but never installs. To rehearse a real update before releasing, on your Mac, with the Developer ID certificate installed (see Signing and notarizing):
+
+1. Build and sign the release version, and install it: `npm run build:helper && npm run build && env -u ELECTRON_RUN_AS_NODE npx electron-builder --mac --publish never -c.mac.identity="<name> (<team>)" -c.mac.hardenedRuntime=true -c.mac.notarize=false`, then copy `dist/mac-universal/Folk Dance Player.app` to `/Applications`. (Notarizing is not needed for the rehearsal: nothing is downloaded through a browser, so nothing is quarantined.)
+2. Make a throwaway newer version: `npm version <next patch> --no-git-tag-version`, and build and sign again the same way. Then restore the version (`git checkout package.json package-lock.json`).
+3. Serve that build's feed: `cd dist && python3 -m http.server 8123` (it serves the new `latest-mac.yml` and `.zip`).
+4. Open the installed copy against it, with a throwaway library: `open --env FDP_UPDATE_URL=http://localhost:8123 --env FDP_USER_DATA=/tmp/fdp-rehearsal "/Applications/Folk Dance Player.app"`. The hardware checklist says what to look for.
+
+`FDP_UPDATE_URL` points the updater at a directory of files instead of the GitHub release; it is read only by the main process. It cannot install a foreign build: macOS still refuses an app not signed by the running app's identity, and the checksum must match.

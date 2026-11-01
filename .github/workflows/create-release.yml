@@ -3,7 +3,8 @@
 # 2. Build, one job per OS (a matrix, like the PR Gate's end-to-end tests): test, build the
 #    installer, check it with the end-to-end tests, keep it as an artifact.
 # 3. Publish, once every build has passed: tag vX.Y.Z and publish one GitHub release with every
-#    installer and the CHANGELOG notes, so a release is never half-published.
+#    installer, the update files the in-app updater reads (the zip and latest-mac.yml) and the
+#    CHANGELOG notes, so a release is never half-published.
 # A dry run (any branch) does everything but publish, and keeps the installers for a week.
 name: Create Release
 
@@ -58,10 +59,15 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # Each OS builds its own installer. Windows joins with its electron-builder target, e.g.
-          # { os: windows-latest, installer: 'dist/*.exe' }.
+          # Each OS builds its own installer and the files the in-app updater reads. Windows joins
+          # with its electron-builder target, e.g. { os: windows-latest, installer: 'dist/*.exe' }
+          # (plus its latest.yml).
           - os: macos-latest
-            installer: 'dist/*.dmg'
+            installer: |
+              dist/*.dmg
+              dist/*.zip
+              dist/*.zip.blockmap
+              dist/latest-mac.yml
     runs-on: ${{ matrix.os }}
     # The signing certificate and Apple's notarization key are secrets of this environment.
     environment: Package
@@ -112,6 +118,11 @@ jobs:
       - name: Build
         if: runner.os != 'macOS'
         run: npm run dist
+      # The in-app updater reads latest-mac.yml: a release whose feed is wrong would strand every
+      # installed copy. Checked on every run, dry runs included.
+      - name: The update feed matches the release (macOS)
+        if: runner.os == 'macOS'
+        run: node scripts/release.mts check-feed dist
       - run: npm run test:e2e:dist
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
