@@ -56,24 +56,39 @@ function inView(el: HTMLElement): boolean {
   return shown >= wanted - 2 && seen.right > seen.left
 }
 
-const CARD_H = 260 // about as tall as a card gets, with its arrow and gap
 const CARD_W = 380
 
-// The side the card opens on: the step's choice (below by default) when the card fits there,
-// otherwise the opposite side if it fits, since a card past the window's edge cannot be scrolled
-// into view. Left alone when neither fits.
-export function sideFor(want: NonNullable<TourStep['placement']>, hole: Hole): typeof want {
+// About how tall a step's card is: its title and buttons, plus the body at roughly 44 letters a line.
+export function cardHeight(step: Pick<TourStep, 'body'>): number {
+  const paragraphs = step.body.split(/\n\n/)
+  const lines = paragraphs.reduce((sum, p) => sum + Math.ceil(p.length / 44), 0)
+  return 110 + lines * 20 + (paragraphs.length - 1) * 8
+}
+
+// The side the card opens on: the step's choice (below by default) when the card fits there, else
+// the opposite side, else either remaining side; a card past the window's edge cannot be scrolled
+// into view. When nothing fits, the side with the most room.
+export function sideFor(
+  want: NonNullable<TourStep['placement']>,
+  hole: Hole,
+  cardH = 260
+): typeof want {
   const room = {
     top: hole.y,
     bottom: window.innerHeight - (hole.y + hole.h),
     left: hole.x,
     right: window.innerWidth - (hole.x + hole.w)
   }
-  const need = (side: typeof want): number =>
-    side === 'top' || side === 'bottom' ? CARD_H : CARD_W
+  const need = (side: typeof want): number => (side === 'top' || side === 'bottom' ? cardH : CARD_W)
   const opposite = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' } as const
-  if (room[want] >= need(want)) return want
-  return room[opposite[want]] >= need(want) ? opposite[want] : want
+  const across = (side: typeof want): (typeof want)[] =>
+    side === 'top' || side === 'bottom' ? ['left', 'right'] : ['top', 'bottom']
+  const order = [want, opposite[want], ...across(want)]
+  const fits = order.find((side) => room[side] >= need(side))
+  if (fits) return fits
+  return order.reduce((best, side) =>
+    room[side] / need(side) > room[best] / need(best) ? side : best
+  )
 }
 
 const ids = (target: TourStep['target']): string[] =>
@@ -256,7 +271,7 @@ export default function TourOverlay(props: TourOverlayProps): React.JSX.Element 
       {lit && step.kind !== 'choice' && step.kind !== 'intro' && (
         <Popover
           opened={!dragging}
-          position={sideFor(props.placement ?? 'bottom', holes[0])}
+          position={sideFor(props.placement ?? 'bottom', holes[0], cardHeight(step))}
           withArrow
           offset={16}
           // Whichever side has room: a card past the window's edge cannot be scrolled into view.

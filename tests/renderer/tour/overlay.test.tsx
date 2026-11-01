@@ -2,7 +2,7 @@ import { MantineProvider } from '@mantine/core'
 import { act, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
-import TourOverlay, { sideFor, useHoles, type Hole } from '@renderer/tour/TourOverlay'
+import TourOverlay, { cardHeight, sideFor, useHoles, type Hole } from '@renderer/tour/TourOverlay'
 import type { TourStep } from '@renderer/tour/steps'
 import { testTheme } from '../test-theme'
 
@@ -140,8 +140,21 @@ describe('which side the card opens on', () => {
     expect(sideFor('top', at(20))).toBe('bottom')
   })
 
-  test('keeps the step’s side when neither side has room', () => {
-    expect(sideFor('bottom', { x: 0, y: 0, w: 100, h: window.innerHeight })).toBe('bottom')
+  test('tries the sides across when neither above nor below has room, and else the roomiest', () => {
+    const tall = { x: 400, y: 0, w: 200, h: window.innerHeight }
+    expect(sideFor('bottom', tall)).toBe('left') // room on the left (400) fits a card
+    const wide = { x: 0, y: 0, w: window.innerWidth, h: window.innerHeight }
+    expect(['top', 'bottom', 'left', 'right']).toContain(sideFor('bottom', wide)) // nothing fits
+  })
+
+  test('a long card needs more room than a short one', () => {
+    const short = cardHeight({ body: 'Click it.' })
+    const long = cardHeight({ body: 'x'.repeat(480) })
+    expect(long).toBeGreaterThan(short + 150)
+    // A hole with 300 px below: the short card fits there, the long one opens above instead.
+    const hole = { x: 400, y: window.innerHeight - 340, w: 200, h: 40 }
+    expect(sideFor('bottom', hole, short)).toBe('bottom')
+    expect(sideFor('bottom', hole, long)).toBe('top')
   })
 })
 

@@ -38,7 +38,8 @@ const PACKAGED = process.env['FDP_APP']
 // Starts the app on the library in `userData`, with any extra environment (FDP_APPLE_LIBRARY…).
 export async function launch(
   userData: string,
-  extraEnv: Record<string, string> = {}
+  extraEnv: Record<string, string> = {},
+  size?: { width: number; height: number } // a smaller window than the default, for layout checks
 ): Promise<Running> {
   // The tour's launch offer would cover the app on a fresh library; only the tour specs want it.
   const env = {
@@ -52,6 +53,11 @@ export async function launch(
     PACKAGED ? { executablePath: PACKAGED, args: [], env } : { args: ['.'], env }
   )
   const page = await app.firstWindow()
+  if (size) {
+    await app.evaluate(({ BrowserWindow }, s) => {
+      BrowserWindow.getAllWindows()[0].setSize(s.width, s.height)
+    }, size)
+  }
   await page.getByRole('tab', { name: 'Program' }).waitFor()
   return {
     app,

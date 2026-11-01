@@ -11,13 +11,15 @@ const SONGS = [
   { title: 'Kolo', genre: 'Serbia' }
 ]
 
+// The app's smallest window (1000×640): the tour's cards must all fit there, as on a small CI display.
+const MIN_WINDOW = { width: 1000, height: 640 }
 const TOUR_ENV = { FDP_TOUR_OFFER: 'on' } // unlike the other specs, these want the launch offer
 let space: ReturnType<typeof workspace>
 let running: Running
 
 test.beforeEach(async () => {
   space = workspace(SONGS)
-  running = await launch(space.userData, TOUR_ENV)
+  running = await launch(space.userData, TOUR_ENV, MIN_WINDOW)
   await running.invoke('import:start', { kind: 'paths', paths: [space.music] })
 })
 
@@ -61,7 +63,7 @@ const practiceFolders = (): string[] =>
 const welcome = () => running.page.getByRole('dialog', { name: 'Welcome to Folk Dance Player' })
 const relaunch = async (): Promise<void> => {
   await running.app.close()
-  running = await launch(space.userData, TOUR_ENV)
+  running = await launch(space.userData, TOUR_ENV, MIN_WINDOW)
 }
 
 test('the launch offer appears; Not now changes nothing, so it comes back next launch', async () => {
@@ -170,7 +172,7 @@ test('quitting during a tour leaves the real library showing next launch, and sw
   const stale = join(tmpdir(), 'fdp-tour-stale-from-a-crash')
   mkdirSync(stale, { recursive: true })
   await running.app.close() // quitting mid-tour
-  running = await launch(space.userData, TOUR_ENV)
+  running = await launch(space.userData, TOUR_ENV, MIN_WINDOW)
   expect(await running.invoke('tour:state')).toEqual({ part: null, landOn: null })
   await expect.poll(titles).toEqual(['Hora', 'Kolo'])
   expect(existsSync(stale)).toBe(false)

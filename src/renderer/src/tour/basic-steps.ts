@@ -60,7 +60,7 @@ export const BASIC_STEPS: TourStep[] = [
     target: 'import.mapping',
     placement: 'bottom',
     title: 'Which tag goes where',
-    body: 'Every song file carries tags, and different collections fill them differently. “Populate Artist from” says which tag becomes the artist; the same goes for the teacher and the choreographer. Many folk dance collections keep the teacher in the Album Artist tag, so check yours. “Genre is Country” turns the Genre tag into the dance’s country.\n\nYour choices are remembered for next time, and you can re-apply them to songs you already have.'
+    body: 'Every song file carries tags. “Populate Artist from” says which tag becomes the artist, and likewise for the teacher and choreographer; many collections keep the teacher in the Album Artist tag, so check yours. “Genre is Country” turns the Genre tag into the dance’s country. Your choices are remembered.'
   }),
   step({
     id: 'basic.import-run',
