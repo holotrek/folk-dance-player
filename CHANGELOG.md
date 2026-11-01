@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- The app now finds new versions by itself, downloads them in the background, and shows **Version X is ready — Restart to Update** in a banner at the top. **Check for Updates…** is in the app menu, and **Check for updates automatically** is in Settings. A copy older than this release has no updater, so it needs one last manual download.
 - A hands-on **guided tour** teaches the app on a practice library, with sample songs and two real tunes, so nothing of yours is touched. It scrolls to whatever it is pointing at, and walks through an import with a pretend folder. The **Basic** tour covers music, building a program and playback; the **Advanced** tour covers the projector, programs, playlists and settings. It is offered the first time you open this version, and any time from **Help → Take the Basic Tour…** / **Take the Advanced Tour…**.
 - In the song editor, each dance's card has an arrow to **fold it up** to its header and open it again, so a song with several dances is easy to see at a glance.
 - **Holding** now works like the Program on the side. Drag songs between them (the song moves and keeps its dance), choose the dance when you drop a song that has several, hold the same song once for each of its dances, and select several held songs to move, release or favorite them together.
