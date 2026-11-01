@@ -1,6 +1,6 @@
 # Windows release — design (draft)
 
-**Status:** draft for discussion. Nothing here is built. §12 lists the open questions that change what gets built; §11 lists what I (Claude) guessed, so you can overrule it.
+**Status:** draft for discussion. Nothing here is built. §12 records the questions you have answered and the few still open; §11 lists what I (Claude) guessed, so you can overrule it.
 
 **Branch:** `feat/windows-release`. It was cut from `feat/in-place-updates` (the updater is not merged yet) and `site/` exists only on `main`. Rebase onto `main` once the updater merges, before any site work.
 
@@ -30,7 +30,7 @@ The four things already named, plus everything else I found:
 - Linux. The capability model in §3.1 should make it cheap later, but nothing is built or tested for it.
 - Moving a library between a Mac and a Windows PC. Paths in `files.path` are absolute and OS-specific; the post-v1 shared database is the real answer.
 - Playing formats Chromium can't (WMA, AIFF, ALAC). Windows libraries have more WMA than Mac ones; we explain it (§9) rather than bundle a transcoder.
-- An ARM64 build unless §12 Q4 says otherwise.
+- An ARM64 build (decided: x64 only; it runs under emulation on ARM laptops).
 - Microsoft Store / MSIX distribution.
 
 **Anti-goals** (would make this a failure even if it technically ships)
@@ -74,7 +74,7 @@ Most of this already works: `AppleSync` takes `available`, and `AppleSyncSwitch`
 
 ### 3.3 The `Library.xml` import is a separate feature
 
-"Import from Apple Music…" reads an exported `Library.xml` file; it needs no Apple software, and `fileURLToPath` already handles Windows paths. Windows users with iTunes for Windows, or an export brought over from a Mac, could use it. But the paths inside such a file point at the other machine's disk. See Q5: keep it on Windows (with a path-remap step), hide it, or keep it only behind an "import from other apps" heading.
+"Import from Apple Music…" reads an exported `Library.xml` file; it needs no Apple software, and `fileURLToPath` already handles Windows paths. Windows users with iTunes for Windows, or an export brought over from a Mac, could use it. But the paths inside such a file point at the other machine's disk. **Decided (Q5):** keep it on Windows, and build a **relocate songs** tool in this release: replace a folder prefix across the library's file paths (preview the count first; songs whose new path doesn't exist stay missing). The same remap step serves the Library.xml import and the MITPlayer importer, so build it once as a shared piece (§9.5).
 
 ### 3.4 The tour
 
@@ -111,9 +111,9 @@ Mechanism: the script sets `data-os="mac|windows|other"` on `<html>`; the CSS hi
 | Under the button | Free. macOS 12 or later. | Free. Windows 10 or later (verify against Electron 44's floor). | Both lines |
 | Secondary link | "Also for Windows" | "Also for Mac" | n/a |
 | Install steps (`#download`) | Open the .dmg, drag to Applications, "Open Anyway" if unsigned | Run the installer; SmartScreen note if the build is unsigned or new (§7.2) | Both lists |
-| "Beyond Apple Music" section + sync screenshot | shown | shown, retitled or dimmed with a "Mac only" badge (Q6) | shown |
+| "Beyond Apple Music" section + sync screenshot | shown | **hidden entirely** (decided, Q6) | shown |
 | Hero copy, `<meta description>`, `og:*` | "…for folk dance organizers" — drop "Mac" from the shared copy | same | same |
-| Screenshots | existing (macOS window chrome, traffic lights) | Windows captures (new; Q7) | Mac ones |
+| Screenshots | existing (macOS window chrome, traffic lights) | Windows captures, retaken on your Windows desktop (decided, Q7) | Mac ones |
 | MITPlayer section | unchanged, plus an "Import from MITPlayer" mention if §5 ships | the same, prominently | |
 
 **Release assets.** `main.js` must pick the asset by platform: `.dmg` for Mac, `Folk-Dance-Player-Setup-*.exe` for Windows (never `.blockmap`, `.zip`, `.yml`). Failure cases to handle: the latest release lacks one platform's asset (a partial publish, or a Windows-only hotfix) → that button falls back to the Releases page; GitHub API rate limit (60/hour/IP, existing cache of 10 minutes stays) → buttons keep the Releases link. The Windows note is deleted.
@@ -138,7 +138,7 @@ It is a pure parser plus mapping, so it works on any OS; Mac users with a copied
 
 **Legal/ethical check:** reading a user's own data file is fine; we use no MITPlayer code or assets. The credit to MITPlayer (spec 2026-10-13 §12) already exists.
 
-If no sample can be had, the release ships without it; nothing else depends on it.
+**Decided (Q3):** the importer is required for the first Windows release **if a sample can be obtained**; if not, the release ships without it and nothing else depends on it. Getting the sample is therefore on the critical path and should start now (Q15 says MITPlayer users and general organizers matter equally, so the importer and the projector run as parallel spikes). The whole site and tour wording for the importer waits on the spike's result.
 
 ## 6. In-place updates on Windows
 
@@ -168,10 +168,11 @@ If no sample can be had, the release ships without it; nothing else depends on i
 
 ### 7.1 Installer
 
-**My call:** NSIS, per-user (`perMachine: false`, `oneClick: true` or a one-click with a short "Installing…" window), because electron-updater only supports NSIS (and AppImage/dmg-zip on the other systems), per-user installs update silently without an admin prompt (a school or community-center laptop may not give the user admin), and the user data folder lives in the profile anyway. Options:
+**Decided (Q8):** NSIS, per-user only (`perMachine: false`, a one-click install with a short "Installing…" window), because electron-updater only supports NSIS (and AppImage/dmg-zip on the other systems), per-user installs update silently without an admin prompt (a school or community-center laptop may not give the user admin), and the user data folder lives in the profile anyway. No all-users option. Options:
 
 - `nsis.deleteAppDataOnUninstall: false` (never delete someone's library on uninstall).
-- Start-menu shortcut yes; desktop shortcut yes by default (organizers launch from the desktop; confirm, Q8).
+- Start-menu shortcut yes; desktop shortcut on by default (decided, Q8; organizers launch from the desktop).
+- **Beta label (decided, Q12):** the first Windows release is "Windows (beta)" on the site, in the installer's text and in About. It shares the next minor version with the Mac build if the work lands together; the label comes off when the Windows hardware checklist has passed on a published release.
 - `win.icon: build/icon.ico` — `npm run icon` needs to also write a multi-size `.ico` (16–256 px).
 - `win.extraResources`: the tour's `hava-nagila.wav` and `korobushka.wav` are currently listed **under `mac:`**, so they would be missing from a Windows build and the tour would break. Move them to a top-level `extraResources`; keep `fdp-music-library` under `mac:`.
 - `publisherName` and `signtoolOptions` once §7.2 is decided.
@@ -179,29 +180,31 @@ If no sample can be had, the release ships without it; nothing else depends on i
 
 ### 7.2 Code signing and SmartScreen
 
-Unsigned Windows installers get Microsoft Defender SmartScreen's "Windows protected your PC" wall and more antivirus false positives; for non-technical organizers that is a real adoption barrier, comparable to the macOS "unidentified developer" problem we solved with a Developer ID. Options, which I have **not** verified current pricing or eligibility for (research needed before choosing):
+Unsigned Windows installers get Microsoft Defender SmartScreen's "Windows protected your PC" wall and more antivirus false positives; for non-technical organizers that is a real adoption barrier, comparable to the macOS "unidentified developer" problem we solved with a Developer ID. **Research (Nov 2026, from web searches; mostly third-party summaries, so confirm each on the vendor's own page before committing money or time):**
 
-- Azure Artifact Signing (formerly Trusted Signing): cheap, cloud-based, integrates with electron-builder; eligibility depends on region and organization/individual verification. Fits that you already use Azure for the site.
-- SignPath Foundation: free code signing for open-source projects (the repo is public), with conditions on the project and the build pipeline.
-- A traditional OV/EV certificate from a CA: more expensive; since 2024 an EV certificate no longer gives immediate SmartScreen reputation as far as I know, so don't pay extra for it on that basis.
-- Ship unsigned at first with a clear install note on the site.
+- **Azure Artifact Signing** (formerly Trusted Signing). About $9.99/month for up to 5,000 signatures (~$120/year); billing starts when the account is created, even if identity validation then fails. Eligibility: per Microsoft's Windows docs, **individuals only in the US and Canada**; organizations in the US, Canada, EU and UK (one third-party guide lists more countries). Individuals need an Azure billing account of type _Individual_. Reports disagree on whether a multi-year business-history rule still applies (a Microsoft Q&A answer from 2025 said yes during the preview; a later blog says it no longer applies to self-employed applicants). Cloud-based (no hardware token), so it works from GitHub Actions. Fits that the site already lives on Azure.
+- **SignPath Foundation**: free signing for open-source projects. The certificate is issued to SignPath Foundation, which then appears as the **publisher**, not you or the app. Conditions: an OSI-approved open-source license, a public repository, no proprietary components, MFA for everyone on the signing team, and an "origin verification" check that the binary was built from the repository by CI (they review CI config and build scripts). A good fit for a public repo built in GitHub Actions; the unknowns are the application's turnaround and whether the repo's license qualifies (check `LICENSE`).
+- **A purchased OV or EV certificate** from a CA. **Don't pay extra for EV to avoid SmartScreen:** since the March 2024 Microsoft root-program change, EV and OV certificates build SmartScreen reputation the same way (through download volume), and older guides, including some electron-builder tutorials, still claim otherwise. Certificate private keys now generally have to live on hardware or a cloud HSM, which complicates CI. A renewed certificate may reset reputation.
+- **Unsigned:** free and immediate; SmartScreen's "Windows protected your PC" wall and more antivirus false positives; the updater gets no publisher check (§6).
 
-Whichever, reputation builds over downloads, and the first weeks may still show warnings. The `Package` environment gets the Windows signing secrets; Create Release signs on every run, dry runs included, like the Mac job.
+**My recommendation:** apply to **SignPath Foundation** first if the repository's license qualifies (free, fits a public GitHub Actions pipeline), and in parallel check whether **Azure Artifact Signing** accepts your identity (US/Canada individual, or an organization). Ship the beta unsigned with an install note only if both stall; the beta label (§7.1) makes that tolerable. Whichever, reputation builds over downloads, and the first weeks may still show warnings even when signed. Keep the same signing identity across releases so reputation isn't reset.
+
+Applying and identity verification take real calendar time, so Q1 below is the first task, not the last. The `Package` environment gets the Windows signing secrets; Create Release signs on every run, dry runs included, like the Mac job.
 
 ### 7.3 Architecture
 
-x64 only is the minimum; Windows-on-ARM runs x64 apps under emulation. An arm64 build doubles the matrix artifacts and electron-updater needs the right file chosen per arch (separate installers or one combined). Q4.
+**Decided (Q4): x64 only.** Windows-on-ARM runs x64 apps under emulation. An arm64 build would double the artifacts and make electron-updater choose a file per architecture; it can be added later.
 
 ### 7.4 Minimum Windows version
 
-Electron 44 supports Windows 10 and later (verify when writing the site copy). Windows 7/8 users can't run the app; the site says so.
+**Decided (Q13): Windows 10 or later**, Electron 44's own floor (verify when writing the site copy). Windows 7/8 users can't run the app; the site says so.
 
 ## 8. Release flow and CI
 
 - **`package.json`:** `dist` and `test:e2e` use `env -u ELECTRON_RUN_AS_NODE`, which is Unix-only. Replace with a small Node script (`scripts/run.mts`, or `cross-env`-style but without a dependency: the variable has to be *removed*, not set to empty) and `dist` becomes per-OS (`dist:mac`, `dist:win`, with `dist` choosing from `process.platform`). `build:helper` is skipped on Windows. `test:e2e:dist` takes `FDP_APP` as the path to the packaged exe.
 - **PR Gate:** add `windows-latest` to the end-to-end matrix; add its check to the `main` ruleset's required checks (a manual Settings step, per CONTRIBUTING). Unit tests keep running on Linux, which cannot catch path-separator bugs, so also run `npm test` on Windows (cheap, and it will find the first dozen assumptions).
 - **Line endings:** add a `.gitattributes` (`* text=auto eol=lf`) and set Prettier `endOfLine: lf`; otherwise `prettier --check .` fails on a Windows checkout with autocrlf, and fixtures with exact byte comparisons (the Canva fixture, generated MP3s) break.
-- **Create Release:** a second matrix entry (`windows-latest`, installers `dist/*.exe`, `dist/*.exe.blockmap`, `dist/latest.yml`), a Windows signing step, and the generalized `check-feed`. **Policy question (Q9):** the current rule is all-or-nothing (Publish needs every build). That means a Windows signing outage blocks a Mac release. Keep (simple, consistent versions, my default) or allow publishing the platforms that passed?
+- **Create Release:** a second matrix entry (`windows-latest`, installers `dist/*.exe`, `dist/*.exe.blockmap`, `dist/latest.yml`), a Windows signing step, and the generalized `check-feed`. **Decided (Q9): always ship together.** The all-or-nothing rule stays (Publish needs every build), so a Windows signing outage blocks a Mac release too. A Mac-only release remains possible as a manual exception, by removing the Windows entry for that run; the site must still cope with a release missing one platform's asset (§4.2).
 - **Release notes and CHANGELOG** need per-platform notes where behavior differs ("Windows: …"); the "Add a line under Unreleased" rule is unchanged.
 - **Hardware checklist:** `pre-release-hardware.md` is macOS-shaped (Accessibility, Music permission, Finder). Add `pre-release-hardware-windows.md`; Prepare Release copies the right one(s) into the release PR.
 - **`electron-builder.yml`** is currently "Packaging: a Universal macOS .dmg"; restructure with per-OS blocks and update the header.
@@ -227,7 +230,7 @@ The macOS implementation encodes hard-won hardware lessons (AGENTS.md 2026-10-13
 ### 9.2 Menus and window chrome
 
 - Windows (and Linux) show the menu **inside the window**, with no app menu. Roles `about`, `services`, `hide`, `hideOthers`, `unhide` are macOS-only. Restructure `menuTemplate` per platform: File (Settings…, Exit), Edit, View, Window, Help (Take the tours, Check for Updates…, About, Open Logs / Backups folder). `Settings…` accelerator `Ctrl+,` works but isn't a Windows convention (many apps use File → Options); keep the accelerator.
-- Decide whether to **hide the menu bar** (`autoHideMenuBar`, Alt reveals it): the control window is dense, and a permanent menu bar costs vertical space on a 1000×640 minimum window. Q10.
+- **Decided (Q10): the menu bar is always visible** (no `autoHideMenuBar`). It costs about one row of height on a 1000×640 minimum window; recheck the layout (player bar, tables, the Program page's container-query breakpoints) at that size on Windows.
 - `app.setAboutPanelOptions` is a macOS/Linux feature; the About item on Windows needs checking (verify; may need a small own dialog).
 - Title bar: the control window uses the default frame (no `titleBarStyle`), so this works. The projector is frameless on both.
 - Taskbar: `setAppUserModelId('com.folkdanceplayer.app')` already exists and must match the installer's app ID, or taskbar pinning and grouping break. Taskbar thumbnail toolbar buttons (play/pause/next) would be a nice later touch; not in scope.
@@ -250,10 +253,10 @@ The macOS implementation encodes hard-won hardware lessons (AGENTS.md 2026-10-13
 
 - **Path model.** `files.path` is stored as-is. Windows paths are case-insensitive and may differ by drive-letter case or slash direction; `samePath` normalizes NFC/NFD (a macOS concern) but not these. Decide the canonical form (`path.normalize` + drive-letter uppercase) and make the unique index and "same path" matching agree. Apple sync's NFC/NFD logic is irrelevant but harmless.
 - **Long paths and odd locations:** Node handles `\\?\` paths, but verify a >260-character path imports and plays; test a UNC share (`\\nas\music`) and a mapped drive; network drives that are offline at launch must produce the existing "missing" state, not a hang (`stat` with a timeout?).
-- **Removable/changed drive letters:** a USB stick becomes `E:` today and `F:` tomorrow; every song reads as missing. Same as moving files on a Mac, but much more common on Windows laptops. A "relocate songs" tool (a path-prefix remap) is the fix and is also what the MITPlayer importer and a `Library.xml` import need (§5, Q5). Candidate shared feature.
+- **Removable/changed drive letters:** a USB stick becomes `E:` today and `F:` tomorrow; every song reads as missing. Same as moving files on a Mac, but much more common on Windows laptops. **In scope (decided, Q5):** a "relocate songs" tool (a path-prefix remap with a preview of how many files it would find), shared by Library.xml import, the MITPlayer importer (§5) and the everyday "I moved my music" case. It belongs in this release and in its own plan.
 - **Hidden-file rules.** `scan.ts` skips names starting with `.` (macOS resource forks). On Windows also skip entries with the hidden/system attribute, `$RECYCLE.BIN`, `System Volume Information` (readdir errors are already swallowed), and `Thumbs.db` is harmless.
 - **File locking.** Windows won't delete or rename an open file. `AttachmentStore` replaces/deletes PDFs and images and the media protocol streams audio and images; the startup backup (`VACUUM INTO`) writes a new file; log rollover renames. Each needs checking against `EBUSY`/`EPERM`, plus antivirus scanning briefly holding new files. Retry-with-backoff on delete/rename is the usual cure.
-- **SQLite:** `node:sqlite` is the same engine. WAL mode on a roaming profile or network home folder is risky (WAL needs shared memory; it fails on some network filesystems). Electron's default `userData` on Windows is `%APPDATA%` (Roaming), which in managed environments (schools, community centers) can be a network-synced profile, and our folder holds a database plus copies of images/PDFs. Consider `%LOCALAPPDATA%` for the data folder (Q11).
+- **SQLite:** `node:sqlite` is the same engine. WAL mode on a roaming profile or network home folder is risky (WAL needs shared memory; it fails on some network filesystems). Electron's default `userData` on Windows is `%APPDATA%` (Roaming), which in managed environments (schools, community centers) can be a network-synced profile, and our folder holds a database plus copies of images/PDFs. **Decided (Q11): the Windows data folder is `%LOCALAPPDATA%\Folk Dance Player`**, set with `app.setPath('userData', …)` before the app is ready, in the same place `userDataOverride` (`src/main/user-data.ts`) already chooses folders; `FDP_USER_DATA` still wins and the dev folder rule is unchanged. This must be settled before the first release, because moving real libraries later needs a migration. The logs folder follows `userData`.
 - **Drop from Explorer:** the renderer gets dropped files' paths via Electron's file-path API; behaves the same, but test dragging from Explorer, from a OneDrive-synced folder (placeholder files that are cloud-only: `stat` succeeds, reads trigger a download) and from a compressed ZIP.
 - **Reveal and open:** `shell.openPath` on a PDF opens the default handler (Edge or Acrobat); fine. Reveal-logs becomes File Explorer.
 - **Log and data locations:** `~/Library/Logs/Folk Dance Player` in comments and the main spec becomes `%APPDATA%\Folk Dance Player\logs` (Electron's `app.getPath('logs')` already resolves per OS). The dev folder `Folk Dance Player (dev)` rule (2026-10-29) is unchanged.
@@ -283,44 +286,53 @@ High-contrast themes, system text scaling, and the system dark/light switch (`na
 4. **Hardware checklist** (Windows, new): install on a clean user, SmartScreen behavior, first launch, tour, import from Explorer drag, projector on a real second display at mixed DPI, unplug/replug, sleep/wake, media keys on the real remote, update from the previous release (needs two published Windows releases or the local-feed rehearsal), uninstall/reinstall keeps the library.
 5. I will ask before any hands-on test that needs you at the screen.
 
+**Test hardware (Q2):** a Windows desktop with a TV as the second display. That stands in for laptop + projector well (extend, duplicate, unplug/replug by switching the TV input, HDMI audio moving the default device). It cannot cover: a laptop's lid and internal panel, sleep/wake on battery, and docking-station display bursts. Those stay on the checklist as "not covered; ask a beta user". Pick the TV's scaling deliberately (a 4K TV at 100% against a 1080p monitor at 125% is a good mixed-DPI case).
+
 ## 11. My calls (change any of these)
 
 - Platform differences go in one `platform.ts` capability module with an `FDP_PLATFORM` test override (§3.1).
-- NSIS per-user installer, x64 first (§7.1, §7.3).
 - Site: no-JS shows everything; detection only picks emphasis (§4).
-- Keep the all-or-nothing release publish (§8) unless you say otherwise.
 - Rebase onto `main` after the updater merges, and do site work from `main`.
 - The importer is spiked before it is designed (§5).
 - Mac-only features are hidden on Windows, not greyed out (consistent with how sync already works).
+- The signing recommendation in §7.2 (SignPath first if the license qualifies, Azure in parallel).
 
-## 12. Open questions
+## 12. Questions
 
-Ordered by how much the answer changes the work.
+### Answered
 
-1. **Signing (§7.2).** Do you want the first Windows release signed, and which route (Azure Artifact Signing, SignPath for open source, a purchased certificate, or unsigned with a warning note)? Does your Azure subscription or an organization/entity let you pass the identity checks? This is the main lead-time item: identity verification can take days or weeks.
-2. **Hardware.** Do you have a Windows laptop and a projector or second monitor to test with (ideally one mixed-DPI setup)? The projector window (§9.1) can't be validated in a VM.
-3. **MITPlayer sample (§5).** Can you get the folder MITPlayer writes (ideally from a real organizer's library, with permission) and an install of MITPlayer to see how it behaves? Is the importer a requirement for the first Windows release, or does it follow as a point release?
-4. **ARM64 Windows.** x64 only (runs under emulation on ARM), or also an arm64 build?
-5. **Apple `Library.xml` import on Windows.** Keep it (needs the path-remap step), hide it, or demote it under a general "Import from other apps"? Is a "relocate songs" (change a folder prefix) tool worth building as part of this release, since drive letters and moved libraries hit Windows users first?
-6. **Mac-only content on the site for Windows visitors.** Hide the Apple Music sections, or keep them with a "Mac only" badge (it still sells the product's depth)?
-7. **Screenshots.** Do you want me to retake the site's images on Windows (needs a Windows machine, and would be needed again as the UI changes), or keep the Mac ones with a note?
-8. **Install defaults.** Desktop shortcut on by default? Install per-user only (my call), or offer all-users with an admin prompt (then silent updates would break for those installs)?
-9. **Release coupling (§8).** If Windows fails (signing, a flaky runner), may we publish the Mac release alone, as a deliberate choice, or must both always ship together?
-10. **Menu bar on Windows.** Always visible (standard), or auto-hide (Alt shows it) to save space on small screens?
-11. **Where the data lives.** Accept Electron's default (Roaming `%APPDATA%`) or move to `%LOCALAPPDATA%` for the big library folder? (A choice made now is hard to change after real libraries exist.)
-12. **Naming and labeling.** Version number for the first Windows release (a minor release shared with a Mac one, or a Windows-only `0.x`)? Do we call it "beta" for the first release, in the installer, About and the site?
-13. **Minimum Windows version.** Windows 10 or later (Electron's own floor), or higher? Any known user machines on Windows 7/8?
-14. **Scope check on the unglamorous list.** Is there anything in §9 you'd cut or want to pull forward (e.g. a taskbar play/pause thumbnail toolbar, an audio output picker for projector audio, a WMA converter hint)?
-15. **Who's the audience?** Is Windows primarily MITPlayer refugees (then the importer and a MITPlayer-style first-run matter most), or Mac-style organizers whose laptop happens to be Windows (then parity and the projector matter most)? It sets the order of the work.
+| # | Decision |
+| --- | --- |
+| Q2 | Test hardware: a Windows desktop with a TV as second display (§10). No laptop. |
+| Q3 | MITPlayer importer is required for the first Windows release **if a sample can be obtained** (§5). |
+| Q4 | x64 only (§7.3). |
+| Q5 | Keep the Library.xml import on Windows, and build a shared "relocate songs" tool in this release (§3.3, §9.5). |
+| Q6 | Hide the Apple Music sections entirely from Windows visitors on the site (§4.2). |
+| Q7 | Retake the site's screenshots on Windows (§4.2). |
+| Q8 | Per-user NSIS install, desktop shortcut on by default; no all-users option (§7.1). |
+| Q9 | Always ship Mac and Windows together (§8). |
+| Q10 | Menu bar always visible (§9.2). |
+| Q11 | Windows data lives in `%LOCALAPPDATA%\Folk Dance Player` (§9.5). |
+| Q12 | First Windows release is labeled "Windows (beta)" and shares the next minor version (§7.1). |
+| Q13 | Windows 10 or later (§7.4). |
+| Q15 | Audience: MITPlayer users and general organizers equally, so the projector and the importer run as parallel spikes (§13). |
+
+### Still open
+
+1. **Signing (Q1, §7.2).** Research is in §7.2. Your move: check the repository has an OSI-approved `LICENSE` and, if so, apply to SignPath Foundation; check whether your Azure account type and country qualify for Artifact Signing. Which route do you want to pursue first? (Calendar time: start now.)
+2. **MITPlayer sample (Q3, §5).** Where could a sample come from (your own MITPlayer install, someone in your dance community)? Do you have permission to use a real organizer's library for tests, or should tests use a synthetic file we build from the format?
+3. **Scope check (Q14, §9).** Anything in §9 you'd cut or pull forward (a taskbar play/pause toolbar, an audio-output picker for projector audio, a WMA hint)? Default if you say nothing: all of §9 stays as verification work, none of the "nice later" items are built.
 
 ## 13. Order of work (proposal, before the plan)
 
-1. Spikes, in parallel: the Windows projector window (§9.1), media keys (§9.4), the MITPlayer sample (§5). Each writes `docs/spikes/*.md`; results decide the plan.
-2. The capability module, the Windows menu, wording, and the tour changes, tested on macOS with `FDP_PLATFORM=windows`.
-3. Cross-platform scripts, `.gitattributes`, Windows in the PR Gate (unit + e2e), fixing what that finds (paths, locking).
-4. Packaging: NSIS, icon, resources, signing, the generalized `check-feed`, Create Release matrix, a dry run.
-5. Updater verification (local-feed rehearsal, then a real two-release check).
-6. Site changes (from `main`), after the first Windows installer exists.
-7. The importer, if the sample arrives, as its own plan.
+1. Start now, in parallel with everything else: the **signing application** (§7.2) and the **MITPlayer sample** (§5). Both have waiting time outside our control.
+2. Spikes, in parallel, on the Windows desktop + TV: the projector window (§9.1) and media keys (§9.4). The MITPlayer format spike runs as soon as the sample exists. Each writes `docs/spikes/*.md`; the results decide the plan.
+3. The capability module, the Windows menu, wording, and the tour changes, tested on macOS with `FDP_PLATFORM=windows`.
+4. Cross-platform scripts, `.gitattributes`, Windows in the PR Gate (unit + e2e), fixing what that finds (paths, locking, the `%LOCALAPPDATA%` data folder).
+5. Relocate songs (shared tool) as its own plan.
+6. Packaging: NSIS, icon, resources, signing, the generalized `check-feed`, Create Release matrix, a dry run.
+7. Updater verification (local-feed rehearsal, then a real two-release check).
+8. The MITPlayer importer, if the sample arrived, as its own plan; its tour and site wording follows it.
+9. Site changes (from `main`), after the first Windows installer exists, with Windows screenshots.
 
-Each of 2–7 becomes a plan under `docs/superpowers/plans/` when reached, as is the habit here.
+Each of 3–9 becomes a plan under `docs/superpowers/plans/` when reached, as is the habit here.
