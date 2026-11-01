@@ -1,3 +1,5 @@
+import { writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { app } from 'electron'
 import { autoUpdater } from 'electron-updater'
 import type { Logger } from '../log/logger'
@@ -20,8 +22,15 @@ export function createElectronUpdater(options: { log: Logger; feedUrl?: string }
     debug: () => undefined
   }
   if (feedUrl) {
-    autoUpdater.setFeedURL({ provider: 'generic', url: feedUrl })
+    // A development run has no app-update.yml, which the download step also reads (for its cache
+    // folder), so give the updater one that names the test feed.
+    const config = join(app.getPath('temp'), 'folk-dance-player-update-config.yml')
+    writeFileSync(
+      config,
+      `provider: generic\nurl: ${feedUrl}\nupdaterCacheDirName: folk-dance-player-updater\n`
+    )
     autoUpdater.forceDevUpdateConfig = true // also in a development run
+    autoUpdater.updateConfigPath = config
   }
   return {
     isEnabled: () => app.isPackaged || feedUrl !== undefined,
