@@ -1,7 +1,7 @@
 # In-place updates — Design
 
 - **Date:** 2026-11-01
-- **Status:** Draft, for the maintainer's review. Nothing is built.
+- **Status:** Built (Plan 23, `docs/superpowers/plans/2026-11-01-plan-23-in-place-updates.md`), apart from the maintainer's signed rehearsal (§8, layer 4).
 - **Extends:** `2026-10-13-folk-dance-player-electron-design.md` (§9 Packaging, §13.4 Releases)
 - **Ships:** 0.3.0 (the maintainer's wish), as the last change before the release PR
 
@@ -184,7 +184,7 @@ GitHub. It is read only in main, and only to build the feed; it is the same idea
 `FDP_USER_DATA`. It is safe to ship: Squirrel.Mac still refuses an app that is not signed by the
 running app's identity, and the checksum still has to match, so a wrong feed can fail an update but
 not install a foreign build. With it set, a development run may check and download too (the
-install step still needs a signed app).
+install step still needs a signed app). **As built:** the updater's download step also reads `app-update.yml` for its cache folder, which a development run lacks, so with `FDP_UPDATE_URL` set the adapter writes a generic-provider config file to the temp folder and points the library's test-only `updateConfigPath` at it. The end-to-end specs showed a development run reaches `ready` this way, so layer 3 asserts the banner.
 
 ## 8. Testing and verification
 
