@@ -1,4 +1,5 @@
 import { isSyncSummary, type SyncSummary } from './apple-sync'
+import { isTourFlag, type TourFlag } from './tour'
 
 // Which of a song's tags fills a field on import (0.3.0 spec §3.4).
 export type TagSource = 'artistTag' | 'albumArtistTag' | 'ignore'
@@ -40,6 +41,9 @@ export interface Settings {
   // column key. The empty list is the default order (0.3.0 spec §3.13).
   'library.columns.music': string[]
   'library.columns.program': string[]
+  // The guided tour's two parts: not finished, finished, or "don't show this again" (tour spec §2.2).
+  'tour.basic': TourFlag
+  'tour.advanced': TourFlag
 }
 
 export type SettingKey = keyof Settings
@@ -75,7 +79,9 @@ export const DEFAULT_SETTINGS: Settings = {
   'appleSync.lastResult': null,
   'playlistFolders.open': [],
   'library.columns.music': [],
-  'library.columns.program': []
+  'library.columns.program': [],
+  'tour.basic': 'unseen',
+  'tour.advanced': 'unseen'
 }
 
 export const SETTING_KEYS = Object.keys(DEFAULT_SETTINGS) as readonly SettingKey[]
@@ -132,7 +138,9 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'appleSync.lastResult': (v) => v === null || isSyncSummary(v),
   'playlistFolders.open': (v) => Array.isArray(v) && v.length <= 1000 && v.every(isPersistentId),
   'library.columns.music': isColumnOrder,
-  'library.columns.program': isColumnOrder
+  'library.columns.program': isColumnOrder,
+  'tour.basic': isTourFlag,
+  'tour.advanced': isTourFlag
 }
 
 export function isSettingKey(key: unknown): key is SettingKey {

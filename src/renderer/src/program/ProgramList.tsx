@@ -64,6 +64,7 @@ function ItemMenu(props: {
           className={classes.options}
           aria-label={`Options for ${name}`}
           data-options
+          data-tour={item.kind === 'track' ? `program.options:${item.title}` : undefined}
         >
           ⋯
         </ActionIcon>
@@ -241,6 +242,7 @@ export default function ProgramList(): React.JSX.Element {
     <section
       className={`${classes.panel} ${dropTarget === 'end' ? classes.panelActive : ''}`}
       aria-label="Program"
+      data-tour="program.panel"
       onDragOver={(e) => over(e, 'end')}
       onDragLeave={() => setDropTarget(null)}
       onDrop={(e) => drop(e, null)}
@@ -324,6 +326,7 @@ export default function ProgramList(): React.JSX.Element {
               dropTarget === item.id ? classes.dropBefore : ''
             ].join(' ')}
             data-removed={item.kind === 'track' && item.isRemoved ? 'true' : undefined}
+            data-tour={item.kind === 'track' ? `program.item:${item.title}` : undefined}
             draggable
             onClick={(e) => click(e, item.id)}
             onDragStart={(e) => startDrag(e, item.id)}
@@ -375,6 +378,7 @@ export default function ProgramList(): React.JSX.Element {
               size="sm"
               color="gray"
               className={classes.remove}
+              data-tour={item.kind === 'track' ? `program.remove:${item.title}` : undefined}
               aria-label={`Remove ${item.kind === 'stop' ? 'STOP / TEACHING' : item.label}`}
               title="Remove from the program"
               onClick={() =>

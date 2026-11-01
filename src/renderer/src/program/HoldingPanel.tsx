@@ -141,6 +141,7 @@ export default function HoldingPanel(): React.JSX.Element {
     <section
       className={`${classes.panel} ${dropTarget === 'end' ? classes.panelActive : ''}`}
       aria-label="Holding"
+      data-tour="holding.panel"
       onDragOver={(e) => over(e, 'end')}
       onDragLeave={() => setDropTarget(null)}
       onDrop={(e) => drop(e, null)}
@@ -173,6 +174,7 @@ export default function HoldingPanel(): React.JSX.Element {
             aria-selected={chosen.has(r.id)}
             className={`${classes.row} ${dropTarget === r.id ? classes.dropBefore : ''}`}
             data-removed={r.isRemoved ? 'true' : undefined}
+            data-tour={`holding.row:${r.title}`}
             draggable
             onClick={(e) => click(e, r.id)}
             onDragStart={(e) => startDrag(e, r.id)}

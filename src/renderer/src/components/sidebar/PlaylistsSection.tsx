@@ -26,6 +26,7 @@ function PlaylistEntry(props: {
   return (
     <div
       className={classes.entry}
+      data-tour={`sidebar.playlist:${p.name}`}
       onContextMenu={(e) => {
         e.preventDefault()
         options.current?.click()
@@ -71,6 +72,7 @@ function PlaylistEntry(props: {
             size="sm"
             className={classes.options}
             aria-label={`Options for ${p.name}`}
+            data-tour={`sidebar.playlist-options:${p.name}`}
           >
             ⋯
           </ActionIcon>
@@ -133,7 +135,12 @@ export default function PlaylistsSection(): React.JSX.Element {
           +
         </ActionIcon>
       </Group>
-      <div className={classes.playlists} role="group" aria-label="Playlists">
+      <div
+        className={classes.playlists}
+        role="group"
+        aria-label="Playlists"
+        data-tour="sidebar.playlists"
+      >
         {playlists.length === 0 && (
           <Text size="sm" c="dimmed">
             No playlists yet

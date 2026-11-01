@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { RendererApi } from '@shared/contract'
 import { mediaUrl } from '@shared/media'
 import type { PlayerState } from '@shared/program'
+import { tourAudio } from '../tour/audio-hold'
 
 const MEDIA_ERRORS: Record<number, string> = {
   2: "the file couldn't be loaded",
@@ -80,6 +81,25 @@ export function useAudio(api: RendererApi, player: PlayerState): AudioControls {
   useEffect(() => {
     if (ref.current) ref.current.volume = player.volume
   }, [player.volume])
+
+  // The guided tour can make a song repeat, and jump to its last seconds (audio-hold.ts).
+  useEffect(() => {
+    const apply = (): void => {
+      if (ref.current) ref.current.loop = tourAudio.loop()
+    }
+    apply()
+    const stopChanges = tourAudio.subscribe(apply)
+    const stopJumps = tourAudio.onJump(() => {
+      const audio = ref.current
+      if (audio && Number.isFinite(audio.duration)) {
+        audio.currentTime = Math.max(0, audio.duration - tourAudio.nearEndMs / 1000)
+      }
+    })
+    return () => {
+      stopChanges()
+      stopJumps()
+    }
+  }, [playId])
 
   useEffect(() => {
     const audio = ref.current

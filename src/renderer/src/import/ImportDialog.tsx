@@ -53,12 +53,16 @@ export default function ImportDialog({ flow }: { flow: ImportFlow }): React.JSX.
               : `${state.paths.length} files or folders`}{' '}
             selected. Choose how their tags are used:
           </Text>
-          <ImportMappingFields value={mapping} onChange={flow.setMapping} />
+          <div data-tour="import.mapping">
+            <ImportMappingFields value={mapping} onChange={flow.setMapping} />
+          </div>
           <Group justify="flex-end">
             <Button variant="default" onClick={flow.close}>
               Cancel
             </Button>
-            <Button onClick={() => flow.startPaths(state.paths)}>Import</Button>
+            <Button data-tour="import.start" onClick={() => flow.startPaths(state.paths)}>
+              Import
+            </Button>
           </Group>
         </Stack>
       )}

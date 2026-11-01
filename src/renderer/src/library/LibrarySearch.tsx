@@ -16,6 +16,7 @@ export default function LibrarySearch(props: { style?: React.CSSProperties }): R
   return (
     <SearchInput
       aria-label="Search music"
+      data-tour="library.search"
       placeholder="Search song, dance, teacher, choreographer or country"
       value={text}
       onValueChange={setText}

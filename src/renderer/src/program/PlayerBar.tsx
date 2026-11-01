@@ -73,11 +73,12 @@ function DelayOption(props: {
   min: number
   max: number
   onSeconds: (seconds: number) => void
+  tour?: string // the guided tour's target id
 }): React.JSX.Element {
   const [text, setText] = useState<string | number>(props.seconds)
   useEffect(() => setText(props.seconds), [props.seconds])
   return (
-    <Group gap={6} wrap="nowrap">
+    <Group gap={6} wrap="nowrap" data-tour={props.tour}>
       <Checkbox
         label={props.label}
         checked={props.checked}
@@ -170,6 +171,7 @@ export default function PlayerBar(): React.JSX.Element {
           <ActionIcon
             size="lg"
             aria-label="Play"
+            data-tour="player.play"
             disabled={!canStart}
             onClick={(e) => e.detail < 2 && void api.invoke('player:play')}
           >
@@ -224,6 +226,7 @@ export default function PlayerBar(): React.JSX.Element {
           <Text size="sm" w={40}>{`${player.speed}×`}</Text>
           <Slider
             aria-label="Speed"
+            data-tour="player.speed"
             min={0.5}
             max={1.5}
             step={0.05}
@@ -252,6 +255,7 @@ export default function PlayerBar(): React.JSX.Element {
           <Text size="sm">Vol</Text>
           <Slider
             aria-label="Volume"
+            data-tour="player.volume"
             min={0}
             max={1}
             step={0.05}
@@ -262,7 +266,7 @@ export default function PlayerBar(): React.JSX.Element {
           />
         </Group>
         <Divider orientation="vertical" mx="xs" />
-        <div>
+        <div data-tour="player.projector">
           <Switch
             label="Projector"
             checked={projector.enabled}
@@ -283,6 +287,7 @@ export default function PlayerBar(): React.JSX.Element {
         <Divider orientation="vertical" mx="xs" />
         <DelayOption
           label="Auto-show when playing"
+          tour="player.autoshow"
           checked={autoShow.enabled}
           onToggle={(on) => autoShow.set('autoFullscreen.enabled', on)}
           seconds={autoShow.seconds}
@@ -313,6 +318,7 @@ export default function PlayerBar(): React.JSX.Element {
         <Divider orientation="vertical" mx="xs" />
         <DelayOption
           label="Auto-continue"
+          tour="player.wait"
           checked={player.autoContinue.enabled}
           onToggle={(enabled) => void api.invoke('player:setAutoContinue', { enabled })}
           seconds={player.autoContinue.seconds}
