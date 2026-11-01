@@ -1,0 +1,355 @@
+:root {
+  --bg: #16161a;
+  --bg-raised: #1f1f25;
+  --text: #f3efe6;
+  --muted: #b4b0a6;
+  --gold: #e0a526;
+  --red: #b3261e;
+  --line: #34343c;
+  --max: 68rem;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font:
+    1.0625rem/1.6 system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+}
+
+a {
+  color: var(--gold);
+}
+
+h1,
+h2,
+h3 {
+  line-height: 1.1;
+  margin: 0 0 0.6em;
+}
+
+h1 {
+  font-size: clamp(2.4rem, 7vw, 4.5rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 700;
+}
+
+h3 {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+section,
+.top,
+.foot {
+  padding-inline: max(1rem, calc((100% - var(--max)) / 2));
+}
+
+/* Header */
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 1rem;
+  border-bottom: 1px solid var(--line);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.brand img {
+  border-radius: 7px;
+}
+
+.top nav {
+  display: flex;
+  gap: 1.25rem;
+}
+
+.top nav a {
+  color: var(--muted);
+  text-decoration: none;
+}
+
+.top nav a:hover,
+.top nav a:focus-visible {
+  color: var(--text);
+}
+
+@media (max-width: 36rem) {
+  .top nav a:not(:last-child) {
+    display: none;
+  }
+}
+
+/* Hero */
+.hero {
+  padding-block: 4rem 3rem;
+  text-align: center;
+}
+
+.eyebrow {
+  margin: 0 0 1rem;
+  color: var(--gold);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.hero h1 {
+  max-width: 14em;
+  margin-inline: auto;
+}
+
+.lead {
+  max-width: 38rem;
+  margin: 0 auto 2rem;
+  color: var(--muted);
+  font-size: 1.25rem;
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1rem;
+}
+
+.button {
+  display: inline-block;
+  padding: 0.85rem 1.75rem;
+  border-radius: 6px;
+  background: var(--gold);
+  color: var(--bg);
+  font-weight: 700;
+  font-size: 1.1rem;
+  text-decoration: none;
+}
+
+.button:hover {
+  filter: brightness(1.1);
+}
+
+.button:focus-visible,
+a:focus-visible {
+  outline: 3px solid var(--text);
+  outline-offset: 3px;
+}
+
+.version {
+  color: var(--muted);
+  font-size: 0.95rem;
+}
+
+.fine {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.windows-note {
+  max-width: 34rem;
+  margin: 0 auto 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--gold);
+  border-radius: 6px;
+}
+
+/* Screenshots */
+.shot {
+  margin: 0;
+}
+
+.shot img {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg-raised);
+}
+
+/* The width and height attributes reserve space before the image loads; auto keeps its proportions. */
+.shot img {
+  height: auto;
+}
+
+.shot-hero {
+  max-width: 56rem;
+  margin: 2.5rem auto 0;
+}
+
+/* Features */
+.features {
+  padding-block: 3rem;
+}
+
+.features h2,
+.section-lead {
+  text-align: center;
+}
+
+.section-lead {
+  max-width: 38rem;
+  margin: 0 auto 3rem;
+  color: var(--muted);
+}
+
+.feature {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  align-items: center;
+  gap: 2.5rem;
+  padding-block: 2.5rem;
+  border-top: 1px solid var(--line);
+}
+
+.feature.flip .text {
+  order: 2;
+}
+
+.feature p {
+  margin: 0;
+  color: var(--muted);
+}
+
+@media (max-width: 48rem) {
+  .feature {
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+  }
+
+  .feature.flip .text {
+    order: 0;
+  }
+}
+
+/* MITPlayer */
+.mit {
+  padding-block: 3.5rem;
+  background: var(--bg-raised);
+}
+
+.mit h2,
+.mit p {
+  max-width: 44rem;
+  margin-inline: auto;
+}
+
+.mit p {
+  margin-block: 0;
+  color: var(--muted);
+}
+
+/* Download */
+.download {
+  padding-block: 4rem;
+  text-align: center;
+}
+
+.steps {
+  display: inline-block;
+  margin: 1.5rem 0;
+  padding-left: 1.25rem;
+  text-align: left;
+  color: var(--muted);
+}
+
+/* Footer */
+.foot {
+  padding-block: 2rem;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* A wide strip (the player bar) goes under its text, at the full width. */
+.feature.stack {
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+/* A magnified inset (scripts/make-site-lens.mts): the screenshot, a dark layer with a hole over the
+   ring, a beam out to the round magnified copy. Strokes keep their width as the picture scales. */
+.lens-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+.lens-svg * {
+  vector-effect: non-scaling-stroke;
+}
+
+.lens-frame {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 1px;
+}
+
+.lens-dim {
+  fill: rgb(0 0 0 / 0.45);
+}
+
+.lens-beam {
+  fill: rgb(224 165 38 / 0.14);
+}
+
+.lens-line {
+  stroke: var(--gold);
+  stroke-width: 1.5px;
+  stroke-opacity: 0.85;
+}
+
+.lens-ring {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 2px;
+}
+
+.lens-shadow {
+  fill: var(--bg);
+  filter: drop-shadow(0 8px 18px rgb(0 0 0 / 0.7));
+}
+
+.lens-bg {
+  fill: var(--bg-raised);
+}
+
+.lens-edge {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 3px;
+}

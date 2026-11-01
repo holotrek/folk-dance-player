@@ -1,0 +1,262 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Folk Dance Player: run the whole evening</title>
+    <meta
+      name="description"
+      content="A Mac music player made for folk dance organizers. Build the program, play it with teaching stops, and show dancers a large projector view with each dance's slide."
+    />
+    <meta name="theme-color" content="#16161a" />
+    <link rel="icon" type="image/png" href="images/favicon.png" />
+    <meta property="og:title" content="Folk Dance Player" />
+    <meta
+      property="og:description"
+      content="Run the whole evening, not just the playlist. A Mac player for folk dance organizers."
+    />
+    <meta property="og:image" content="https://folkdanceplayer.com/images/icon-256.png" />
+    <link rel="stylesheet" href="style.css" />
+    <script src="main.js" defer></script>
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="#top">
+        <img src="images/icon-256.png" alt="" width="32" height="32" />
+        Folk Dance Player
+      </a>
+      <nav aria-label="Page">
+        <a href="#features">Features</a>
+        <a href="#mitplayer">MITPlayer</a>
+        <a href="#download">Download</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero">
+        <p class="eyebrow">For the person who runs the evening</p>
+        <h1>Run the whole evening, not just the playlist.</h1>
+        <p class="lead">
+          Build tonight's program, play it with teaching stops, and show your dancers what's playing
+          and what's next, with the dance's slide, on a big screen.
+        </p>
+        <p class="cta">
+          <a
+            class="button"
+            data-download
+            href="https://github.com/holotrek/folk-dance-player/releases/latest"
+          >
+            Download for Mac
+          </a>
+          <span class="version" data-version-line hidden></span>
+        </p>
+        <p class="windows-note" data-windows-note hidden>
+          You're on Windows. A Windows version is in the works; for now Folk Dance Player runs on
+          Macs.
+        </p>
+        <p class="fine">Free. macOS 12 or later, Apple silicon or Intel.</p>
+
+        <figure class="shot shot-hero">
+          <img
+            src="images/projector-view.png"
+            alt="The projector view: previously played, the dance now playing with a progress bar, and what is up next, in large type on black"
+            width="1800"
+            height="1125"
+          />
+        </figure>
+      </section>
+
+      <section id="features" class="features">
+        <h2>Beyond Apple Music</h2>
+        <p class="section-lead">
+          Apple Music is great at songs. Folk dance evenings are made of dances. Folk Dance Player
+          keeps your Music library and adds the rest.
+        </p>
+
+        <article class="feature">
+          <div class="text">
+            <h3>Build the program, not a queue</h3>
+            <p>
+              Drag dances into the order you'll teach and dance them. Add STOP markers where you'll
+              pause to teach. Auto-continue with a countdown carries the evening between them, and a
+              media remote handles play, pause and next. See when the program will end, and save it
+              afterward with what was actually played.
+            </p>
+          </div>
+          <figure class="shot">
+            <!-- lens:program -->
+            <!-- prettier-ignore -->
+            <svg class="lens-svg" viewBox="0 0 1000 674" role="img" aria-label="The Program page in dark mode, with a magnified view of the running order: a song, a STOP / TEACHING marker, then the next dances">
+  <defs>
+    <clipPath id="lens-program"><circle cx="730" cy="410" r="250" /></clipPath>
+    <clipPath id="frame-program"><rect width="1000" height="602.78" rx="10" /></clipPath>
+  </defs>
+  <g clip-path="url(#frame-program)">
+    <image href="images/program-full.png" width="1000" height="602.78" />
+    <path class="lens-dim" fill-rule="evenodd" d="M0 0H1000V602.78H0ZM110 373.72a125 125 0 1 0 250 0a125 125 0 1 0 -250 0Z" />
+  </g>
+  <rect class="lens-frame" width="1000" height="602.78" rx="10" />
+  <polygon class="lens-beam" points="194.76 492.07 649.52 646.69 684.89 164.1 212.45 250.77" />
+  <line class="lens-line" x1="194.76" y1="492.07" x2="649.52" y2="646.69" />
+  <line class="lens-line" x1="212.45" y1="250.77" x2="684.89" y2="164.1" />
+  <circle class="lens-ring" cx="235" cy="373.72" r="125" />
+  <circle class="lens-shadow" cx="730" cy="410" r="250" />
+  <g clip-path="url(#lens-program)">
+    <rect class="lens-bg" x="480" y="160" width="500" height="500" />
+    <image href="images/program-full.png" width="1000" height="602.78" transform="translate(730 410) scale(2) translate(-235 -373.72)" />
+  </g>
+  <circle class="lens-edge" cx="730" cy="410" r="250" />
+</svg>
+            <!-- /lens:program -->
+          </figure>
+        </article>
+
+        <article class="feature stack">
+          <div class="text">
+            <h3>Teach at the right speed</h3>
+            <p>
+              Slow a song down to walk through the figures, without changing its pitch. Stop to
+              re-teach a step and press play to carry on as the same dance. Double-click any song to
+              preview it without disturbing the program.
+            </p>
+          </div>
+          <figure class="shot">
+            <img
+              src="images/player-bar.png"
+              alt="The player bar playing a song at 0.8 times speed, with the transport buttons, speed and volume sliders, and the progress bar"
+              width="1880"
+              height="236"
+            />
+          </figure>
+        </article>
+
+        <article class="feature flip">
+          <div class="text">
+            <h3>A projector view dancers can read</h3>
+            <p>
+              A borderless, large-type display for a second screen or projector: what was played,
+              what's playing, what's coming up, and each dance's Canva slide or your own image.
+              Slides are saved for use offline, so a dead Wi-Fi hall doesn't stop the show. With no
+              projector, the same view can cover your laptop.
+            </p>
+          </div>
+          <figure class="shot">
+            <img
+              src="images/projector-with-canva.png"
+              alt="The projector view with a Canva slide for the dance now playing: its origin, meter and teacher, a flag and a map, with the previously played and up next lists beneath"
+              width="1800"
+              height="1125"
+            />
+          </figure>
+        </article>
+
+        <article class="feature">
+          <div class="text">
+            <h3>Dances and songs, kept apart</h3>
+            <p>
+              One tune can carry several dances, and one dance can be done to many tunes. Record
+              each dance's country, choreographer, difficulty, notes and PDF, plus who taught it to
+              your group. Search by song, dance, teacher, choreographer or country, and accents
+              don't get in the way: "pasa" finds "Paşa".
+            </p>
+          </div>
+          <figure class="shot">
+            <!-- lens:song -->
+            <!-- prettier-ignore -->
+            <svg class="lens-svg" viewBox="0 0 1000 824" role="img" aria-label="The Music page with a song open in the editor, with a magnified view of its two dances: the default dance folded up, and a second dance, shared with another song, open beneath it">
+  <defs>
+    <clipPath id="lens-song"><circle cx="270" cy="560" r="250" /></clipPath>
+    <clipPath id="frame-song"><rect width="1000" height="813.19" rx="10" /></clipPath>
+  </defs>
+  <g clip-path="url(#frame-song)">
+    <image href="images/music-full.png" width="1000" height="813.19" />
+    <path class="lens-dim" fill-rule="evenodd" d="M0 0H1000V813.19H0ZM730 509.87a125 125 0 1 0 250 0a125 125 0 1 0 -250 0Z" />
+  </g>
+  <rect class="lens-frame" width="1000" height="813.19" rx="10" />
+  <polygon class="lens-beam" points="871.09 385.91 302.18 312.08 343.88 798.83 891.94 629.29" />
+  <line class="lens-line" x1="871.09" y1="385.91" x2="302.18" y2="312.08" />
+  <line class="lens-line" x1="891.94" y1="629.29" x2="343.88" y2="798.83" />
+  <circle class="lens-ring" cx="855" cy="509.87" r="125" />
+  <circle class="lens-shadow" cx="270" cy="560" r="250" />
+  <g clip-path="url(#lens-song)">
+    <rect class="lens-bg" x="20" y="310" width="500" height="500" />
+    <image href="images/music-full.png" width="1000" height="813.19" transform="translate(270 560) scale(2) translate(-855 -509.87)" />
+  </g>
+  <circle class="lens-edge" cx="270" cy="560" r="250" />
+</svg>
+            <!-- /lens:song -->
+          </figure>
+        </article>
+
+        <article class="feature stack">
+          <div class="text">
+            <h3>Your Apple Music library, kept in step</h3>
+            <p>
+              Switch on sync and the app reads your Music library directly: songs, tags and
+              playlists stay current as you add music. Or import files, folders or a Library.xml.
+              Nothing you add here (dances, programs, notes, slides) is ever lost.
+            </p>
+          </div>
+          <figure class="shot">
+            <img
+              src="images/apple-music-sync-bar.png"
+              alt="The top of the Music page with Sync with Apple Music switched on: when it last synced, with Details and Sync now buttons"
+              width="2108"
+              height="232"
+            />
+          </figure>
+        </article>
+      </section>
+
+      <section id="mitplayer" class="mit">
+        <h2>Inspired by MITPlayer</h2>
+        <p>
+          For years, many folk dance organizers ran their evenings on MITPlayer. It showed how a
+          player for dancing should work: a running order, teaching stops, a display the room can
+          see. Folk Dance Player carries those ideas forward on a current Mac, with a library built
+          around dances, Canva slides, Apple Music sync and a guided tour for new users. Thank you
+          to everyone who built and shared MITPlayer.
+        </p>
+      </section>
+
+      <section id="download" class="download">
+        <h2>Download Folk Dance Player</h2>
+        <p class="cta">
+          <a
+            class="button"
+            data-download
+            href="https://github.com/holotrek/folk-dance-player/releases/latest"
+          >
+            Download for Mac
+          </a>
+          <span class="version" data-version-line hidden></span>
+        </p>
+        <p class="windows-note" data-windows-note hidden>
+          A Windows version is in the works. Check back soon.
+        </p>
+        <ol class="steps">
+          <li>Open the downloaded <strong>.dmg</strong>.</li>
+          <li>Drag <strong>Folk Dance Player</strong> to <strong>Applications</strong>.</li>
+          <li>
+            Open it. The app offers a short guided tour on a practice library, so nothing of yours
+            is touched.
+          </li>
+        </ol>
+        <p class="fine">
+          <a href="https://github.com/holotrek/folk-dance-player/releases"
+            >All releases and notes</a
+          >
+          ·
+          <a href="https://github.com/holotrek/folk-dance-player">Source on GitHub</a>
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>
+        Folk Dance Player is free software for folk dance organizers.
+        <a href="https://github.com/holotrek/folk-dance-player/issues">Questions or problems?</a>
+      </p>
+    </footer>
+  </body>
+</html>
