@@ -4,6 +4,7 @@ import { CAPTURES_IDLE } from '@shared/canva'
 import { IDLE_PLAYER_STATE, NO_REMOTE } from '@shared/program'
 import { PROJECTOR_OFF } from '@shared/projector'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
+import { UPDATE_IDLE } from '@shared/updates'
 
 type Handler = (...args: never[]) => unknown
 
@@ -46,6 +47,8 @@ export function createFakeApi(
         if (channel === 'programs:list' || channel === 'programs:played') return []
         if (channel === 'programs:get') return null
         if (channel === 'player:getState') return IDLE_PLAYER_STATE
+        // No update is known unless a test says otherwise.
+        if (channel === 'updates:getState' || channel === 'updates:check') return UPDATE_IDLE
         if (channel === 'remote:status') return NO_REMOTE
         // The projector is off, and the control window's progress reports go nowhere.
         if (channel === 'projector:status') return PROJECTOR_OFF
