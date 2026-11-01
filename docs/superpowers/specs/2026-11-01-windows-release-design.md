@@ -304,8 +304,11 @@ High-contrast themes, system text scaling, and the system dark/light switch (`na
 
 ### Still open
 
-1. **Signing (Q1, §7.2).** Research is in §7.2. Your move: check the repository has an OSI-approved `LICENSE` and, if so, apply to SignPath Foundation; check whether your Azure account type and country qualify for Artifact Signing. Which route do you want to pursue first? (Calendar time: start now.)
-2. **Scope check (Q14, §9).** Anything in §9 you'd cut or pull forward (a taskbar play/pause toolbar, an audio-output picker for projector audio, a WMA hint)? Default if you say nothing: all of §9 stays as verification work, none of the "nice later" items are built.
+1. **Signing route (Q1, §7.2).** The MIT `LICENSE` is now in the repository (and `"license": "MIT"` in `package.json`), so SignPath Foundation's license condition is met. Remaining: apply to SignPath Foundation, and check whether your Azure account type and country qualify for Artifact Signing; decide which to pursue if both accept. Calendar time: start now.
+
+### Decided without discussion
+
+- **Scope check (Q14):** all of §9 stays as verification work; none of the "nice later" items (a taskbar play/pause toolbar, an audio-output picker, a WMA converter) are built in this release.
 
 ## 13. Order of work (proposal, before the plan)
 
