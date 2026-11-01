@@ -94,12 +94,17 @@ describe('the practice library', () => {
     expect(names).toContain('Lesnoto')
     expect(names).toContain('Legnala Dana')
     expect(names).not.toContain('Misirlou')
-    expect(names).toContain('Pravo Rhodopsko')
+    expect(names).toContain('Pravo Rhodopsko Oro')
     // The two tunes of Lesnoto are labelled as that dance in the library.
     const labels = listLibrary(db, all)
       .filter((r) => r.title === 'Makedonsko Devojče')
       .map((r) => r.label)
     expect(labels).toEqual(['Lesnoto ♪ Makedonsko Devojče'])
+    // Pravo Rhodopsko Oro is the dance; Pusteno Ludo is the song it is done to.
+    const pravo = listLibrary(db, all).filter((r) => r.danceName === 'Pravo Rhodopsko Oro')
+    expect(pravo.map((r) => [r.title, r.label])).toEqual([
+      ['Pusteno Ludo', 'Pravo Rhodopsko Oro ♪ Pusteno Ludo']
+    ])
   })
 
   test('has a favorite, a local playlist, a synced playlist in a folder, and a saved program', () => {

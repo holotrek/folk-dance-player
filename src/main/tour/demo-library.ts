@@ -55,10 +55,10 @@ const SONGS: DemoSong[] = [
   { title: 'Legnala Dana', country: 'Bulgaria', teacher: 'Elena Petrova', dance: 'Legnala Dana' },
   { title: 'Makedonsko Devojče', country: 'Macedonia', teacher: 'Anna Kovacs', dance: 'Lesnoto' },
   {
-    title: 'Pravo Rhodopsko Oro',
+    title: 'Pusteno Ludo',
     country: 'Bulgaria',
     teacher: 'Elena Petrova',
-    dance: 'Pravo Rhodopsko'
+    dance: 'Pravo Rhodopsko Oro'
   },
   { title: 'Ali Pasa', country: 'Turkey', teacher: 'Mehmet Yilmaz', dance: 'Ali Pasa' },
   { title: 'Zemer Atik', country: 'Israel', teacher: 'Ruth Adler', dance: 'Zemer Atik' },
@@ -149,7 +149,7 @@ export function buildDemoLibrary(dir: string, tuneDir: string): DemoLibrary {
         persistentId: 'D000000000000001',
         name: 'Balkan night',
         parentId: 'C000000000000001',
-        itemIds: [ids[2], ids[3], ids[4], ids[7]] // Legnala Dana, Makedonsko Devojče, Pravo, Hora Mare
+        itemIds: [ids[2], ids[3], ids[4], ids[7]] // Legnala Dana, Makedonsko Devojče, Pusteno Ludo, Hora Mare
       }
     ]
   }
@@ -159,7 +159,7 @@ export function buildDemoLibrary(dir: string, tuneDir: string): DemoLibrary {
   addTracks(
     db,
     program,
-    ['Hava Nagila', 'Hora Mare', 'Pravo Rhodopsko Oro'].map((t) => bySong(t).fileId)
+    ['Hava Nagila', 'Hora Mare', 'Pusteno Ludo'].map((t) => bySong(t).fileId)
   )
 
   return { db, dbPath }
