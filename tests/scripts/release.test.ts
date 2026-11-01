@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest'
+import { createHash } from 'node:crypto'
 import {
   checkRelease,
+  checkUpdateFeed,
   compareVersions,
   nextVersion,
   prepareChangelog
@@ -26,6 +28,75 @@ Intro.
 
 - The first release.
 `
+
+// A feed as electron-builder writes it (latest-mac.yml), for a zip whose bytes are `zip`.
+const ZIP_NAME = 'Folk-Dance-Player-0.3.0-universal.zip'
+const zip = Buffer.from('not really a zip, but bytes')
+const sha = (bytes: Buffer): string => createHash('sha512').update(bytes).digest('base64')
+const feed = (
+  extra: { version?: string; url?: string; sha512?: string } = {}
+): string => `version: ${extra.version ?? '0.3.0'}
+files:
+  - url: ${extra.url ?? ZIP_NAME}
+    sha512: ${extra.sha512 ?? sha(zip)}
+    size: ${zip.length}
+  - url: Folk-Dance-Player-0.3.0-universal.dmg
+    sha512: ZGlmZmVyZW50
+    size: 10
+path: ${extra.url ?? ZIP_NAME}
+sha512: ${extra.sha512 ?? sha(zip)}
+releaseDate: '2026-11-01T02:20:52.295Z'
+`
+
+describe('checking the update feed', () => {
+  const files = { [ZIP_NAME]: zip }
+
+  test('a good feed passes', () => {
+    expect(checkUpdateFeed({ yml: feed(), version: '0.3.0', files })).toEqual({ ok: true })
+  })
+
+  test('a feed for another version fails, naming both', () => {
+    const result = checkUpdateFeed({ yml: feed({ version: '0.2.0' }), version: '0.3.0', files })
+    expect(result).toMatchObject({ ok: false })
+    expect((result as { error: string }).error).toContain('0.2.0')
+    expect((result as { error: string }).error).toContain('0.3.0')
+  })
+
+  test('a feed naming a file that is not there fails, naming it', () => {
+    const result = checkUpdateFeed({
+      yml: feed({ url: 'Folk Dance Player-0.3.0-universal-mac.zip' }),
+      version: '0.3.0',
+      files
+    })
+    expect(result).toMatchObject({ ok: false })
+    expect((result as { error: string }).error).toContain(
+      'Folk Dance Player-0.3.0-universal-mac.zip'
+    )
+  })
+
+  test('a checksum that does not match the file fails', () => {
+    const result = checkUpdateFeed({
+      yml: feed({ sha512: sha(Buffer.from('another file')) }),
+      version: '0.3.0',
+      files
+    })
+    expect(result).toMatchObject({ ok: false })
+    expect((result as { error: string }).error).toMatch(/checksum|sha512/i)
+  })
+
+  test('a feed with no version fails', () => {
+    const yml = feed().replace(/^version: .*\n/, '')
+    expect(checkUpdateFeed({ yml, version: '0.3.0', files })).toMatchObject({ ok: false })
+  })
+
+  test('the real file electron-builder wrote parses and names a zip', () => {
+    const real =
+      "version: 0.2.0\nfiles:\n  - url: Folk-Dance-Player-0.2.0-universal.zip\n    sha512: mlu5DaXbkSQM/UWmNAhvnePtyvmUFapPYfP5aw2nf01Bwh7qNNosvLdRUrYlh4kbfr2quSZyOrDIHMO4yAuqxg==\n    size: 229016964\n  - url: Folk-Dance-Player-0.2.0-universal.dmg\n    sha512: lTULIHOp/2WJac0CwQat0Fbw63IOG4ukQIYB/CG8afSlJFw0SFH3Lt9oQ+NP6BBZVTI+b7RI0V0/LFfW7okmPQ==\n    size: 237029982\npath: Folk-Dance-Player-0.2.0-universal.zip\nsha512: mlu5DaXbkSQM/UWmNAhvnePtyvmUFapPYfP5aw2nf01Bwh7qNNosvLdRUrYlh4kbfr2quSZyOrDIHMO4yAuqxg==\nreleaseDate: '2026-11-01T02:24:20.432Z'\n"
+    const result = checkUpdateFeed({ yml: real, version: '0.2.0', files: {} })
+    // No files given: it must fail on the missing zip, not on parsing the version or the url.
+    expect((result as { error: string }).error).toContain('Folk-Dance-Player-0.2.0-universal.zip')
+  })
+})
 
 describe('versions', () => {
   test('compare by number, not as text', () => {
