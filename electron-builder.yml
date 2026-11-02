@@ -64,6 +64,16 @@ nsis:
   shortcutName: Folk Dance Player
   # Never delete someone's library with the program.
   deleteAppDataOnUninstall: false
+# The Microsoft Store package (Windows Store design): `npm run dist:store` adds the identity that
+# Partner Center gave the app. The Store signs it, so it is built unsigned, and the Store (not our
+# updater) updates it.
+appx:
+  displayName: Folk Dance Player
+  languages:
+    - en-US
+  # Tiles come from build/appx/ (npm run icon makes them).
+  backgroundColor: transparent
+  artifactName: Folk-Dance-Player-Store-${version}.${ext}
 # Written into the app as app-update.yml: where the in-app updater looks for new releases.
 publish:
   provider: github

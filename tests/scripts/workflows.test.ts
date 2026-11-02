@@ -78,6 +78,38 @@ describe('Create Release on Windows', () => {
   })
 })
 
+describe('the Microsoft Store package in CI', () => {
+  const gate = workflow('pr-gate.yml')
+  const release = workflow('create-release.yml')
+
+  it('is built in the PR Gate on Windows, with the real identity when it is set and a placeholder when not', () => {
+    expect(gate).toMatch(/name: Store package \(Windows\)\s+runs-on: windows-latest/)
+    expect(gate).toContain('node scripts/store.mts --test')
+    for (const name of ['STORE_IDENTITY_NAME', 'STORE_PUBLISHER', 'STORE_PUBLISHER_DISPLAY_NAME']) {
+      expect(gate).toContain(`\${{ vars.${name} }}`)
+    }
+  })
+
+  it('is kept as a workflow artifact for Partner Center, in the PR Gate and in Create Release', () => {
+    for (const file of [gate, release]) {
+      expect(file).toMatch(/name: store-package[^\n]*\n\s+path: dist\/\*\.appx/)
+    }
+  })
+
+  it('is never published with the release: the Publish job only takes the installer artifacts', () => {
+    expect(release).toContain('pattern: installer-*')
+    expect(release).not.toMatch(/installer-store|name: installer-\$\{\{ matrix\.os \}\}-store/)
+    const publish = release.slice(release.indexOf('  publish:'))
+    expect(publish).not.toContain('store-package')
+  })
+
+  it('is built in Create Release only when the identity is set, so a release works before the account does', () => {
+    const step = release.slice(release.indexOf('Build the Store package (Windows)'))
+    expect(step.slice(0, 400)).toMatch(/if: runner\.os == 'Windows'/)
+    expect(step.slice(0, 900)).toContain('STORE_IDENTITY_NAME')
+  })
+})
+
 describe('Prepare Release', () => {
   const prepare = workflow('prepare-release.yml')
 

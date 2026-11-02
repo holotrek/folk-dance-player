@@ -129,6 +129,26 @@ jobs:
       - name: The update feeds match the release
         run: node scripts/release.mts check-feed dist
       - run: npm run test:e2e:dist
+      # The Microsoft Store package: built when the Partner Center identity is set (repository
+      # variables), and kept for the maintainer to upload. It is never part of the GitHub release. After
+      # the end-to-end tests: it rewrites dist/win-unpacked with the Store version.
+      - name: Build the Store package (Windows)
+        if: runner.os == 'Windows' && vars.STORE_IDENTITY_NAME != ''
+        shell: bash
+        env:
+          STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          node scripts/store.mts
+      - name: Keep the Store package
+        if: runner.os == 'Windows' && vars.STORE_IDENTITY_NAME != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-package
+          path: dist/*.appx
+          retention-days: 30
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installer-${{ matrix.os }}

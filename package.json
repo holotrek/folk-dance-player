@@ -22,6 +22,7 @@
     "format": "prettier --write .",
     "build:helper": "sh scripts/build-helper.sh",
     "dist": "node scripts/dist.mts",
+    "dist:store": "node scripts/store.mts",
     "icon": "node scripts/run.mts electron scripts/make-icon.cjs",
     "tour:tune": "node scripts/make-tour-tune.mts",
     "postinstall": "install-electron"

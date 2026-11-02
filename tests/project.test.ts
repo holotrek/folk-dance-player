@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 import { describe, expect, test } from 'vitest'
 
@@ -68,5 +68,27 @@ describe('the Music library helper (Apple Music sync spec §3.1)', () => {
     // scripts/dist.mts builds the helper on a Mac only (dist.test.ts checks the steps).
     expect(pkg.scripts.dist).toBe('node scripts/dist.mts')
     expect(read('.gitignore')).toMatch(/^resources\/bin\/$/m)
+  })
+})
+
+describe('the Microsoft Store package (Windows Store design)', () => {
+  const read = (file: string): string => readFileSync(resolve(__dirname, '..', file), 'utf8')
+
+  test('has our own tile images, not electron-builder’s default Electron logo', () => {
+    for (const name of [
+      'StoreLogo.png',
+      'Square44x44Logo.png',
+      'Square150x150Logo.png',
+      'Wide310x150Logo.png'
+    ]) {
+      expect(existsSync(resolve(__dirname, '..', 'build/appx', name)), name).toBe(true)
+    }
+  })
+
+  test('is configured, and built by a script that passes the Store identity', () => {
+    const builder = read('electron-builder.yml')
+    expect(builder).toMatch(/^appx:\n(?: {2}.+\n)*? {2}displayName: Folk Dance Player$/m)
+    expect(builder).toMatch(/^ {2}artifactName: Folk-Dance-Player-Store-\$\{version\}\.\$\{ext\}$/m)
+    expect(pkg.scripts['dist:store']).toBe('node scripts/store.mts')
   })
 })
