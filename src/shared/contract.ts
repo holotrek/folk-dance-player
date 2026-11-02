@@ -52,6 +52,7 @@ export interface AppInfo {
   dbPath: string
   schemaVersion: number
   platform: Platform
+  store?: boolean // the Microsoft Store version; absent means no
 }
 
 export interface LibraryStats {

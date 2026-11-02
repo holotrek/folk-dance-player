@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { capabilitiesFor, platformFrom } from '@shared/platform'
+import { capabilitiesFor, platformFrom, storeFrom } from '@shared/platform'
 
 describe('platformFrom', () => {
   test('maps Node platform names', () => {
@@ -28,7 +28,8 @@ describe('capabilitiesFor', () => {
       appleMusicSync: false,
       mediaKeyTrust: false,
       fileManager: 'File Explorer',
-      computer: 'computer'
+      computer: 'computer',
+      store: false
     })
   })
 
@@ -38,12 +39,32 @@ describe('capabilitiesFor', () => {
       appleMusicSync: true,
       mediaKeyTrust: true,
       fileManager: 'Finder',
-      computer: 'Mac'
+      computer: 'Mac',
+      store: false
     })
   })
 
   test('linux', () => {
     expect(capabilitiesFor('linux').fileManager).toBe('file manager')
     expect(capabilitiesFor('linux').appleMusicSync).toBe(false)
+  })
+})
+
+describe('storeFrom', () => {
+  test('is the Microsoft Store version only on Windows, where Electron says so', () => {
+    expect(storeFrom('windows', true, {}, true)).toBe(true)
+    expect(storeFrom('windows', false, {}, true)).toBe(false)
+    expect(storeFrom('mac', true, {}, true)).toBe(false)
+  })
+
+  test('FDP_STORE=1 makes an unpackaged Windows run the Store version, a packaged one ignores it', () => {
+    expect(storeFrom('windows', false, { FDP_STORE: '1' }, false)).toBe(true)
+    expect(storeFrom('windows', false, { FDP_STORE: '1' }, true)).toBe(false)
+    expect(storeFrom('mac', false, { FDP_STORE: '1' }, false)).toBe(false)
+  })
+
+  test('is a capability, and the Store updates the app itself', () => {
+    expect(capabilitiesFor('windows', true).store).toBe(true)
+    expect(capabilitiesFor('windows').store).toBe(false)
   })
 })

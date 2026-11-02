@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from 'vitest'
 import { capabilitiesFor, type Platform } from '../../../src/shared/platform'
 import { menuTemplate, syncAppleMusicFromMenu } from '../../../src/main/menu'
 
-function setup(dev = false, appleSync = false, platform: Platform = 'mac') {
+function setup(dev = false, appleSync = false, platform: Platform = 'mac', store = false) {
   const actions = {
     showSettings: vi.fn(),
     revealLogs: vi.fn(),
@@ -19,7 +19,7 @@ function setup(dev = false, appleSync = false, platform: Platform = 'mac') {
       appName: 'Folk Dance Player',
       dev,
       appleSync,
-      caps: capabilitiesFor(platform),
+      caps: capabilitiesFor(platform, store),
       ...actions
     })
   }
@@ -111,6 +111,16 @@ describe('the app menu', () => {
 const MAC_ONLY = ['about', 'services', 'hide', 'hideOthers', 'unhide', 'windowMenu']
 const walk = (items: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] =>
   items.flatMap((i) => [i, ...(Array.isArray(i.submenu) ? walk(i.submenu) : [])])
+
+describe('the Windows menu in the Microsoft Store version', () => {
+  test('has no Check for Updates…: the Store updates the app', () => {
+    const labels = (store: boolean): string[] =>
+      submenu(setup(false, false, 'windows', store).menu, 'help').map((i) => i.label ?? '')
+    expect(labels(false)).toContain('Check for Updates…')
+    expect(labels(true)).not.toContain('Check for Updates…')
+    expect(labels(true)).toContain('About Folk Dance Player')
+  })
+})
 
 describe('the Windows menu', () => {
   test('has no macOS-only roles, and no Apple Music item', () => {

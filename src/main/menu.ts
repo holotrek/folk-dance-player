@@ -64,7 +64,8 @@ function windowsMenu(o: MenuOptions): MenuItemConstructorOptions[] {
         { label: 'Take the Basic Tour…', click: () => o.takeTour('basic') },
         { label: 'Take the Advanced Tour…', click: () => o.takeTour('advanced') },
         { type: 'separator' },
-        { label: 'Check for Updates…', click: o.checkForUpdates },
+        // The Microsoft Store updates its own version.
+        ...(o.caps.store ? [] : [{ label: 'Check for Updates…', click: o.checkForUpdates }]),
         { label: `About ${o.appName}`, click: o.showAbout },
         { type: 'separator' },
         { label: `Show Logs in ${where}`, click: o.revealLogs },

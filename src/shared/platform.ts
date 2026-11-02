@@ -8,6 +8,7 @@ export interface Capabilities {
   mediaKeyTrust: boolean // macOS delivers media keys only to an app trusted for Accessibility
   fileManager: 'Finder' | 'File Explorer' | 'file manager'
   computer: 'Mac' | 'computer' // for copy like "files on this Mac"
+  store: boolean // the Microsoft Store version, which the Store updates (no updater of ours)
 }
 
 const PLATFORMS: readonly string[] = ['mac', 'windows', 'linux']
@@ -26,13 +27,26 @@ export function platformFrom(
   return 'linux'
 }
 
-export function capabilitiesFor(platform: Platform): Capabilities {
+// Whether this run is the Microsoft Store version: Electron says so in a Store (appx) package, and
+// FDP_STORE=1 shows it from an unpackaged Windows run (development and end-to-end tests).
+export function storeFrom(
+  platform: Platform,
+  windowsStore: boolean,
+  env: NodeJS.ProcessEnv,
+  isPackaged: boolean
+): boolean {
+  if (platform !== 'windows') return false
+  return windowsStore || (!isPackaged && env['FDP_STORE'] === '1')
+}
+
+export function capabilitiesFor(platform: Platform, store = false): Capabilities {
   const mac = platform === 'mac'
   return {
     platform,
     appleMusicSync: mac,
     mediaKeyTrust: mac,
     fileManager: mac ? 'Finder' : platform === 'windows' ? 'File Explorer' : 'file manager',
-    computer: mac ? 'Mac' : 'computer'
+    computer: mac ? 'Mac' : 'computer',
+    store
   }
 }

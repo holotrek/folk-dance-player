@@ -58,6 +58,7 @@ export interface PracticeOptions {
   tuneDir: string // holds the practice tunes (hava-nagila.wav, korobushka.wav)
   appVersion: string
   platform: Platform // the real app's: the practice library mirrors what it can show
+  store?: boolean // the real app is the Microsoft Store version
   // Where the context's events go: only to the window that is touring.
   send<C extends EventChannel>(channel: C, payload: EventContract[C]): void
 }
@@ -83,7 +84,8 @@ export function createPracticeContext(opts: PracticeOptions): PracticeContext {
       version: opts.appVersion,
       dbPath,
       schemaVersion: getSchemaVersion(db),
-      platform: opts.platform
+      platform: opts.platform,
+      store: opts.store === true
     }),
     importer: {
       // A pretend import (tour spec §3, step 1): it "finds" the songs the practice library already

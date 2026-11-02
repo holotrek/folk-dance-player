@@ -20,7 +20,7 @@ export function PlatformProvider(props: {
     let live = true
     api
       .invoke('app:getInfo')
-      .then((info) => live && setCaps(capabilitiesFor(info.platform)))
+      .then((info) => live && setCaps(capabilitiesFor(info.platform, info.store === true)))
       .catch(() => live && setCaps(capabilitiesFor('mac')))
     return () => {
       live = false

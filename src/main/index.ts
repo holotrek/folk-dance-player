@@ -73,7 +73,7 @@ import { PlayerSession } from './session/player-session'
 import { createSessionPorts } from './session/session-ports'
 import { guardNavigation } from './navigation'
 import { userDataOverride } from './user-data'
-import { capabilitiesFor, platformFrom } from '@shared/platform'
+import { capabilitiesFor, platformFrom, storeFrom } from '@shared/platform'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
 
@@ -81,7 +81,11 @@ import { SettingsStore } from './settings/settings-store'
 // touch the real one.
 // Which system this is, decided once (Windows release spec §3.1).
 const platform = platformFrom(process.platform, process.env, app.isPackaged)
-const caps = capabilitiesFor(platform)
+// `process.windowsStore` is Electron's flag for a Microsoft Store (appx) package.
+const caps = capabilitiesFor(
+  platform,
+  storeFrom(platform, process.windowsStore === true, process.env, app.isPackaged)
+)
 const userData = userDataOverride(process.env, app.isPackaged, app.getPath('appData'), platform)
 if (userData) app.setPath('userData', userData)
 
@@ -337,6 +341,7 @@ function startApp(): void {
           : join(app.getAppPath(), 'resources', 'tour'),
         appVersion: app.getVersion(),
         platform,
+        store: caps.store,
         send
       }),
     sendToWindow: sendTo,
@@ -360,7 +365,8 @@ function startApp(): void {
       onState: (state) => broadcast('updates:state', state)
     }
   )
-  updates.start()
+  // The Microsoft Store updates its own version: no checks of ours.
+  if (!caps.store) updates.start()
   app.on('will-quit', () => updates.stop())
 
   // Sync with Apple Music (sync spec §3): the bundled helper, or a snapshot file in development and
@@ -667,7 +673,8 @@ function startApp(): void {
       version: app.getVersion(),
       dbPath,
       schemaVersion: getSchemaVersion(db),
-      platform
+      platform,
+      store: caps.store
     }),
     importer,
     dialogs: importDialogs,
