@@ -9,7 +9,7 @@ import { PlayerSession } from '../session/player-session'
 import { createSessionPorts } from '../session/session-ports'
 import { SettingsStore } from '../settings/settings-store'
 import { buildDemoLibrary } from './demo-library'
-import type { Platform } from '@shared/platform'
+import { capabilitiesFor, type Platform } from '@shared/platform'
 
 export const UNAVAILABLE = 'Not available in the practice library'
 
@@ -65,7 +65,9 @@ export interface PracticeOptions {
 // A second, complete set of handlers over a throwaway library (tour spec §4.1): its own database,
 // settings and player, with no import, sync, Canva, projector, remote or attachments.
 export function createPracticeContext(opts: PracticeOptions): PracticeContext {
-  const { db, dbPath } = buildDemoLibrary(opts.dir, opts.tuneDir)
+  const { db, dbPath } = buildDemoLibrary(opts.dir, opts.tuneDir, {
+    appleMirrors: capabilitiesFor(opts.platform).appleMusicSync
+  })
   const settings = new SettingsStore(db)
   const programsChanged = coalesced(() => opts.send('programs:changed', null))
   const libraryChanged = coalesced(() => opts.send('library:changed', null))

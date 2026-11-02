@@ -1,5 +1,7 @@
 import { tourAudio } from './audio-hold'
-import type { StepContext, TourStep } from './steps'
+import { capabilitiesFor } from '@shared/platform'
+import { resolveSteps } from './resolve'
+import type { StepContext, TourStepDef } from './steps'
 
 // The Basic tour (tour spec §3, steps 1–16), . The welcome screen is not a step: it is
 // shown before the tour is entered. Song names are the practice library's (demo-library.ts).
@@ -32,16 +34,21 @@ const selectedDances = async (ctx: StepContext) => {
   return row ? ((await ctx.api.invoke('library:song', row.songId))?.dances ?? []) : []
 }
 
-const step = (s: Omit<TourStep, 'part'>): TourStep => ({ part: 'basic', ...s })
+const step = (s: Omit<TourStepDef, 'part'>): TourStepDef => ({ part: 'basic', ...s })
 
-export const BASIC_STEPS: TourStep[] = [
+export const BASIC_DEFS: TourStepDef[] = [
   step({
     id: 'basic.import',
     page: 'music',
     kind: 'explain',
     target: 'music.add',
     title: 'Getting your music in',
-    body: 'This is where your music comes in. Add Music… takes a folder of songs; the app reads each song’s title, artist and country from the file. On a Mac you can also turn on Sync with Apple Music, beside it, to keep your Music library and playlists in step automatically.\n\nThe practice library already has songs, but let’s walk through an import.'
+    body: (caps) =>
+      'This is where your music comes in. Add Music… takes a folder of songs; the app reads each song’s title, artist and country from the file. ' +
+      (caps.appleMusicSync
+        ? 'On a Mac you can also turn on Sync with Apple Music, beside it, to keep your Music library and playlists in step automatically.'
+        : '') +
+      '\n\nThe practice library already has songs, but let’s walk through an import.'
   }),
   step({
     id: 'basic.import-open',
@@ -358,3 +365,6 @@ export const BASIC_STEPS: TourStep[] = [
     ]
   })
 ]
+
+// The tour as it reads on a Mac, with every step.
+export const BASIC_STEPS = resolveSteps(BASIC_DEFS, capabilitiesFor('mac'))

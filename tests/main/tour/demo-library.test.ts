@@ -160,3 +160,17 @@ describe('the practice library', () => {
     expect(version.user_version).toBeGreaterThanOrEqual(7)
   })
 })
+
+describe('the practice library without Apple Music', () => {
+  test('has no synced playlist or folder', () => {
+    const { db } = buildDemoLibrary(dir, TUNE_DIR, { appleMirrors: false })
+    expect(listPlaylistFolders(db)).toEqual([])
+    expect(listPlaylists(db).map((p) => p.name)).toEqual(['Easy circle dances'])
+  })
+
+  test('has the Festival 2026 folder and Balkan night by default', () => {
+    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    expect(listPlaylistFolders(db).map((f) => f.name)).toContain('Festival 2026')
+    expect(listPlaylists(db).map((p) => p.name)).toContain('Balkan night')
+  })
+})

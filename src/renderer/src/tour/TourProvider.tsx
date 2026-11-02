@@ -2,8 +2,11 @@ import { createContext, useContext, useEffect, useReducer, useRef, useState } fr
 import type { TourPart } from '@shared/tour'
 import { useLibraryApi, useLibraryStore } from '../library/LibraryProvider'
 import { useProgramStore } from '../program/ProgramProvider'
-import { ADVANCED_STEPS } from './advanced-steps'
-import { BASIC_STEPS } from './basic-steps'
+import type { Capabilities } from '@shared/platform'
+import { usePlatform } from '../platform'
+import { ADVANCED_DEFS } from './advanced-steps'
+import { BASIC_DEFS } from './basic-steps'
+import { resolveSteps } from './resolve'
 import { createTourEngine, type TourEngine } from './engine'
 import type { Page, StepContext, TourStep } from './steps'
 import TourIntro from './TourIntro'
@@ -14,9 +17,9 @@ const TourContext = createContext({ touring: false })
 // Whether the window is on the practice library (the header shows a banner then).
 export const useTour = (): { touring: boolean } => useContext(TourContext)
 
-const defaultStepsFor = (): { steps: TourStep[]; advanced: TourStep[] } => ({
-  steps: BASIC_STEPS,
-  advanced: ADVANCED_STEPS
+const defaultStepsFor = (caps: Capabilities): { steps: TourStep[]; advanced: TourStep[] } => ({
+  steps: resolveSteps(BASIC_DEFS, caps),
+  advanced: resolveSteps(ADVANCED_DEFS, caps)
 })
 
 const EVALUATE_DELAY_MS = 60 // after an event, let the state settle before looking at it
@@ -31,7 +34,8 @@ export function TourProvider(props: {
   children: React.ReactNode
   stepsFor?: () => { steps: TourStep[]; advanced: TourStep[] } // for tests
 }): React.JSX.Element {
-  const { page, setPage, stepsFor = defaultStepsFor } = props
+  const caps = usePlatform()
+  const { page, setPage, stepsFor = () => defaultStepsFor(caps) } = props
   const api = useLibraryApi()
   const library = useLibraryStore()
   const program = useProgramStore()
