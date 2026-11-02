@@ -3,19 +3,45 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Folk Dance Player: run the whole evening</title>
+    <title>Folk Dance Player: a music player for folk dance organizers</title>
     <meta
       name="description"
-      content="A Mac music player made for folk dance organizers. Build the program, play it with teaching stops, and show dancers a large projector view with each dance's slide."
+      content="A free music player for folk dance organizers. Build the program, play it with teaching stops, and show dancers a large projector view with each dance's slide. For Mac; a Windows version is coming."
     />
+    <link rel="canonical" href="https://folkdanceplayer.com/" />
     <meta name="theme-color" content="#16161a" />
     <link rel="icon" type="image/png" href="images/favicon.png" />
-    <meta property="og:title" content="Folk Dance Player" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Folk Dance Player" />
+    <meta property="og:url" content="https://folkdanceplayer.com/" />
+    <meta
+      property="og:title"
+      content="Folk Dance Player: a music player for folk dance organizers"
+    />
     <meta
       property="og:description"
-      content="Run the whole evening, not just the playlist. A Mac player for folk dance organizers."
+      content="Run the whole evening, not just the playlist. A free music player for folk dance organizers."
     />
     <meta property="og:image" content="https://folkdanceplayer.com/images/icon-256.png" />
+    <meta property="og:image:alt" content="The Folk Dance Player icon" />
+    <meta name="twitter:card" content="summary" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Folk Dance Player",
+        "url": "https://folkdanceplayer.com/",
+        "description": "A free music player for folk dance organizers: build the program, play it with teaching stops, and show dancers a large projector view with each dance's slide.",
+        "applicationCategory": "MultimediaApplication",
+        "operatingSystem": "macOS 12 or later",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" },
+        "license": "https://opensource.org/license/mit",
+        "image": "https://folkdanceplayer.com/images/icon-256.png",
+        "author": { "@type": "Person", "name": "Evan Kaiser" },
+        "sameAs": ["https://github.com/holotrek/folk-dance-player"]
+      }
+    </script>
+    <script src="system.js"></script>
     <link rel="stylesheet" href="style.css" />
     <script src="main.js" defer></script>
   </head>
@@ -50,7 +76,7 @@
           </a>
           <span class="version" data-version-line hidden></span>
         </p>
-        <p class="windows-note" data-windows-note hidden>
+        <p class="windows-note" data-windows-note>
           You're on Windows. A Windows version is in the works; for now Folk Dance Player runs on
           Macs.
         </p>
@@ -233,7 +259,7 @@
           </a>
           <span class="version" data-version-line hidden></span>
         </p>
-        <p class="windows-note" data-windows-note hidden>
+        <p class="windows-note" data-windows-note>
           A Windows version is in the works. Check back soon.
         </p>
         <ol class="steps">

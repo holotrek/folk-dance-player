@@ -13,6 +13,14 @@ python3 -m http.server 8765 -d site
 Then open http://localhost:8765. The download buttons point at the latest release's page until
 `main.js` has read the release from GitHub, and stay there if that fails.
 
+## Search engines and Windows visitors
+
+`index.html` carries the title, description, canonical link, social tags and `SoftwareApplication`
+structured data; `robots.txt` and `sitemap.xml` sit beside it (update the sitemap's `lastmod` when the
+page changes). A visitor on Windows gets no download button, only the note that a Windows version is
+coming: `system.js` (a blocking script in the head) marks the page and `style.css` hides the
+buttons. When Windows is released, replace that rule with a Windows button.
+
 ## Hosting
 
 Azure Static Web Apps (free tier). The `Deploy Site` workflow publishes `site/` when it changes on
