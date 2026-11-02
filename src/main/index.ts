@@ -73,7 +73,7 @@ import { PlayerSession } from './session/player-session'
 import { createSessionPorts } from './session/session-ports'
 import { guardNavigation } from './navigation'
 import { userDataOverride } from './user-data'
-import { platformFrom } from '@shared/platform'
+import { capabilitiesFor, platformFrom } from '@shared/platform'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
 
@@ -81,6 +81,7 @@ import { SettingsStore } from './settings/settings-store'
 // touch the real one.
 // Which system this is, decided once (Windows release spec §3.1).
 const platform = platformFrom(process.platform, process.env, app.isPackaged)
+const caps = capabilitiesFor(platform)
 const userData = userDataOverride(process.env, app.isPackaged, app.getPath('appData'), platform)
 if (userData) app.setPath('userData', userData)
 
@@ -507,6 +508,14 @@ function startApp(): void {
       menuTemplate({
         appName: 'Folk Dance Player',
         dev: is.dev,
+        caps,
+        showAbout: () =>
+          void dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'About Folk Dance Player',
+            message: 'Folk Dance Player',
+            detail: `Version ${app.getVersion()}\n© 2026 Evan Kaiser\nFor folk dance organizers. Inspired by MITPlayer.`
+          }),
         showSettings: () => showPage({ page: 'settings' }),
         revealLogs: reveal(log.dir),
         revealBackups: reveal(backupsDir),
