@@ -1,6 +1,6 @@
 // The page works without this script: the download buttons already link to the latest release's
-// page. This points them straight at the .dmg and shows the version, and tells Windows visitors that a
-// Windows version is on its way.
+// page. This points them straight at the .dmg and shows the version. (Windows visitors get no button:
+// system.js marks the page and the stylesheet hides it.)
 const REPO = 'holotrek/folk-dance-player'
 const CACHE_KEY = 'fdp-latest-release'
 const CACHE_MS = 10 * 60 * 1000
@@ -39,10 +39,6 @@ async function latestRelease() {
   }
   writeCache(release)
   return release
-}
-
-if (/windows/i.test(navigator.userAgent)) {
-  for (const note of document.querySelectorAll('[data-windows-note]')) note.hidden = false
 }
 
 latestRelease()
