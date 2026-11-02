@@ -197,22 +197,29 @@ const onStep = async (title: string): Promise<void> => {
     })
     .first()
   if (await card.count()) {
-    await expect
-      .poll(async () => {
-        const box = await card.boundingBox()
-        const view = await running.page.evaluate(() => ({
-          width: window.innerWidth,
-          height: window.innerHeight
-        }))
-        return (
-          box !== null &&
-          box.x >= 0 &&
-          box.y >= 0 &&
-          box.x + box.width <= view.width &&
-          box.y + box.height <= view.height
-        )
-      })
-      .toBe(true)
+    // On failure the message says which step, and how big the card and the window were.
+    let seen = ''
+    try {
+      await expect
+        .poll(async () => {
+          const box = await card.boundingBox()
+          const view = await running.page.evaluate(() => ({
+            width: window.innerWidth,
+            height: window.innerHeight
+          }))
+          seen = `card ${JSON.stringify(box)} in window ${JSON.stringify(view)}`
+          return (
+            box !== null &&
+            box.x >= 0 &&
+            box.y >= 0 &&
+            box.x + box.width <= view.width &&
+            box.y + box.height <= view.height
+          )
+        })
+        .toBe(true)
+    } catch (err) {
+      throw new Error(`the "${title}" card does not fit the window: ${seen}`, { cause: err })
+    }
   }
 }
 // The tour switches pages itself, a moment after showing a step: wait for it before using the page.

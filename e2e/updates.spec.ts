@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test'
 import { launch, workspace, type Running } from './app'
-import { serveFeed, type Feed } from './update-feed'
+import { assetName, FEED_NAME, serveFeed, type Feed } from './update-feed'
 
 // The real updater against a local feed (updates spec §8, layer 3): the check, the download and its
 // checksum, and the banner. It stops short of pressing Restart to Update: the swap needs a signed app
@@ -31,10 +31,10 @@ test('a newer version is found, downloaded and offered in the banner', async () 
   await expect(running.page.getByText('Version 99.0.0 is ready.')).toBeVisible()
   await expect(running.page.getByRole('button', { name: 'Restart to Update' })).toBeVisible()
   expect(await running.invoke('updates:getState')).toEqual({ kind: 'ready', version: '99.0.0' })
-  // The feed first, then the zip it names (the updater also looks for a blockmap, for a partial
-  // download, and falls back to the whole zip without one).
-  expect(feed.requests[0]).toBe('/latest-mac.yml')
-  expect(feed.requests).toContain('/Folk-Dance-Player-99.0.0-universal.zip')
+  // The feed first, then the file it names (the updater also looks for a blockmap, for a partial
+  // download, and falls back to the whole file without one).
+  expect(feed.requests[0]).toBe(`/${FEED_NAME}`)
+  expect(feed.requests).toContain(`/${assetName('99.0.0')}`)
 })
 
 test('the banner can be dismissed', async () => {
@@ -55,7 +55,7 @@ test('a feed at the current version offers nothing', async () => {
   await start({ version: info })
   expect(await running.invoke('updates:check')).toEqual({ kind: 'idle' })
   await expect(running.page.getByRole('button', { name: 'Restart to Update' })).toHaveCount(0)
-  expect(feed.requests).toEqual(['/latest-mac.yml'])
+  expect(feed.requests).toEqual([`/${FEED_NAME}`])
 })
 
 test('a zip whose checksum does not match is never offered', async () => {

@@ -7,18 +7,24 @@ import { backupDatabase } from '../../../src/main/db/backup'
 import { openDatabase } from '../../../src/main/db/connection'
 
 const dirs: string[] = []
+const open: DatabaseSync[] = []
 const tempDir = () => {
   const dir = mkdtempSync(join(tmpdir(), 'fdp-backup-'))
   dirs.push(dir)
   return dir
 }
-afterEach(() => dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true })))
+// Windows will not delete a file that is open: close the databases first.
+afterEach(() => {
+  open.splice(0).forEach((db) => db.close())
+  dirs.splice(0).forEach((d) => rmSync(d, { recursive: true, force: true }))
+})
 
 // A library on disk with one song title in it, at schema version 3.
 function library(dir: string, title = 'Hora'): DatabaseSync {
   const db = openDatabase(join(dir, 'folk-dance-player.sqlite'))
   db.exec(`CREATE TABLE songs (title TEXT); PRAGMA user_version = 3;`)
   db.prepare('INSERT INTO songs VALUES (?)').run(title)
+  open.push(db)
   return db
 }
 const at = (minute: number) => new Date(2026, 9, 14, 20, minute, 5, 123)

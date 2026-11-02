@@ -11,10 +11,20 @@ import { tunePath } from '../../../scripts/make-tour-tune.mjs'
 const TUNE_DIR = dirname(tunePath('hava-nagila'))
 
 let dir: string
+const open: { close(): void }[] = []
+// Windows will not delete a file that is open: libraries built here are closed after each test.
+const build: typeof buildDemoLibrary = (...args) => {
+  const built = buildDemoLibrary(...args)
+  open.push(built.db)
+  return built
+}
 beforeEach(() => {
   dir = mkdtempSync(join(tmpdir(), 'fdp-demo-test-'))
 })
-afterEach(() => rmSync(dir, { recursive: true, force: true }))
+afterEach(() => {
+  open.splice(0).forEach((db) => db.close())
+  rmSync(dir, { recursive: true, force: true })
+})
 
 const all = {
   search: '',
@@ -24,7 +34,7 @@ const all = {
 
 describe('the practice library', () => {
   test('has about eight songs from several countries', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     const rows = listLibrary(db, all)
     expect(rows.length).toBeGreaterThanOrEqual(7)
     expect(rows.length).toBeLessThanOrEqual(10)
@@ -32,7 +42,7 @@ describe('the practice library', () => {
   })
 
   test('has one tune with two dances: Legnala Dana, as Legnala Dana and as Lesnoto', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     const many = db
       .prepare(
         `SELECT s.title, GROUP_CONCAT(d.name, '|') AS dances FROM dance_songs ds
@@ -46,7 +56,7 @@ describe('the practice library', () => {
   })
 
   test('the two tunes that play are Hava Nagila and Korobushka, each its own audio', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     const path = (title: string): string =>
       (
         db
@@ -60,7 +70,7 @@ describe('the practice library', () => {
   })
 
   test('has one dance used by two tunes, each with its own teacher', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     const shared = db
       .prepare(
         'SELECT dance_id AS danceId, COUNT(*) AS n FROM dance_songs GROUP BY dance_id HAVING n = 2'
@@ -86,7 +96,7 @@ describe('the practice library', () => {
   })
 
   test('names its dances for real dances, not after the tunes', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     const names = db
       .prepare('SELECT name FROM dances ORDER BY name')
       .all()
@@ -108,7 +118,7 @@ describe('the practice library', () => {
   })
 
   test('has a favorite, a local playlist, a synced playlist in a folder, and a saved program', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     expect(
       listLibrary(db, { ...all, filter: { kind: 'favorites' } }).length
     ).toBeGreaterThanOrEqual(1)
@@ -124,7 +134,7 @@ describe('the practice library', () => {
   })
 
   test('every song’s file exists, is the practice tune, and has its length recorded', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     const files = db.prepare('SELECT path, duration_ms AS ms FROM files').all() as {
       path: string
       ms: number
@@ -144,18 +154,19 @@ describe('the practice library', () => {
   test('building in two folders gives independent libraries', () => {
     const other = mkdtempSync(join(tmpdir(), 'fdp-demo-test-'))
     try {
-      const a = buildDemoLibrary(dir, TUNE_DIR)
-      const b = buildDemoLibrary(other, TUNE_DIR)
+      const a = build(dir, TUNE_DIR)
+      const b = build(other, TUNE_DIR)
       a.db.prepare("UPDATE songs SET title = 'Changed'").run()
       expect(listLibrary(b.db, all).some((r) => r.title === 'Changed')).toBe(false)
       expect(a.dbPath).not.toBe(b.dbPath)
     } finally {
+      open.splice(0).forEach((db) => db.close()) // both libraries: `dir`'s is removed after the test
       rmSync(other, { recursive: true, force: true })
     }
   })
 
   test('is a migrated library with the current schema', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     const version = db.prepare('PRAGMA user_version').get() as { user_version: number }
     expect(version.user_version).toBeGreaterThanOrEqual(7)
   })
@@ -163,13 +174,13 @@ describe('the practice library', () => {
 
 describe('the practice library without Apple Music', () => {
   test('has no synced playlist or folder', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR, { appleMirrors: false })
+    const { db } = build(dir, TUNE_DIR, { appleMirrors: false })
     expect(listPlaylistFolders(db)).toEqual([])
     expect(listPlaylists(db).map((p) => p.name)).toEqual(['Easy circle dances'])
   })
 
   test('has the Festival 2026 folder and Balkan night by default', () => {
-    const { db } = buildDemoLibrary(dir, TUNE_DIR)
+    const { db } = build(dir, TUNE_DIR)
     expect(listPlaylistFolders(db).map((f) => f.name)).toContain('Festival 2026')
     expect(listPlaylists(db).map((p) => p.name)).toContain('Balkan night')
   })

@@ -16,7 +16,7 @@ describe('userDataOverride', () => {
 
   it('gives an unpackaged run its own folder, so a development build never migrates the real library', () => {
     expect(userDataOverride({}, false, appData, 'mac')).toBe(
-      '/Users/me/Library/Application Support/Folk Dance Player (dev)'
+      join(appData, 'Folk Dance Player (dev)')
     )
     expect(userDataOverride({ LOCALAPPDATA: local }, false, appData, 'windows')).toBe(
       join(appData, 'Folk Dance Player (dev)')

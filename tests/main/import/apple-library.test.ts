@@ -44,18 +44,27 @@ const xml = appleLibraryXml(
 )
 
 describe('parseAppleLibrary', () => {
-  test('reads tracks with decoded file paths and Apple Music tags', () => {
-    const lib = parseAppleLibrary(xml)
-    expect(lib.tracks.get(101)).toEqual({
-      trackId: 101,
-      persistentId: 'AAA0000000000101',
-      path: '/Music/Balkan/Ajde Jano.mp3',
-      tags: { title: 'Ajde Jano', artist: 'Ensemble', albumArtist: 'Bora Özkök', genre: 'Serbia' },
-      durationMs: 201000,
-      kind: 'MPEG audio file'
-    })
-    expect(lib.tracks.get(102)?.path).toBe('/Music/Ali Paşa.mp3')
-  })
+  // Library.xml holds macOS paths, which are resolved for the system the parser runs on.
+  test.skipIf(process.platform === 'win32')(
+    'reads tracks with decoded file paths and Apple Music tags',
+    () => {
+      const lib = parseAppleLibrary(xml)
+      expect(lib.tracks.get(101)).toEqual({
+        trackId: 101,
+        persistentId: 'AAA0000000000101',
+        path: '/Music/Balkan/Ajde Jano.mp3',
+        tags: {
+          title: 'Ajde Jano',
+          artist: 'Ensemble',
+          albumArtist: 'Bora Özkök',
+          genre: 'Serbia'
+        },
+        durationMs: 201000,
+        kind: 'MPEG audio file'
+      })
+      expect(lib.tracks.get(102)?.path).toBe('/Music/Ali Paşa.mp3')
+    }
+  )
 
   test('gives streaming-only tracks no path', () => {
     expect(parseAppleLibrary(xml).tracks.get(104)?.path).toBeNull()

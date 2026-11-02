@@ -32,7 +32,7 @@ const fileIdOf = (title: string): number =>
     .file_id
 
 const rel = (items: { path: string }[]): string[] =>
-  items.map((i) => i.path.slice(dir.path.length + 1)).sort()
+  items.map((i) => i.path.slice(dir.path.length + 1).replaceAll('\\', '/')).sort()
 
 beforeEach(() => {
   db = createTestDb()
