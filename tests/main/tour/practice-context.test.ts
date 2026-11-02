@@ -16,6 +16,7 @@ beforeEach(() => {
   context = createPracticeContext({
     dir,
     tuneDir: dirname(tunePath('hava-nagila')),
+    platform: 'mac',
     appVersion: '0.3.0',
     send: (channel, payload) => void sent.push([channel, payload])
   })

@@ -9,6 +9,7 @@ import { PlayerSession } from '../session/player-session'
 import { createSessionPorts } from '../session/session-ports'
 import { SettingsStore } from '../settings/settings-store'
 import { buildDemoLibrary } from './demo-library'
+import type { Platform } from '@shared/platform'
 
 export const UNAVAILABLE = 'Not available in the practice library'
 
@@ -56,6 +57,7 @@ export interface PracticeOptions {
   dir: string
   tuneDir: string // holds the practice tunes (hava-nagila.wav, korobushka.wav)
   appVersion: string
+  platform: Platform // the real app's: the practice library mirrors what it can show
   // Where the context's events go: only to the window that is touring.
   send<C extends EventChannel>(channel: C, payload: EventContract[C]): void
 }
@@ -75,7 +77,12 @@ export function createPracticeContext(opts: PracticeOptions): PracticeContext {
   const handlers = createHandlers({
     db,
     settings,
-    appInfo: () => ({ version: opts.appVersion, dbPath, schemaVersion: getSchemaVersion(db) }),
+    appInfo: () => ({
+      version: opts.appVersion,
+      dbPath,
+      schemaVersion: getSchemaVersion(db),
+      platform: opts.platform
+    }),
     importer: {
       // A pretend import (tour spec §3, step 1): it "finds" the songs the practice library already
       // has, so the dialog's mapping, progress and summary are real and nothing is added.

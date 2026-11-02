@@ -30,7 +30,12 @@ function fakeApi(
         return { enabled: false, open: false, mode: null, display: null, notice: null }
       }
       if (channel === 'app:getInfo')
-        return { version: '0.1.0', dbPath: '/data/folk-dance-player.sqlite', schemaVersion: 1 }
+        return {
+          version: '0.1.0',
+          dbPath: '/data/folk-dance-player.sqlite',
+          schemaVersion: 1,
+          platform: 'mac'
+        }
       if (channel === 'settings:set') {
         const [key, value] = args as [keyof Settings, unknown]
         if (key === 'autoContinue.seconds' && (value as number) < 0) {

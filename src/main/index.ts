@@ -73,11 +73,14 @@ import { PlayerSession } from './session/player-session'
 import { createSessionPorts } from './session/session-ports'
 import { guardNavigation } from './navigation'
 import { userDataOverride } from './user-data'
+import { platformFrom } from '@shared/platform'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
 
 // A separate library for end-to-end tests, smoke runs and development builds, so they never
 // touch the real one.
+// Which system this is, decided once (Windows release spec §3.1).
+const platform = platformFrom(process.platform, process.env, app.isPackaged)
 const userData = userDataOverride(process.env, app.isPackaged, app.getPath('appData'))
 if (userData) app.setPath('userData', userData)
 
@@ -322,6 +325,7 @@ function startApp(): void {
           ? process.resourcesPath
           : join(app.getAppPath(), 'resources', 'tour'),
         appVersion: app.getVersion(),
+        platform,
         send
       }),
     sendToWindow: sendTo,
@@ -629,7 +633,12 @@ function startApp(): void {
   realHandlers = createHandlers({
     db,
     settings,
-    appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) }),
+    appInfo: () => ({
+      version: app.getVersion(),
+      dbPath,
+      schemaVersion: getSchemaVersion(db),
+      platform
+    }),
     importer,
     dialogs: importDialogs,
     attachments,

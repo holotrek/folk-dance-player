@@ -1,3 +1,4 @@
+import type { Platform } from './platform'
 import type {
   ApplePlaylistConflict,
   ApplePreview,
@@ -50,6 +51,7 @@ export interface AppInfo {
   version: string
   dbPath: string
   schemaVersion: number
+  platform: Platform
 }
 
 export interface LibraryStats {

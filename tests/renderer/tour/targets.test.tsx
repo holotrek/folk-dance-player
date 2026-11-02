@@ -292,7 +292,7 @@ describe('the tour’s targets exist on the screen', () => {
       'remote:status': { trusted: true, keys: [] },
       'appleSync:status': APPLE_SYNC_OFF,
       'projector:displays': [],
-      'app:getInfo': { version: '0.3.0', dbPath: '/x', schemaVersion: 7 }
+      'app:getInfo': { version: '0.3.0', dbPath: '/x', schemaVersion: 7, platform: 'mac' }
     })
     renderWithLibrary(<SettingsPage api={fake.api} />, fake.api)
     await screen.findByText('Appearance')

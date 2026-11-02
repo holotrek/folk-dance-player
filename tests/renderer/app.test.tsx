@@ -22,7 +22,12 @@ function setup(extra: Record<string, unknown> = {}) {
     'library:holding': [], // the Program page's Holding panel
     'tour:state': { part: null, landOn: null },
     'tour:offer': null,
-    'app:getInfo': { version: '0.1.0', dbPath: '/data/fdp.sqlite', schemaVersion: 2 },
+    'app:getInfo': {
+      version: '0.1.0',
+      dbPath: '/data/fdp.sqlite',
+      schemaVersion: 2,
+      platform: 'mac'
+    },
     ...extra
   })
   ;(window as { api?: unknown }).api = fake.api
