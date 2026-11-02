@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- In the Advanced tour, clicking a playlist now stops on a step that shows what is in it, with a **Next**, instead of moving on at once. The Remote control step mentions macOS's permission only on a Mac.
+
 ### Added
 
 - **Windows (beta).** Folk Dance Player runs on Windows 10 and later, from a per-user installer (`Folk-Dance-Player-Setup-<version>.exe`) that keeps your library in `%LOCALAPPDATA%\Folk Dance Player` and updates itself like the Mac version. Apple Music sync is a Mac feature, so the Windows app doesn't show it, and its menus, tours and wording follow Windows. The first Windows builds are not signed, so Windows SmartScreen warns before the first launch (More info → Run anyway).

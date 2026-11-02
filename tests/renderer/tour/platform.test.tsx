@@ -46,7 +46,7 @@ describe('the tours on Windows', () => {
 
   test('mention no Apple, Mac, Finder or ⌘', () => {
     for (const s of resolved)
-      expect(`${s.title} ${s.body}`, s.id).not.toMatch(/Apple|Mac\b|Finder|⌘/)
+      expect(`${s.title} ${s.body}`, s.id).not.toMatch(/Apple|Mac|macOS|Finder|⌘/)
   })
 
   test('have no step about folders or synced playlists', () => {

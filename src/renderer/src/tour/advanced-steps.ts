@@ -100,6 +100,15 @@ export const ADVANCED_DEFS: TourStepDef[] = [
     }
   }),
   step({
+    id: 'advanced.playlist-contents',
+    page: 'program',
+    kind: 'explain',
+    target: 'library.table',
+    placement: 'left',
+    title: 'What is in the playlist',
+    body: 'The library now shows only the songs in Easy circle dances. Click All Music in the sidebar any time to see everything again.'
+  }),
+  step({
     id: 'advanced.open-folder',
     when: (caps) => caps.appleMusicSync,
     page: 'music',
@@ -149,7 +158,9 @@ export const ADVANCED_DEFS: TourStepDef[] = [
     target: 'settings.remote',
     placement: 'right',
     title: 'Settings: Remote control',
-    body: 'If you use a presentation remote or keyboard media keys, they play, pause and skip songs even when the app is in the background. macOS asks you to allow it here.'
+    body: (caps) =>
+      'If you use a presentation remote or keyboard media keys, they play, pause and skip songs even when the app is in the background.' +
+      (caps.mediaKeyTrust ? ' macOS asks you to allow it here.' : '')
   }),
   step({
     id: 'advanced.settings-about',

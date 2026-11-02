@@ -182,6 +182,7 @@ describe('the tour’s targets exist on the screen', () => {
     record()
     for (const id of [
       'library.search',
+      'library.table',
       'program.panel',
       'holding.panel',
       'holding.row:Korobushka',

@@ -384,6 +384,8 @@ async function doAdvancedTour(): Promise<void> {
 
   await onStep('Playlists')
   await page.getByText('Easy circle dances').first().click()
+  await onStep('What is in the playlist')
+  await next()
   // The Apple Music folder and synced playlist exist (and have steps) only where sync does; run
   // this spec with FDP_PLATFORM=windows to walk the Windows tour.
   if (process.env['FDP_PLATFORM'] !== 'windows') {
