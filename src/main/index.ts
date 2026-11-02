@@ -81,10 +81,11 @@ import { SettingsStore } from './settings/settings-store'
 // touch the real one.
 // Which system this is, decided once (Windows release spec §3.1).
 const platform = platformFrom(process.platform, process.env, app.isPackaged)
-const userData = userDataOverride(process.env, app.isPackaged, app.getPath('appData'))
+const userData = userDataOverride(process.env, app.isPackaged, app.getPath('appData'), platform)
 if (userData) app.setPath('userData', userData)
 
-// The app log (spec §10.1): ~/Library/Logs/Folk Dance Player, or beside a separate library.
+// The app log (spec §10.1): ~/Library/Logs/Folk Dance Player on a Mac, beside the library on
+// Windows, or beside a separate library.
 app.setAppLogsPath(userData ? join(userData, 'logs') : undefined)
 const log = createLogger({ dir: app.getPath('logs') })
 // Logged rather than shown: a side failure must never stop the music (spec §10.1).
