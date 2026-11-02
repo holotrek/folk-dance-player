@@ -6,9 +6,13 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8
 
 describe('package.json', () => {
   // VS Code's terminal sets ELECTRON_RUN_AS_NODE=1, which makes Electron run as plain Node.
-  test.each(['dev', 'start'])('%s script unsets ELECTRON_RUN_AS_NODE', (name) => {
-    expect(pkg.scripts[name]).toMatch(/^env -u ELECTRON_RUN_AS_NODE /)
-  })
+  // scripts/run.mts removes it (it is cross-platform, unlike `env -u`; dist.test.ts tests it).
+  test.each(['dev', 'start', 'test:e2e', 'icon'])(
+    '%s script unsets ELECTRON_RUN_AS_NODE',
+    (name) => {
+      expect(pkg.scripts[name]).toMatch(/node scripts\/run\.mts /)
+    }
+  )
 
   // Electron 44 has no install script of its own; electron-vite needs the binary present.
   test('postinstall downloads the Electron binary', () => {
@@ -61,7 +65,8 @@ describe('the Music library helper (Apple Music sync spec §3.1)', () => {
     expect(builder).toMatch(/NSAppleMusicUsageDescription:/)
     expect(builder).toMatch(/x64ArchFiles: Contents\/Resources\/fdp-music-library/)
     expect(pkg.scripts['build:helper']).toBe('sh scripts/build-helper.sh')
-    expect(pkg.scripts.dist).toContain('npm run build:helper')
+    // scripts/dist.mts builds the helper on a Mac only (dist.test.ts checks the steps).
+    expect(pkg.scripts.dist).toBe('node scripts/dist.mts')
     expect(read('.gitignore')).toMatch(/^resources\/bin\/$/m)
   })
 })
