@@ -10,6 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Unplugging the projector's display and plugging it back in now returns the projector view to that display, instead of sometimes swapping places with the app window.
 - **Auto-show when playing** now appears on the same display as the Projector switch (the TV or projector), not over the screen you are working on, whenever a second display is connected. It works as if you had turned the Projector switch on: moving the mouse or pressing Esc does not close it, and turning the switch off does.
 
 ### Changed

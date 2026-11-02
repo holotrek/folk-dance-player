@@ -66,6 +66,8 @@ export class ProjectorController {
   private mode: 'projector' | 'laptop' | null = null
   private display: DisplayInfo | null = null
   private notice: string | null = null
+  // The display projector mode lost to an unplug: when it comes back, the view returns to it.
+  private lostId: number | null = null
 
   constructor(private readonly deps: ProjectorDeps) {}
 
@@ -93,6 +95,7 @@ export class ProjectorController {
 
   // The player bar's projector toggle.
   setEnabled(on: boolean): void {
+    this.lostId = null
     this.deps.settings.setEnabled(on)
     if (on) this.openProjector()
     else this.close()
@@ -129,8 +132,10 @@ export class ProjectorController {
     const displays = this.deps.displays()
     if (this.window && this.mode === 'projector') {
       const now = displays.find((d) => d.id === this.display?.id)
-      if (!now) this.close()
-      else {
+      if (!now) {
+        this.lostId = this.display?.id ?? null
+        this.close()
+      } else {
         this.display = now
         this.window.setBounds(now.bounds)
       }
@@ -138,7 +143,7 @@ export class ProjectorController {
     if (this.deps.settings.enabled() && this.mode !== 'projector') {
       // A separate display appeared: projector mode (from laptop mode, or after an unplug). Without
       // one, an unplugged projector's view stays closed rather than covering the laptop mid-event.
-      if (chooseDisplay(displays, this.deps.settings.displayId(), this.deps.controlDisplayId())) {
+      if (this.chosen(displays)) {
         this.close()
         this.openProjector()
       }
@@ -164,6 +169,7 @@ export class ProjectorController {
 
   // Settings chose another display: an open projector moves there.
   displayChoiceChanged(): void {
+    this.lostId = null
     if (this.mode === 'projector') {
       this.close()
       this.openProjector()
@@ -175,14 +181,21 @@ export class ProjectorController {
     this.window?.send(channel, payload)
   }
 
+  // The display for projector mode: the one chosen in Settings, else the one just lost to an unplug
+  // (a replug must not swap the view with the control window), else Automatic.
+  private chosen(displays: DisplayInfo[]): DisplayInfo | null {
+    return chooseDisplay(
+      displays,
+      this.deps.settings.displayId() ?? this.lostId,
+      this.deps.controlDisplayId()
+    )
+  }
+
   private openProjector(): void {
     if (this.window) return
     const displays = this.deps.displays()
-    const target = chooseDisplay(
-      displays,
-      this.deps.settings.displayId(),
-      this.deps.controlDisplayId()
-    )
+    const target = this.chosen(displays)
+    this.lostId = null
     if (!target) return this.open(this.controlDisplay(), 'laptop', NO_SEPARATE_DISPLAY)
     this.keepControlOff(target)
     this.open(target, 'projector', null)

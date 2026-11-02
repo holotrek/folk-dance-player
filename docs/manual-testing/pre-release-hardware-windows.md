@@ -33,7 +33,7 @@ issue) before the release. Write what you see for the findings, especially for s
 - [x] 7. Extended: Projector on covers the TV completely, **including the taskbar** if the taskbar is on that display. The cursor and the control window stay on the main display.
 - [ ] 8. Duplicate (Win+P): the view covers the screen and Esc or moving the mouse closes it.
 - [x] 9. Unplug the TV's input while it is showing, then reconnect: the view comes back or closes cleanly; the control window never ends up on the TV.
-- [ ] 10. Mixed scaling: set the main display to 125% or 150% and the TV to 100% (or the reverse). The slide fills the screen exactly (no gap, no overflow) and the Canva slide is aligned with its saved image.
+- [x] 10. Mixed scaling: set the main display to 125% or 150% and the TV to 100% (or the reverse). The slide fills the screen exactly (no gap, no overflow) and the Canva slide is aligned with its saved image.
 - [ ] 11. Play with the projector on for two songs: the Canva slide changes without flashing the previous one or showing Canva's controls.
 - [ ] 12. HDMI audio: plugging in the TV moves Windows' default audio to it; note whether the music follows mid-song.
 
@@ -41,8 +41,8 @@ Results from the first Windows desktop (a monitor and a TV on one graphics card,
 7 passes (nothing shows over the projector view, taskbar included). 6 passes (the media keys work).
 9 passes: unplugging while the view is showing leaves no gray window (the macOS known issue in
 `projector-unplug.md` does not happen here). Reconnecting made the projector view and the control
-window **swap displays**; the view still works, so this is a known issue to fix before the release,
-not a blocker. 8, 10, 11 and 12 are not done yet.
+window **swap displays** (fixed in the build after that; retest: unplug and replug with the app on the
+monitor and the view on the TV, and send the log's "Display event" lines if it still swaps). 10 passes (different scales look right). 8, 11 and 12 are not done yet.
 
 ## D. Updates and removal
 

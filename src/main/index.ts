@@ -626,7 +626,18 @@ function startApp(): void {
     )
   })
   for (const event of ['display-added', 'display-removed', 'display-metrics-changed'] as const) {
-    screen.on(event as 'display-added', () => controller.displaysChanged())
+    screen.on(event as 'display-added', () => {
+      const control = mainWindow.isDestroyed()
+        ? 'gone'
+        : screen.getDisplayMatching(mainWindow.getBounds()).id
+      log.info(
+        `Display event ${event}: displays ${screen
+          .getAllDisplays()
+          .map((d) => d.id)
+          .join(', ')}; the control window is on ${control}`
+      )
+      controller.displaysChanged()
+    })
   }
 
   mainWindow.on('moved', () => controller.keepControlReachable())

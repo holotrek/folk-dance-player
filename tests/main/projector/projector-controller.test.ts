@@ -298,6 +298,38 @@ describe('projector window', () => {
     expect(open()).toHaveLength(1)
   })
 
+  test('after the projector display is unplugged and plugged back in, the view returns to it and the control window is moved off it', () => {
+    const monitor = { ...hdmi, label: 'Monitor' }
+    const { controller, state, open } = setup([monitor, tv], { control: 2 })
+    controller.setEnabled(true)
+    expect(open()[0].bounds).toEqual(tv.bounds)
+    state.displays = [monitor]
+    controller.displaysChanged()
+    expect(open()).toHaveLength(0)
+    // Back again, with the control window already on the TV (Windows moved it, or it was on the
+    // only display for a moment): the view must not swap places with it.
+    state.displays = [monitor, tv]
+    state.control = 3
+    controller.displaysChanged()
+    expect(open()[0].bounds).toEqual(tv.bounds)
+    expect(state.control).toBe(2)
+  })
+
+  test('turning the switch off forgets the unplugged display, so Automatic applies again', () => {
+    const monitor = { ...hdmi, label: 'Monitor' }
+    const { controller, state, open } = setup([monitor, tv], { control: 2 })
+    controller.setEnabled(true)
+    state.displays = [monitor]
+    controller.displaysChanged()
+    controller.setEnabled(false)
+    controller.setEnabled(true) // one display: laptop mode, nothing remembered
+    controller.setEnabled(false)
+    state.displays = [monitor, tv]
+    state.control = 3
+    controller.setEnabled(true)
+    expect(open()[0].bounds).toEqual(monitor.bounds)
+  })
+
   test('sends only to an open window, and announces every status change', () => {
     const { controller, state, open } = setup([laptop, hdmi])
     controller.send('projector:snapshot', 1)
