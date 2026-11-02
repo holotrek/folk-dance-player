@@ -85,10 +85,26 @@ function setup(
 
 describe('choosing the projector display', () => {
   test('the saved display when connected, else the first external one; none when alone', () => {
-    expect(chooseDisplay([laptop, hdmi, tv], 3)?.id).toBe(3)
-    expect(chooseDisplay([laptop, hdmi, tv], 99)?.id).toBe(2)
-    expect(chooseDisplay([laptop, hdmi], null)?.id).toBe(2)
-    expect(chooseDisplay([laptop], null)).toBeNull()
+    expect(chooseDisplay([laptop, hdmi, tv], 3, 1)?.id).toBe(3)
+    expect(chooseDisplay([laptop, hdmi, tv], 99, 1)?.id).toBe(2)
+    expect(chooseDisplay([laptop, hdmi], null, 1)?.id).toBe(2)
+    expect(chooseDisplay([laptop], null, 1)).toBeNull()
+  })
+
+  test('automatic skips the display the control window is on, so a desktop with two externals uses the other one', () => {
+    const monitor = { ...hdmi, id: 2, label: 'Monitor' }
+    expect(chooseDisplay([monitor, tv], null, 2)?.id).toBe(3)
+    expect(chooseDisplay([monitor, tv], null, 3)?.id).toBe(2)
+    expect(chooseDisplay([laptop, monitor, tv], null, 2)?.id).toBe(3) // an external before the laptop
+    expect(chooseDisplay([laptop, monitor, tv], null, 1)?.id).toBe(2)
+  })
+
+  test('with a laptop and one external display, the external one even when the control window is on it', () => {
+    expect(chooseDisplay([laptop, hdmi], null, 2)?.id).toBe(2)
+  })
+
+  test('a saved display still wins, even if the control window is on it', () => {
+    expect(chooseDisplay([hdmi, tv], 3, 3)?.id).toBe(3)
   })
 })
 

@@ -35,13 +35,21 @@ const NO_SEPARATE_DISPLAY =
   'No separate display — showing on this screen (move the mouse or press Esc to close)'
 
 // The projector's display (spec §8.1): the one chosen in Settings when it's connected, else the
-// first external one. None when there's only one display.
-export function chooseDisplay(displays: DisplayInfo[], savedId: number | null): DisplayInfo | null {
+// first external one that the control window isn't on (a desktop's monitor and TV are both
+// external, so "external" alone would pick the screen the operator is working on), else any
+// external one (macOS may have put the control window on a laptop's only external display), else
+// any other display. None when there's only one display.
+export function chooseDisplay(
+  displays: DisplayInfo[],
+  savedId: number | null,
+  controlId: number
+): DisplayInfo | null {
   if (displays.length < 2) return null
   return (
     displays.find((d) => d.id === savedId) ??
+    displays.find((d) => d.id !== controlId && !d.internal) ??
     displays.find((d) => !d.internal) ??
-    displays.find((d) => d.id !== displays[0].id) ??
+    displays.find((d) => d.id !== controlId) ??
     null
   )
 }
@@ -74,7 +82,11 @@ export class ProjectorController {
   // At startup: projector mode left on from last time opens again on a projector (spec §8.1).
   // Without one, nothing covers the laptop; plugging one in opens it.
   start(): void {
-    const projector = chooseDisplay(this.deps.displays(), this.deps.settings.displayId())
+    const projector = chooseDisplay(
+      this.deps.displays(),
+      this.deps.settings.displayId(),
+      this.deps.controlDisplayId()
+    )
     if (this.deps.settings.enabled() && projector) this.openProjector()
     this.announce()
   }
@@ -117,7 +129,7 @@ export class ProjectorController {
     if (this.deps.settings.enabled() && this.mode !== 'projector') {
       // A separate display appeared: projector mode (from laptop mode, or after an unplug). Without
       // one, an unplugged projector's view stays closed rather than covering the laptop mid-event.
-      if (chooseDisplay(displays, this.deps.settings.displayId())) {
+      if (chooseDisplay(displays, this.deps.settings.displayId(), this.deps.controlDisplayId())) {
         this.close()
         this.openProjector()
       }
@@ -157,7 +169,11 @@ export class ProjectorController {
   private openProjector(): void {
     if (this.window) return
     const displays = this.deps.displays()
-    const target = chooseDisplay(displays, this.deps.settings.displayId())
+    const target = chooseDisplay(
+      displays,
+      this.deps.settings.displayId(),
+      this.deps.controlDisplayId()
+    )
     if (!target) return this.open(this.controlDisplay(), 'laptop', NO_SEPARATE_DISPLAY)
     this.keepControlOff(target)
     this.open(target, 'projector', null)

@@ -198,7 +198,7 @@ describe('SettingsPage', () => {
     const { api, calls } = fakeApi()
     renderWithMantine(<SettingsPage api={api} />)
     // Select labels a hidden input too (like TagsInput), so find it by the value it shows.
-    const select = await screen.findByDisplayValue('Automatic (the first external display)')
+    const select = await screen.findByDisplayValue('Automatic (the first other display)')
     await userEvent.click(select)
     await userEvent.click(await screen.findByRole('option', { name: 'Epson Projector' }))
     expect(calls).toContainEqual(['projector:setDisplay', 2])
