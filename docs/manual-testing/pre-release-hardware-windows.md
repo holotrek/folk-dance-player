@@ -42,7 +42,7 @@ Results from the first Windows desktop (a monitor and a TV on one graphics card,
 9 passes: unplugging while the view is showing leaves no gray window (the macOS known issue in
 `projector-unplug.md` does not happen here). Reconnecting made the projector view and the control
 window **swap displays** (fixed in the build after that; retest: unplug and replug with the app on the
-monitor and the view on the TV, and send the log's "Display event" lines if it still swaps). 10 passes (different scales look right). 8, 11 and 12 are not done yet.
+monitor and the view on the TV, and send the log's "Display event" lines if it still swaps). 10 passes (different scales look right). Known issue, not fixed: after a replug the taskbar can show over the view (switch the Projector off and on; see `docs/spikes/windows-projector.md`). 8, 11 and 12 are not done yet.
 
 ## D. Updates and removal
 
