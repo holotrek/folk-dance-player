@@ -85,10 +85,26 @@ function setup(
 
 describe('choosing the projector display', () => {
   test('the saved display when connected, else the first external one; none when alone', () => {
-    expect(chooseDisplay([laptop, hdmi, tv], 3)?.id).toBe(3)
-    expect(chooseDisplay([laptop, hdmi, tv], 99)?.id).toBe(2)
-    expect(chooseDisplay([laptop, hdmi], null)?.id).toBe(2)
-    expect(chooseDisplay([laptop], null)).toBeNull()
+    expect(chooseDisplay([laptop, hdmi, tv], 3, 1)?.id).toBe(3)
+    expect(chooseDisplay([laptop, hdmi, tv], 99, 1)?.id).toBe(2)
+    expect(chooseDisplay([laptop, hdmi], null, 1)?.id).toBe(2)
+    expect(chooseDisplay([laptop], null, 1)).toBeNull()
+  })
+
+  test('automatic skips the display the control window is on, so a desktop with two externals uses the other one', () => {
+    const monitor = { ...hdmi, id: 2, label: 'Monitor' }
+    expect(chooseDisplay([monitor, tv], null, 2)?.id).toBe(3)
+    expect(chooseDisplay([monitor, tv], null, 3)?.id).toBe(2)
+    expect(chooseDisplay([laptop, monitor, tv], null, 2)?.id).toBe(3) // an external before the laptop
+    expect(chooseDisplay([laptop, monitor, tv], null, 1)?.id).toBe(2)
+  })
+
+  test('with a laptop and one external display, the external one even when the control window is on it', () => {
+    expect(chooseDisplay([laptop, hdmi], null, 2)?.id).toBe(2)
+  })
+
+  test('a saved display still wins, even if the control window is on it', () => {
+    expect(chooseDisplay([hdmi, tv], 3, 3)?.id).toBe(3)
   })
 })
 
@@ -238,17 +254,80 @@ describe('projector window', () => {
     expect(open()[0].bounds).toEqual(tv.bounds)
   })
 
-  test('the auto-fullscreen view covers the laptop only while projector mode is off', () => {
-    const { controller, open } = setup([laptop, hdmi])
+  test('with a separate display, auto-show is projector mode: the switch turns on, and only the switch closes it', () => {
+    const { controller, state, open } = setup([laptop, hdmi])
+    controller.showOnLaptop()
+    expect(open()[0].bounds).toEqual(hdmi.bounds)
+    expect(state.settings.enabled).toBe(true)
+    expect(controller.status()).toMatchObject({
+      enabled: true,
+      mode: 'projector',
+      display: 'Epson Projector'
+    })
+    controller.dismiss() // mouse or Esc
+    expect(open()).toHaveLength(1)
+    controller.setEnabled(false) // the Projector switch
+    expect(open()).toHaveLength(0)
+  })
+
+  test('auto-show uses the display the Projector switch would use', () => {
+    const monitor = { ...hdmi, label: 'Monitor' }
+    const desktop = setup([monitor, tv], { control: 2 })
+    desktop.controller.showOnLaptop()
+    expect(desktop.open()[0].bounds).toEqual(tv.bounds)
+
+    const saved = setup([laptop, hdmi, tv], { saved: 3 })
+    saved.controller.showOnLaptop()
+    expect(saved.open()[0].bounds).toEqual(tv.bounds)
+  })
+
+  test('with only one display, auto-show covers it as laptop mode, which activity closes', () => {
+    const { controller, state, open } = setup([laptop])
     controller.showOnLaptop()
     expect(open()[0].bounds).toEqual(laptop.bounds)
     expect(controller.status()).toMatchObject({ enabled: false, mode: 'laptop', notice: null })
     controller.dismiss()
     expect(open()).toHaveLength(0)
+    expect(state.settings.enabled).toBe(false)
+  })
+
+  test('auto-show does nothing while a view is already open', () => {
+    const { controller, open } = setup([laptop, hdmi], { enabled: true })
     controller.setEnabled(true)
     controller.showOnLaptop()
     expect(open()).toHaveLength(1)
-    expect(open()[0].bounds).toEqual(hdmi.bounds)
+  })
+
+  test('after the projector display is unplugged and plugged back in, the view returns to it and the control window is moved off it', () => {
+    const monitor = { ...hdmi, label: 'Monitor' }
+    const { controller, state, open } = setup([monitor, tv], { control: 2 })
+    controller.setEnabled(true)
+    expect(open()[0].bounds).toEqual(tv.bounds)
+    state.displays = [monitor]
+    controller.displaysChanged()
+    expect(open()).toHaveLength(0)
+    // Back again, with the control window already on the TV (Windows moved it, or it was on the
+    // only display for a moment): the view must not swap places with it.
+    state.displays = [monitor, tv]
+    state.control = 3
+    controller.displaysChanged()
+    expect(open()[0].bounds).toEqual(tv.bounds)
+    expect(state.control).toBe(2)
+  })
+
+  test('turning the switch off forgets the unplugged display, so Automatic applies again', () => {
+    const monitor = { ...hdmi, label: 'Monitor' }
+    const { controller, state, open } = setup([monitor, tv], { control: 2 })
+    controller.setEnabled(true)
+    state.displays = [monitor]
+    controller.displaysChanged()
+    controller.setEnabled(false)
+    controller.setEnabled(true) // one display: laptop mode, nothing remembered
+    controller.setEnabled(false)
+    state.displays = [monitor, tv]
+    state.control = 3
+    controller.setEnabled(true)
+    expect(open()[0].bounds).toEqual(monitor.bounds)
   })
 
   test('sends only to an open window, and announces every status change', () => {

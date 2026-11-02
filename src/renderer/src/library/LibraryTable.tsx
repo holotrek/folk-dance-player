@@ -294,6 +294,7 @@ export default function LibraryTable({
     <div
       className={[classes.table, compact ? classes.compact : ''].join(' ')}
       role="table"
+      data-tour="library.table"
       aria-label="Songs"
       aria-rowcount={rows.length}
       // Focusable, so clicking a row gives the table the keyboard: ⌘A / Ctrl+A selects every song.

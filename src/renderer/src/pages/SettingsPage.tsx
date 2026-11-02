@@ -18,6 +18,7 @@ import { mappingFromSettings, mappingSettings, type ImportMapping } from '@share
 import type { Appearance, SettingKey, Settings } from '@shared/settings'
 import { colorSchemeFor } from '../appearance'
 import Logo from '../components/Logo'
+import { usePlatform } from '../platform'
 import ProjectorDisplay from '../components/ProjectorDisplay'
 import RemoteSection from '../components/RemoteSection'
 import ImportMappingFields from '../import/ImportMappingFields'
@@ -27,6 +28,7 @@ type NumberKey = 'autoContinue.seconds' | 'countdown.seconds'
 type BooleanKey = 'autoContinue.enabled' | 'updates.check'
 
 export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.Element {
+  const { store } = usePlatform()
   const [settings, setSettings] = useState<Settings | null>(null)
   const [info, setInfo] = useState<AppInfo | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -149,7 +151,11 @@ export default function SettingsPage({ api }: { api: RendererApi }): React.JSX.E
           </Group>
           <Text size="sm">Library database (schema {info.schemaVersion}):</Text>
           <Code>{info.dbPath}</Code>
-          {toggle('updates.check', 'Check for updates automatically')}
+          {store ? (
+            <Text size="sm">Updated by the Microsoft Store.</Text>
+          ) : (
+            toggle('updates.check', 'Check for updates automatically')
+          )}
           <Text size="xs" c="dimmed" mt="xs">
             The tour’s practice tunes are synthesized renditions of the traditional melodies “Hava
             Nagila” and “Korobushka”.

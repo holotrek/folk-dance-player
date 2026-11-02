@@ -3,7 +3,7 @@ import { useMantineColorScheme, type MantineColorScheme } from '@mantine/core'
 import type { RendererApi } from '@shared/contract'
 import type { Appearance } from '@shared/settings'
 
-// Settings → Appearance as Mantine's color scheme ("system" follows the Mac).
+// Settings → Appearance as Mantine's color scheme ("system" follows the system).
 export const colorSchemeFor = (appearance: Appearance): MantineColorScheme =>
   appearance === 'system' ? 'auto' : appearance
 

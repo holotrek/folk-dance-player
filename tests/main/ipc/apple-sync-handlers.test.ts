@@ -16,7 +16,7 @@ function setup() {
   const deps: HandlerDeps = {
     db,
     settings,
-    appInfo: () => ({ version: '0', dbPath: '', schemaVersion: 4 }),
+    appInfo: () => ({ version: '0', dbPath: '', schemaVersion: 4, platform: 'mac' }),
     importer: {
       run: async () => emptySummary(),
       cancel: () => undefined,

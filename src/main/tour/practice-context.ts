@@ -9,6 +9,7 @@ import { PlayerSession } from '../session/player-session'
 import { createSessionPorts } from '../session/session-ports'
 import { SettingsStore } from '../settings/settings-store'
 import { buildDemoLibrary } from './demo-library'
+import { capabilitiesFor, type Platform } from '@shared/platform'
 
 export const UNAVAILABLE = 'Not available in the practice library'
 
@@ -56,6 +57,8 @@ export interface PracticeOptions {
   dir: string
   tuneDir: string // holds the practice tunes (hava-nagila.wav, korobushka.wav)
   appVersion: string
+  platform: Platform // the real app's: the practice library mirrors what it can show
+  store?: boolean // the real app is the Microsoft Store version
   // Where the context's events go: only to the window that is touring.
   send<C extends EventChannel>(channel: C, payload: EventContract[C]): void
 }
@@ -63,7 +66,9 @@ export interface PracticeOptions {
 // A second, complete set of handlers over a throwaway library (tour spec §4.1): its own database,
 // settings and player, with no import, sync, Canva, projector, remote or attachments.
 export function createPracticeContext(opts: PracticeOptions): PracticeContext {
-  const { db, dbPath } = buildDemoLibrary(opts.dir, opts.tuneDir)
+  const { db, dbPath } = buildDemoLibrary(opts.dir, opts.tuneDir, {
+    appleMirrors: capabilitiesFor(opts.platform).appleMusicSync
+  })
   const settings = new SettingsStore(db)
   const programsChanged = coalesced(() => opts.send('programs:changed', null))
   const libraryChanged = coalesced(() => opts.send('library:changed', null))
@@ -75,7 +80,13 @@ export function createPracticeContext(opts: PracticeOptions): PracticeContext {
   const handlers = createHandlers({
     db,
     settings,
-    appInfo: () => ({ version: opts.appVersion, dbPath, schemaVersion: getSchemaVersion(db) }),
+    appInfo: () => ({
+      version: opts.appVersion,
+      dbPath,
+      schemaVersion: getSchemaVersion(db),
+      platform: opts.platform,
+      store: opts.store === true
+    }),
     importer: {
       // A pretend import (tour spec §3, step 1): it "finds" the songs the practice library already
       // has, so the dialog's mapping, progress and summary are real and nothing is added.

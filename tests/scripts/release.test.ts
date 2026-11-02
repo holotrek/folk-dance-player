@@ -98,6 +98,44 @@ describe('checking the update feed', () => {
   })
 })
 
+// A feed as electron-builder writes it for the Windows installer (latest.yml): one file, no blockmap.
+const EXE_NAME = 'Folk-Dance-Player-Setup-0.4.0.exe'
+const exe = Buffer.from('the installer as built')
+const exeFeed = (bytes: Buffer, version = '0.4.0'): string => `version: ${version}
+files:
+  - url: ${EXE_NAME}
+    sha512: ${sha(bytes)}
+    size: ${bytes.length}
+path: ${EXE_NAME}
+sha512: ${sha(bytes)}
+releaseDate: '2026-11-02T03:00:00.000Z'
+`
+
+describe('the Windows update feed (latest.yml)', () => {
+  test('a good feed passes', () => {
+    expect(
+      checkUpdateFeed({
+        yml: exeFeed(exe),
+        version: '0.4.0',
+        files: { [EXE_NAME]: exe },
+        feedName: 'latest.yml'
+      })
+    ).toEqual({ ok: true })
+  })
+
+  test('its messages name latest.yml, not latest-mac.yml', () => {
+    const result = checkUpdateFeed({
+      yml: exeFeed(exe, '0.3.0'),
+      version: '0.4.0',
+      files: { [EXE_NAME]: exe },
+      feedName: 'latest.yml'
+    })
+    const error = (result as { error: string }).error
+    expect(error).toContain('latest.yml')
+    expect(error).not.toContain('latest-mac.yml')
+  })
+})
+
 describe('versions', () => {
   test('compare by number, not as text', () => {
     expect(compareVersions('0.10.0', '0.9.9')).toBeGreaterThan(0)

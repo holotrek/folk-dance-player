@@ -29,11 +29,11 @@ export function workspace(songs: Id3Tags[]) {
   }
 }
 
-// The packaged app, when FDP_APP names its .app (npm run test:e2e:dist); otherwise the build in
-// out/, started as `electron .` so it reports its own version.
-const PACKAGED = process.env['FDP_APP']
-  ? join(process.env['FDP_APP'], 'Contents', 'MacOS', basename(process.env['FDP_APP'], '.app'))
-  : null
+// The packaged app, when FDP_APP names it (npm run test:e2e:dist): a macOS .app, or the Windows
+// .exe; otherwise the build in out/, started as `electron .` so it reports its own version.
+const packagedExecutable = (app: string): string =>
+  app.endsWith('.app') ? join(app, 'Contents', 'MacOS', basename(app, '.app')) : app
+const PACKAGED = process.env['FDP_APP'] ? packagedExecutable(process.env['FDP_APP']) : null
 
 // Starts the app on the library in `userData`, with any extra environment (FDP_APPLE_LIBRARY…).
 export async function launch(

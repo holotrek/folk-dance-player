@@ -5,7 +5,7 @@ import type { DisplayChoice } from '@shared/projector'
 
 const AUTO = 'auto'
 
-// Spec §6.4: which display the projector uses. Automatic is the first external display; a chosen
+// Spec §6.4: which display the projector uses. Automatic is the first external display that the control window isn't on; a chosen
 // display that isn't connected now falls back to automatic until it's back.
 export default function ProjectorDisplay(props: {
   api: RendererApi
@@ -18,7 +18,7 @@ export default function ProjectorDisplay(props: {
     void api.invoke('projector:displays').then(setDisplays)
   }, [api])
   const data = [
-    { value: AUTO, label: 'Automatic (the first external display)' },
+    { value: AUTO, label: 'Automatic (the first other display)' },
     ...displays.map((d) => ({
       value: String(d.id),
       label: d.internal ? `${d.label} (this screen)` : d.label

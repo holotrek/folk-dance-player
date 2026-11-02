@@ -8,6 +8,20 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Unplugging the projector's display and plugging it back in now returns the projector view to that display, instead of sometimes swapping places with the app window.
+- **Auto-show when playing** now appears on the same display as the Projector switch (the TV or projector), not over the screen you are working on, whenever a second display is connected. It works as if you had turned the Projector switch on: moving the mouse or pressing Esc does not close it, and turning the switch off does.
+
+### Changed
+
+- The projector's **Automatic** display is now the first display the app's window is not on, so on a desktop with a monitor and a TV the projector goes to the other screen. With a laptop it still picks the external display.
+- In the Advanced tour, clicking a playlist now stops on a step that shows what is in it, with a **Next**, instead of moving on at once. The Remote control step mentions macOS's permission only on a Mac.
+
+### Added
+
+- **Windows (beta).** Folk Dance Player runs on Windows 10 and later, from a per-user installer (`Folk-Dance-Player-Setup-<version>.exe`) that keeps your library in `%LOCALAPPDATA%\Folk Dance Player` and updates itself like the Mac version. Apple Music sync is a Mac feature, so the Windows app doesn't show it, and its menus, tours and wording follow Windows. The first Windows builds are not signed, so Windows SmartScreen warns before the first launch (More info → Run anyway).
+
 ## [0.3.0] - 2026-11-01
 
 ### Added

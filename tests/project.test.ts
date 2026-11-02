@@ -1,4 +1,4 @@
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
 import { resolve } from 'path'
 import { describe, expect, test } from 'vitest'
 
@@ -6,9 +6,13 @@ const pkg = JSON.parse(readFileSync(resolve(__dirname, '../package.json'), 'utf8
 
 describe('package.json', () => {
   // VS Code's terminal sets ELECTRON_RUN_AS_NODE=1, which makes Electron run as plain Node.
-  test.each(['dev', 'start'])('%s script unsets ELECTRON_RUN_AS_NODE', (name) => {
-    expect(pkg.scripts[name]).toMatch(/^env -u ELECTRON_RUN_AS_NODE /)
-  })
+  // scripts/run.mts removes it (it is cross-platform, unlike `env -u`; dist.test.ts tests it).
+  test.each(['dev', 'start', 'test:e2e', 'icon'])(
+    '%s script unsets ELECTRON_RUN_AS_NODE',
+    (name) => {
+      expect(pkg.scripts[name]).toMatch(/node scripts\/run\.mts /)
+    }
+  )
 
   // Electron 44 has no install script of its own; electron-vite needs the binary present.
   test('postinstall downloads the Electron binary', () => {
@@ -61,7 +65,30 @@ describe('the Music library helper (Apple Music sync spec §3.1)', () => {
     expect(builder).toMatch(/NSAppleMusicUsageDescription:/)
     expect(builder).toMatch(/x64ArchFiles: Contents\/Resources\/fdp-music-library/)
     expect(pkg.scripts['build:helper']).toBe('sh scripts/build-helper.sh')
-    expect(pkg.scripts.dist).toContain('npm run build:helper')
+    // scripts/dist.mts builds the helper on a Mac only (dist.test.ts checks the steps).
+    expect(pkg.scripts.dist).toBe('node scripts/dist.mts')
     expect(read('.gitignore')).toMatch(/^resources\/bin\/$/m)
+  })
+})
+
+describe('the Microsoft Store package (Windows Store design)', () => {
+  const read = (file: string): string => readFileSync(resolve(__dirname, '..', file), 'utf8')
+
+  test('has our own tile images, not electron-builder’s default Electron logo', () => {
+    for (const name of [
+      'StoreLogo.png',
+      'Square44x44Logo.png',
+      'Square150x150Logo.png',
+      'Wide310x150Logo.png'
+    ]) {
+      expect(existsSync(resolve(__dirname, '..', 'build/appx', name)), name).toBe(true)
+    }
+  })
+
+  test('is configured, and built by a script that passes the Store identity', () => {
+    const builder = read('electron-builder.yml')
+    expect(builder).toMatch(/^appx:\n(?: {2}.+\n)*? {2}displayName: Folk Dance Player$/m)
+    expect(builder).toMatch(/^ {2}artifactName: Folk-Dance-Player-Store-\$\{version\}\.\$\{ext\}$/m)
+    expect(pkg.scripts['dist:store']).toBe('node scripts/store.mts')
   })
 })
