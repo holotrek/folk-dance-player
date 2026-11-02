@@ -182,10 +182,13 @@ const toDisplay = (d: Electron.Display): DisplayInfo => ({
 
 function createMainWindow(): BrowserWindow {
   const win = new BrowserWindow({
+    // On Windows the sizes are of the content: its title bar and menu bar would otherwise leave
+    // about 575 of the 640, where macOS's title bar leaves 612, and the tour's cards would not fit.
+    useContentSize: platform === 'windows',
     width: 1280,
     height: 800,
     minWidth: 1000,
-    minHeight: 640,
+    minHeight: platform === 'windows' ? 612 : 640,
     title: 'Folk Dance Player',
     show: false,
     webPreferences: {

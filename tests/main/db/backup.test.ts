@@ -36,6 +36,7 @@ describe('the startup backup (spec §10.1)', () => {
     const path = backupDatabase(db, join(dir, 'backups'), at(30), 3)
     expect(path).toBe(join(dir, 'backups', 'folk-dance-player-2026-10-14_203005-123.sqlite'))
     const copy = new DatabaseSync(path!, { readOnly: true })
+    open.push(copy)
     expect(copy.prepare('SELECT title FROM songs').all()).toEqual([{ title: 'Hora' }])
     expect(copy.prepare('PRAGMA user_version').get()).toEqual({ user_version: 3 })
   })
@@ -71,6 +72,7 @@ describe('the startup backup (spec §10.1)', () => {
   test('a brand-new, empty library has nothing to back up', () => {
     const dir = tempDir()
     const db = openDatabase(join(dir, 'folk-dance-player.sqlite'))
+    open.push(db)
     expect(backupDatabase(db, join(dir, 'backups'), at(1), 3)).toBeNull()
   })
 })
