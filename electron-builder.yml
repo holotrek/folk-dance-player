@@ -64,6 +64,9 @@ nsis:
   shortcutName: Folk Dance Player
   # Never delete someone's library with the program.
   deleteAppDataOnUninstall: false
+  # No blockmap: the installer is signed after it is built, which changes its bytes and would leave a
+  # blockmap wrong. The updater downloads the whole file.
+  differentialPackage: false
 # Written into the app as app-update.yml: where the in-app updater looks for new releases.
 publish:
   provider: github
