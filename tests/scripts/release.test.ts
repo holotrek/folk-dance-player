@@ -5,8 +5,7 @@ import {
   checkUpdateFeed,
   compareVersions,
   nextVersion,
-  prepareChangelog,
-  refreshFeedChecksum
+  prepareChangelog
 } from '../../scripts/release.mjs'
 
 const CHANGELOG = `# Changelog
@@ -102,7 +101,6 @@ describe('checking the update feed', () => {
 // A feed as electron-builder writes it for the Windows installer (latest.yml): one file, no blockmap.
 const EXE_NAME = 'Folk-Dance-Player-Setup-0.4.0.exe'
 const exe = Buffer.from('the installer as built')
-const signedExe = Buffer.from('the installer as built, plus a signature')
 const exeFeed = (bytes: Buffer, version = '0.4.0'): string => `version: ${version}
 files:
   - url: ${EXE_NAME}
@@ -135,61 +133,6 @@ describe('the Windows update feed (latest.yml)', () => {
     const error = (result as { error: string }).error
     expect(error).toContain('latest.yml')
     expect(error).not.toContain('latest-mac.yml')
-  })
-
-  test('after signing, the refreshed feed carries the signed file’s checksum and size, and passes', () => {
-    const stale = exeFeed(exe)
-    expect(
-      checkUpdateFeed({
-        yml: stale,
-        version: '0.4.0',
-        files: { [EXE_NAME]: signedExe },
-        feedName: 'latest.yml'
-      })
-    ).toMatchObject({ ok: false }) // why the refresh is needed
-    const refreshed = refreshFeedChecksum({ yml: stale, file: EXE_NAME, bytes: signedExe })
-    expect(refreshed).toContain(`    sha512: ${sha(signedExe)}\n    size: ${signedExe.length}\n`)
-    expect(refreshed).toContain(`\nsha512: ${sha(signedExe)}\n`)
-    expect(refreshed).not.toContain(sha(exe))
-    expect(refreshed).toContain('version: 0.4.0\n')
-    expect(refreshed).toContain(`path: ${EXE_NAME}\n`)
-    expect(refreshed).toContain("releaseDate: '2026-11-02T03:00:00.000Z'")
-    expect(
-      checkUpdateFeed({
-        yml: refreshed,
-        version: '0.4.0',
-        files: { [EXE_NAME]: signedExe },
-        feedName: 'latest.yml'
-      })
-    ).toEqual({ ok: true })
-  })
-
-  test('a feed with no size line, as electron-builder writes it without a blockmap, is refreshed too', () => {
-    // Copied from a real build with differentialPackage: false.
-    const real = `version: 0.4.0
-files:
-  - url: ${EXE_NAME}
-    sha512: kP00Y28sS7FH+vZtK1GgxdUJyK1G9V5tJOeYlDTVCqqZruFF0JoJF2DwyfkaovIFHV5Y8B/UubKUFdkXifuTnw==
-path: ${EXE_NAME}
-sha512: kP00Y28sS7FH+vZtK1GgxdUJyK1G9V5tJOeYlDTVCqqZruFF0JoJF2DwyfkaovIFHV5Y8B/UubKUFdkXifuTnw==
-releaseDate: '2026-11-02T05:45:18.836Z'
-`
-    const refreshed = refreshFeedChecksum({ yml: real, file: EXE_NAME, bytes: signedExe })
-    expect(refreshed).not.toContain('size:')
-    expect(
-      checkUpdateFeed({
-        yml: refreshed,
-        version: '0.4.0',
-        files: { [EXE_NAME]: signedExe },
-        feedName: 'latest.yml'
-      })
-    ).toEqual({ ok: true })
-  })
-
-  test('refreshing a feed that does not name the file fails, naming the file', () => {
-    expect(() =>
-      refreshFeedChecksum({ yml: exeFeed(exe), file: 'Other-Setup.exe', bytes: signedExe })
-    ).toThrow('Other-Setup.exe')
   })
 })
 

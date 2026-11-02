@@ -3,7 +3,6 @@
 //   node scripts/release.mts prepare <major|minor|patch|x.y.z>   bump the version, date the notes
 //   node scripts/release.mts check [notes-file]                  may this version be released?
 //   node scripts/release.mts check-feed [dist-dir]               are the update feeds right?
-//   node scripts/release.mts refresh-feed [dist-dir]             latest.yml after the installer is signed
 // The pure functions below are unit-tested; the commands at the bottom wire them to the files.
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -128,26 +127,6 @@ export function checkUpdateFeed(input: {
   return { ok: true }
 }
 
-// Signing changes the installer's bytes after electron-builder wrote its feed, so the checksum and
-// size must be written again: the feed entry for `file` and the top-level `sha512` (electron-updater
-// verifies the download against it). Everything else in the feed is left as it was.
-export function refreshFeedChecksum(input: { yml: string; file: string; bytes: Buffer }): string {
-  const { yml, file, bytes } = input
-  const sha512 = createHash('sha512').update(bytes).digest('base64')
-  // electron-builder writes a `size:` only for a file with a blockmap, so it is changed if there.
-  const entry = new RegExp(
-    `(-\\s*url:\\s*${file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\n\\s*)sha512:[ \\t]*\\S+([ \\t]*\\n\\s*size:[ \\t]*)?(\\d+)?`
-  )
-  if (!entry.test(yml)) throw new Error(`The update feed does not name ${file}.`)
-  return yml
-    .replace(
-      entry,
-      (_, head, gap, size) =>
-        `${head}sha512: ${sha512}${gap ?? ''}${size === undefined ? '' : bytes.length}`
-    )
-    .replace(/^sha512:[ \t]*\S+[ \t]*$/m, `sha512: ${sha512}`)
-}
-
 // The feeds the in-app updater reads: macOS and Windows.
 const FEEDS = ['latest-mac.yml', 'latest.yml']
 
@@ -209,21 +188,9 @@ function main(args: string[]): void {
       }
       console.log(`${feedName} is good for ${readVersion()}`)
     }
-  } else if (command === 'refresh-feed') {
-    // After the installer is signed: write its new checksum and size into latest.yml.
-    const dir = arg ?? 'dist'
-    const ymlPath = join(dir, 'latest.yml')
-    const yml = existsSync(ymlPath) ? readFileSync(ymlPath, 'utf8') : ''
-    const file = /^path:\s*(.+?)\s*$/m.exec(yml)?.[1]
-    if (!file || !existsSync(join(dir, file))) {
-      console.error(`::error::${ymlPath} or the installer it names is missing from ${dir}.`)
-      process.exit(1)
-    }
-    writeFileSync(ymlPath, refreshFeedChecksum({ yml, file, bytes: readFileSync(join(dir, file)) }))
-    console.log(`latest.yml now carries the checksum of ${file}`)
   } else {
     console.error(
-      'Usage: node scripts/release.mts prepare <major|minor|patch|x.y.z> | check [notes-file] | check-feed [dist-dir] | refresh-feed [dist-dir]'
+      'Usage: node scripts/release.mts prepare <major|minor|patch|x.y.z> | check [notes-file] | check-feed [dist-dir]'
     )
     process.exit(2)
   }

@@ -26,8 +26,7 @@ Goals:
 Non-goals (for now):
 
 - Moving a library between the two versions: issue #80.
-- Signing the direct installer: the SignPath steps in Create Release stay, dormant without secrets;
-  a certificate later turns them on.
+- Signing the direct installer: there is no signing service in the workflow (SignPath is removed).
 - Automating Store submission (Partner Center's submission API): the first submissions are by hand.
 - A Windows on ARM build, or Mac App Store.
 
@@ -80,7 +79,7 @@ steps; AGENTS.md gets the decision; the Windows hardware checklist gets a Store 
 
 - `appx`, not `msix`: the stable target; both are accepted by the Store. Revisit when `msix` leaves beta.
 - Store identity values are repository variables, not secrets.
-- The direct installer's signing steps stay in place, dormant.
+- The signing steps were removed from the workflow; the direct installer stays unsigned.
 - The Store version is the main button only after it is approved; before that the direct download is
   the only Windows button, still with the warning.
 - No in-app message in the direct version about the Store (the site says it).

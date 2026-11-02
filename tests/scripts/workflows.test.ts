@@ -51,38 +51,18 @@ describe('the PR Gate', () => {
 describe('Create Release on Windows', () => {
   const release = workflow('create-release.yml')
 
-  it('builds the Windows installer and its update feed, with no blockmap', () => {
+  it('builds the Windows installer and its update feed', () => {
     const entry = release.slice(release.indexOf('- os: windows-latest'))
     const installer = entry.slice(0, entry.indexOf('runs-on:'))
     expect(installer).toContain('dist/*.exe')
+    expect(installer).toContain('dist/*.exe.blockmap')
     expect(installer).toContain('dist/latest.yml')
-    expect(installer).not.toContain('blockmap')
   })
 
-  it('signs through SignPath, with the action pinned to a commit', () => {
-    expect(release).toContain(
-      'signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0'
-    )
-    // The app is signed, then the installer made from the signed app, then the installer signed.
-    const order = [
-      '--win --dir',
-      'unsigned-app',
-      '--prepackaged dist/win-unpacked',
-      'unsigned-installer',
-      'refresh-feed'
-    ].map((text) => release.indexOf(text))
-    expect(order.every((at) => at > 0)).toBe(true)
-    expect(order).toEqual([...order].sort((a, b) => a - b))
-  })
-
-  it('refuses to publish an unsigned installer, but lets a dry run build one', () => {
-    const step = release.slice(release.indexOf('name: A release is signed (Windows)'))
-    const condition = step.slice(0, step.indexOf('run:')).match(/if: .+/)?.[0] ?? ''
-    expect(condition).toContain("env.DRY_RUN != 'true'")
-    expect(condition).toContain("steps.signing.outputs.enabled != 'true'")
-    expect(release).toMatch(
-      /name: Build \(Windows, unsigned\)\n\s+if: .*steps\.signing\.outputs\.enabled != 'true'/
-    )
+  it('has no signing service: the installer is unsigned, and the Store version is the signed way in', () => {
+    expect(release).not.toMatch(/signpath/i)
+    expect(release).not.toContain('--prepackaged')
+    expect(release).not.toContain('A release is signed')
   })
 
   it('checks every update feed, on every system', () => {
@@ -95,12 +75,6 @@ describe('Create Release on Windows', () => {
     for (const line of release.split('\n')) {
       if (/secrets\./.test(line)) expect(line, line).not.toMatch(/\b(echo|printf)\b/)
     }
-    // The only run steps that read the API token get it through env.
-    expect(release).not.toMatch(/run:.*SIGNPATH_API_TOKEN/)
-  })
-
-  it('lets the SignPath action read the job', () => {
-    expect(release).toMatch(/permissions:\n\s+actions: read[^\n]*\n\s+contents: read/)
   })
 })
 

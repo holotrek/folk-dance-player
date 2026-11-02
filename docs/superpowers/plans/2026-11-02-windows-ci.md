@@ -1,5 +1,7 @@
 # Windows CI and Release Implementation Plan
 
+> **Status (2026-11-02):** executed, then the signing parts (Task 4's SignPath chain, Task 1's `refresh-feed`, Task 2's no-blockmap setting and Task 6's secrets docs) were removed when SignPath declined the project. The rest stands.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Windows is built, tested and released by CI next to macOS: a Windows unit-test job, Windows in the end-to-end matrix, a Windows build in Create Release that is signed through SignPath once its secrets are filled in, a checked `latest.yml`, and the Windows hardware checklist in the release PR.

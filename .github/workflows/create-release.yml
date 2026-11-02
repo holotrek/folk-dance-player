@@ -5,8 +5,7 @@
 # 3. Publish, once every build has passed: tag vX.Y.Z and publish one GitHub release with every
 #    installer, the update files the in-app updater reads (the macOS zip with latest-mac.yml, and
 #    the Windows installer with latest.yml) and the CHANGELOG notes, so a release is never
-#    half-published. The Windows installer is signed through SignPath; with no SignPath secrets a
-#    dry run builds it unsigned, and a real release refuses to go on.
+#    half-published. The Windows installer is not signed.
 # A dry run (any branch) does everything but publish, and keeps the installers for a week.
 name: Create Release
 
@@ -68,18 +67,14 @@ jobs:
               dist/*.zip
               dist/*.zip.blockmap
               dist/latest-mac.yml
-          # No blockmap: the installer is signed after it is built (electron-builder.yml).
           - os: windows-latest
             installer: |
               dist/*.exe
+              dist/*.exe.blockmap
               dist/latest.yml
     runs-on: ${{ matrix.os }}
-    # The signing certificate, Apple's notarization key and the SignPath values are secrets of this
-    # environment.
+    # The signing certificate and Apple's notarization key are secrets of this environment.
     environment: Package
-    permissions:
-      actions: read # the SignPath action reads the job
-      contents: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -124,94 +119,11 @@ jobs:
           npm run dist -- -c.mac.identity="Evan Kaiser (AQM822PPT3)" \
             -c.mac.hardenedRuntime=true -c.mac.notarize=true
           rm -f "$APPLE_API_KEY"
-      # Windows. Smart App Control judges every executable, so the app inside the installer is signed
-      # too: build the unpacked app, have SignPath sign it, pack the installer from the signed app,
-      # have SignPath sign the installer, then write its new checksum into latest.yml. Every SignPath
-      # value is a secret; dry runs use the test signing policy.
-      - name: Is signing set up? (Windows)
-        id: signing
+      # Windows: the installer is unsigned (the direct download warns about it on the site); the
+      # Microsoft Store version is the signed way in.
+      - name: Build (Windows)
         if: runner.os == 'Windows'
-        shell: bash
-        env:
-          SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
-        run: |
-          if [ -n "$SIGNPATH_API_TOKEN" ]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "enabled=false" >> "$GITHUB_OUTPUT"
-          fi
-      - name: A release is signed (Windows)
-        if: runner.os == 'Windows' && env.DRY_RUN != 'true' && steps.signing.outputs.enabled != 'true'
-        shell: bash
-        run: |
-          echo "::error::A Windows release is signed. Add the SIGNPATH_* secrets to the Package environment (CONTRIBUTING.md, Signing the Windows installer)."
-          exit 1
-      - name: Build (Windows, unsigned)
-        if: runner.os == 'Windows' && steps.signing.outputs.enabled != 'true'
         run: npm run dist
-      - name: Build the app to sign (Windows)
-        if: runner.os == 'Windows' && steps.signing.outputs.enabled == 'true'
-        shell: bash
-        run: |
-          npm run build
-          npx electron-builder --win --dir --publish never
-      - name: Keep the app for SignPath (Windows)
-        id: upload-app
-        if: runner.os == 'Windows' && steps.signing.outputs.enabled == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: unsigned-app
-          path: dist/win-unpacked
-          retention-days: 1
-          if-no-files-found: error
-      - name: Sign the app (Windows, SignPath)
-        if: runner.os == 'Windows' && steps.signing.outputs.enabled == 'true'
-        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ env.DRY_RUN == 'true' && secrets.SIGNPATH_TEST_SIGNING_POLICY_SLUG || secrets.SIGNPATH_SIGNING_POLICY_SLUG }}
-          artifact-configuration-slug: ${{ secrets.SIGNPATH_APP_ARTIFACT_CONFIGURATION_SLUG }}
-          github-artifact-id: ${{ steps.upload-app.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 1800 # a release policy may wait for approval
-          output-artifact-directory: signed-app
-      - name: Pack the installer from the signed app (Windows)
-        if: runner.os == 'Windows' && steps.signing.outputs.enabled == 'true'
-        shell: bash
-        run: |
-          cp -R signed-app/. dist/win-unpacked/
-          npx electron-builder --win --prepackaged dist/win-unpacked --publish never
-      - name: Keep the installer for SignPath (Windows)
-        id: upload-installer
-        if: runner.os == 'Windows' && steps.signing.outputs.enabled == 'true'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: unsigned-installer
-          path: dist/Folk-Dance-Player-Setup-*.exe
-          retention-days: 1
-          if-no-files-found: error
-      - name: Sign the installer (Windows, SignPath)
-        if: runner.os == 'Windows' && steps.signing.outputs.enabled == 'true'
-        uses: signpath/github-action-submit-signing-request@f6d04783b4569d051e0c80105fe66e82819d0092 # v3.0
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ secrets.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ secrets.SIGNPATH_PROJECT_SLUG }}
-          signing-policy-slug: ${{ env.DRY_RUN == 'true' && secrets.SIGNPATH_TEST_SIGNING_POLICY_SLUG || secrets.SIGNPATH_SIGNING_POLICY_SLUG }}
-          artifact-configuration-slug: ${{ secrets.SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG }}
-          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 1800
-          output-artifact-directory: signed-installer
-      # Signing changed the installer's bytes, so latest.yml's checksum is written again.
-      - name: Use the signed installer (Windows)
-        if: runner.os == 'Windows' && steps.signing.outputs.enabled == 'true'
-        shell: bash
-        run: |
-          cp signed-installer/Folk-Dance-Player-Setup-*.exe dist/
-          node scripts/release.mts refresh-feed dist
       # The in-app updater reads latest-mac.yml and latest.yml: a release whose feed is wrong would
       # strand every installed copy. Checked on every run, dry runs included.
       - name: The update feeds match the release

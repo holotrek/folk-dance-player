@@ -70,11 +70,3 @@ describe('the Music library helper (Apple Music sync spec §3.1)', () => {
     expect(read('.gitignore')).toMatch(/^resources\/bin\/$/m)
   })
 })
-
-describe('the Windows installer (CI release spec: signing changes its bytes)', () => {
-  test('has no blockmap, which signing after the build would leave wrong', () => {
-    const builder = readFileSync(resolve(__dirname, '..', 'electron-builder.yml'), 'utf8')
-    const nsis = builder.slice(builder.indexOf('\nnsis:'), builder.indexOf('\npublish:'))
-    expect(nsis).toMatch(/^ {2}differentialPackage: false$/m)
-  })
-})

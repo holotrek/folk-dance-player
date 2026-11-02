@@ -79,7 +79,7 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 - **The CHANGELOG check:** a pull request that changes `src/` must add a line to `CHANGELOG.md`. If nobody would notice the change, label the PR `no changelog`. Dependabot's PRs are skipped.
 - **Adding an OS:**
   - **End-to-end tests:** add it to the `e2e` job's `matrix.os` in `pr-gate.yml` (for example `ubuntu-latest`, under a virtual display, or `windows-latest`), and add its check to the required checks of the `main` ruleset (Settings → Rules).
-  - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml` (for Windows: `windows-latest`, `dist/*.exe`, `dist/latest.yml`; done). `check-feed` checks every feed it finds in `dist/`. The Windows jobs in the PR Gate (`Unit tests (Windows)`, `End-to-end (windows-latest)`) are not required checks until you add them to the ruleset.
+  - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml` (for Windows: `windows-latest`, `dist/*.exe`, `dist/*.exe.blockmap`, `dist/latest.yml`; done). `check-feed` checks every feed it finds in `dist/`. The Windows jobs in the PR Gate (`Unit tests (Windows)`, `End-to-end (windows-latest)`) are not required checks until you add them to the ruleset.
 - **Pull requests from forks** run with read-only permissions and no secrets. GitHub asks a maintainer to approve a first-time contributor's runs.
 - **Dependabot** opens weekly update PRs (npm packages and the workflows' actions), only for releases at least 14 days old. It skips major npm upgrades: make those on purpose (Vite stays on 7 for electron-vite 5; `@types/node` follows Node's major).
 
@@ -116,52 +116,13 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 
 In CI, the certificate (as `CSC_LINK` and `CSC_KEY_PASSWORD`) and the App Store Connect key for notarization (`APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`) are secrets of the `Package` environment, passed to Create Release's build job.
 
-### Signing the Windows installer
+### The Windows installer is unsigned
 
-Create Release signs the Windows installer through [SignPath](https://signpath.io) (the free
-open-source program), in two requests, because Smart App Control judges every executable: the
-unpacked app (`Folk Dance Player.exe`) is signed, the NSIS installer is packed from that signed
-folder, then the installer is signed, and `latest.yml` gets the signed file's checksum
-(`node scripts/release.mts refresh-feed dist`). The installer has no blockmap (`nsis.differentialPackage:
-false`), since signing changes its bytes. Without the secrets below, a dry run builds an **unsigned**
-installer, and a real release stops with "A Windows release is signed" instead of publishing one.
-
-Secrets of the `Package` environment (Settings → Environments → Package):
-
-| Secret                                           | What it is                                                                       |
-| ------------------------------------------------ | -------------------------------------------------------------------------------- |
-| `SIGNPATH_API_TOKEN`                             | An API token of a SignPath user who may submit to the policies below             |
-| `SIGNPATH_ORGANIZATION_ID`                       | The organization's ID (SignPath → Organization)                                  |
-| `SIGNPATH_PROJECT_SLUG`                          | The project's slug                                                               |
-| `SIGNPATH_SIGNING_POLICY_SLUG`                   | The policy for real releases (SignPath Foundation: `release-signing`)            |
-| `SIGNPATH_TEST_SIGNING_POLICY_SLUG`              | The policy for dry runs (`test-signing`), so a dry run needs no release approval |
-| `SIGNPATH_APP_ARTIFACT_CONFIGURATION_SLUG`       | The artifact configuration for the unpacked app                                  |
-| `SIGNPATH_INSTALLER_ARTIFACT_CONFIGURATION_SLUG` | The artifact configuration for the installer                                     |
-
-On SignPath's side: add the predefined **GitHub.com** trusted build system to the organization and
-link it to the project; create the two artifact configurations (the XML below is a sketch from
-memory: check the element names against SignPath's documentation); give the token's user submit
-permission on both policies.
-
-```xml
-<!-- the app: the artifact is the unpacked folder, zipped by upload-artifact -->
-<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
-  <zip-file>
-    <pe-file path="Folk Dance Player.exe"><authenticode-sign/></pe-file>
-  </zip-file>
-</artifact-configuration>
-
-<!-- the installer -->
-<artifact-configuration xmlns="http://signpath.io/artifact-configuration/v1">
-  <zip-file>
-    <pe-file path="Folk-Dance-Player-Setup-*.exe"><authenticode-sign/></pe-file>
-  </zip-file>
-</artifact-configuration>
-```
-
-Known gap: the uninstaller that NSIS embeds in the installer is built during packaging and is not
-signed. None of this has run against a real SignPath account yet; the first dry run with the
-secrets filled in will show what needs adjusting.
+Create Release builds the Windows installer without a signature, so Windows shows SmartScreen's
+warning, and Smart App Control (Windows 11) blocks it where it is turned on. The signed way in is the
+Microsoft Store version, which Microsoft signs (design: `docs/superpowers/specs/2026-11-02-windows-store-design.md`).
+The site tells Windows visitors that the direct download may be blocked. SignPath's free program
+declined the project, so there is no signing service in the workflow.
 
 ### Updates
 
