@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- **Windows (beta).** Folk Dance Player runs on Windows 10 and later, from a per-user installer (`Folk-Dance-Player-Setup-<version>.exe`) that keeps your library in `%LOCALAPPDATA%\Folk Dance Player` and updates itself like the Mac version. Apple Music sync is a Mac feature, so the Windows app doesn't show it, and its menus, tours and wording follow Windows. The first Windows builds are not signed, so Windows SmartScreen warns before the first launch (More info → Run anyway).
+
 ## [0.3.0] - 2026-11-01
 
 ### Added
@@ -26,7 +30,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A song, program item or held song whose dance has a PDF now offers **Open PDF** in its right-click (⋯) menu.
 - In the song editor, a song's default dance has a **Same as song** box: while it is checked the dance's name can't be edited, and renaming the song renames the dance too. Uncheck it to name the dance separately; check it again to set the dance's name back to the song's.
 - Drag a column header to reorder the columns of the Music page and of the Program page's library list (Alt+←/→ with a header focused also works). Each list keeps its own order, and right-clicking a header offers **Reset columns**.
-- **Windows (beta).** Folk Dance Player runs on Windows 10 and later, from a per-user installer (`Folk-Dance-Player-Setup-<version>.exe`) that keeps your library in `%LOCALAPPDATA%\Folk Dance Player` and updates itself like the Mac version. Apple Music sync is a Mac feature, so the Windows app doesn't show it, and its menus, tours and wording follow Windows. The first Windows builds are not signed, so Windows SmartScreen warns before the first launch (More info → Run anyway).
 
 ### Changed
 
