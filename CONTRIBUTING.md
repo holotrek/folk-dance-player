@@ -138,9 +138,9 @@ package (Windows)**) and in Create Release, and keeps it as the workflow artifac
 2. Run the PR Gate (or a Create Release dry run) and download the `store-package` artifact from the run.
 3. In the submission's **Packages** step upload the `.appx`.
 
-The package version is the app's with the major raised by one (`0.4.0` is `1.4.0.0`): the Store rejects a
-version that starts with 0, and this keeps rising when the app reaches 1.0 (`storeVersion` in
-`scripts/store.mts`). The Store version has no updater of its own (`Capabilities.store`): the Store updates
+The package version is the app's (`1.4.0` is `1.4.0.0`; the Store reserves the fourth part). The Store
+rejects a version that starts with 0, so the first package that can be submitted is from 1.0.0; a 0.x build
+still works for testing and warns (`storeVersion` in `scripts/store.mts`). The Store version has no updater of its own (`Capabilities.store`): the Store updates
 it. `npm run dist:store` builds the package on a Windows machine with the same variables set, or
 `node scripts/store.mts --test` with a placeholder identity.
 

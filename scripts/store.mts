@@ -8,13 +8,20 @@ import { readFileSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { run } from './run.mts'
 
-// The Store rejects a package version that starts with 0, and the app is 0.x. So the Store version is
-// (major + 1).minor.patch: 0.4.0 is 1.4.0, and 1.0.0 will be 2.0.0, so it keeps rising. The fourth
-// part is reserved for the Store; electron-builder adds it as 0.
+// The Store version is the app's (1.4.0 is 1.4.0.0): the fourth part is reserved for the Store, and
+// electron-builder adds it as 0. The Store rejects a version that starts with 0, so the first release
+// that can be submitted is 1.0.0.
 export function storeVersion(version: string): string {
-  const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version)
-  if (!match) throw new Error(`The version "${version}" is not major.minor.patch.`)
-  return `${Number(match[1]) + 1}.${match[2]}.${match[3]}`
+  if (!/^\d+\.\d+\.\d+$/.test(version)) {
+    throw new Error(`The version "${version}" is not major.minor.patch.`)
+  }
+  return version
+}
+
+export function storeVersionWarning(version: string): string | null {
+  return version.startsWith('0.')
+    ? `The version ${version} starts with 0, which the Microsoft Store rejects: this package can't be submitted.`
+    : null
 }
 
 const IDENTITY = ['STORE_IDENTITY_NAME', 'STORE_PUBLISHER', 'STORE_PUBLISHER_DISPLAY_NAME'] as const
@@ -66,6 +73,8 @@ function main(flags: string[]): number {
     console.error(`::error::${(err as Error).message}`)
     return 1
   }
+  const warning = storeVersionWarning(version)
+  if (warning) console.warn(`::warning::${warning}`)
   const status = run(['npm', 'run', 'build'])
   if (status !== 0) return status
   return run(args.map((arg) => shellArg(arg, process.platform)))

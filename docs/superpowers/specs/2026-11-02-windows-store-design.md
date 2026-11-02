@@ -56,7 +56,7 @@ library); drag-and-drop from File Explorer; the Canva views and the projector wi
 workflow artifact. The Store package is **not** attached to the GitHub release: users can't install
 an unsigned package, and the maintainer uploads it to Partner Center.
 
-**Version.** The Store rejects a package version that starts with 0, so the package is `(major + 1).minor.patch` (`0.4.0` is `1.4.0.0`).
+**Version.** The package version is the app's (`1.4.0` is `1.4.0.0`). The Store rejects a version that starts with 0, so the app's first release, with the Windows version, is 1.0.0.
 
 **Identity.** `win.appx` takes `identityName`, `publisher` and `publisherDisplayName` from
 repository variables (`STORE_IDENTITY_NAME`, `STORE_PUBLISHER`, `STORE_PUBLISHER_DISPLAY_NAME`, copied
