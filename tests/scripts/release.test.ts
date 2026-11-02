@@ -5,7 +5,8 @@ import {
   checkUpdateFeed,
   compareVersions,
   nextVersion,
-  prepareChangelog
+  prepareChangelog,
+  refreshFeedChecksum
 } from '../../scripts/release.mjs'
 
 const CHANGELOG = `# Changelog
@@ -95,6 +96,78 @@ describe('checking the update feed', () => {
     const result = checkUpdateFeed({ yml: real, version: '0.2.0', files: {} })
     // No files given: it must fail on the missing zip, not on parsing the version or the url.
     expect((result as { error: string }).error).toContain('Folk-Dance-Player-0.2.0-universal.zip')
+  })
+})
+
+// A feed as electron-builder writes it for the Windows installer (latest.yml): one file, no blockmap.
+const EXE_NAME = 'Folk-Dance-Player-Setup-0.4.0.exe'
+const exe = Buffer.from('the installer as built')
+const signedExe = Buffer.from('the installer as built, plus a signature')
+const exeFeed = (bytes: Buffer, version = '0.4.0'): string => `version: ${version}
+files:
+  - url: ${EXE_NAME}
+    sha512: ${sha(bytes)}
+    size: ${bytes.length}
+path: ${EXE_NAME}
+sha512: ${sha(bytes)}
+releaseDate: '2026-11-02T03:00:00.000Z'
+`
+
+describe('the Windows update feed (latest.yml)', () => {
+  test('a good feed passes', () => {
+    expect(
+      checkUpdateFeed({
+        yml: exeFeed(exe),
+        version: '0.4.0',
+        files: { [EXE_NAME]: exe },
+        feedName: 'latest.yml'
+      })
+    ).toEqual({ ok: true })
+  })
+
+  test('its messages name latest.yml, not latest-mac.yml', () => {
+    const result = checkUpdateFeed({
+      yml: exeFeed(exe, '0.3.0'),
+      version: '0.4.0',
+      files: { [EXE_NAME]: exe },
+      feedName: 'latest.yml'
+    })
+    const error = (result as { error: string }).error
+    expect(error).toContain('latest.yml')
+    expect(error).not.toContain('latest-mac.yml')
+  })
+
+  test('after signing, the refreshed feed carries the signed file’s checksum and size, and passes', () => {
+    const stale = exeFeed(exe)
+    expect(
+      checkUpdateFeed({
+        yml: stale,
+        version: '0.4.0',
+        files: { [EXE_NAME]: signedExe },
+        feedName: 'latest.yml'
+      })
+    ).toMatchObject({ ok: false }) // why the refresh is needed
+    const refreshed = refreshFeedChecksum({ yml: stale, file: EXE_NAME, bytes: signedExe })
+    expect(refreshed).toContain(`    sha512: ${sha(signedExe)}\n    size: ${signedExe.length}\n`)
+    expect(refreshed).toContain(`\nsha512: ${sha(signedExe)}\n`)
+    expect(refreshed).not.toContain(sha(exe))
+    expect(refreshed).toContain('version: 0.4.0\n')
+    expect(refreshed).toContain(`path: ${EXE_NAME}\n`)
+    expect(refreshed).toContain("releaseDate: '2026-11-02T03:00:00.000Z'")
+    expect(
+      checkUpdateFeed({
+        yml: refreshed,
+        version: '0.4.0',
+        files: { [EXE_NAME]: signedExe },
+        feedName: 'latest.yml'
+      })
+    ).toEqual({ ok: true })
+  })
+
+  test('refreshing a feed that does not name the file fails, naming the file', () => {
+    expect(() =>
+      refreshFeedChecksum({ yml: exeFeed(exe), file: 'Other-Setup.exe', bytes: signedExe })
+    ).toThrow('Other-Setup.exe')
   })
 })
 

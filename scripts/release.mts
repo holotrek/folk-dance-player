@@ -2,7 +2,8 @@
 // Node 24, which runs TypeScript directly:
 //   node scripts/release.mts prepare <major|minor|patch|x.y.z>   bump the version, date the notes
 //   node scripts/release.mts check [notes-file]                  may this version be released?
-//   node scripts/release.mts check-feed [dist-dir]               is the update feed right?
+//   node scripts/release.mts check-feed [dist-dir]               are the update feeds right?
+//   node scripts/release.mts refresh-feed [dist-dir]             latest.yml after the installer is signed
 // The pure functions below are unit-tested; the commands at the bottom wire them to the files.
 import { execFileSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
@@ -99,32 +100,51 @@ export function checkUpdateFeed(input: {
   yml: string
   version: string
   files: Record<string, Buffer | string>
+  feedName?: string // latest-mac.yml (the default) or latest.yml, for the messages
 }): FeedCheck {
-  const { yml, version, files } = input
+  const { yml, version, files, feedName = 'latest-mac.yml' } = input
   const feedVersion = /^version:\s*(\S+)\s*$/m.exec(yml)?.[1]
-  if (!feedVersion) return { ok: false, error: 'latest-mac.yml has no version.' }
+  if (!feedVersion) return { ok: false, error: `${feedName} has no version.` }
   if (feedVersion !== version) {
     return {
       ok: false,
-      error: `latest-mac.yml is for version ${feedVersion}, but this release is ${version}.`
+      error: `${feedName} is for version ${feedVersion}, but this release is ${version}.`
     }
   }
   const entry = /^files:\s*\n\s*-\s*url:\s*(.+?)\s*\n\s*sha512:\s*(\S+)\s*$/m.exec(yml)
-  if (!entry) return { ok: false, error: 'latest-mac.yml names no file to download.' }
+  if (!entry) return { ok: false, error: `${feedName} names no file to download.` }
   const [, url, sha512] = entry
   const bytes = files[url]
   if (bytes === undefined) {
-    return { ok: false, error: `latest-mac.yml names ${url}, which is not in the release.` }
+    return { ok: false, error: `${feedName} names ${url}, which is not in the release.` }
   }
   const actual = createHash('sha512').update(bytes).digest('base64')
   if (actual !== sha512) {
     return {
       ok: false,
-      error: `The sha512 checksum of ${url} in latest-mac.yml doesn’t match the file.`
+      error: `The sha512 checksum of ${url} in ${feedName} doesn’t match the file.`
     }
   }
   return { ok: true }
 }
+
+// Signing changes the installer's bytes after electron-builder wrote its feed, so the checksum and
+// size must be written again: the feed entry for `file` and the top-level `sha512` (electron-updater
+// verifies the download against it). Everything else in the feed is left as it was.
+export function refreshFeedChecksum(input: { yml: string; file: string; bytes: Buffer }): string {
+  const { yml, file, bytes } = input
+  const sha512 = createHash('sha512').update(bytes).digest('base64')
+  const entry = new RegExp(
+    `(-\\s*url:\\s*${file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\n\\s*)sha512:\\s*\\S+(\\s*\\n\\s*)size:\\s*\\d+`
+  )
+  if (!entry.test(yml)) throw new Error(`The update feed does not name ${file}.`)
+  return yml
+    .replace(entry, `$1sha512: ${sha512}$2size: ${bytes.length}`)
+    .replace(/^sha512:[ \t]*\S+[ \t]*$/m, `sha512: ${sha512}`)
+}
+
+// The feeds the in-app updater reads: macOS and Windows.
+const FEEDS = ['latest-mac.yml', 'latest.yml']
 
 // --- Commands ------------------------------------------------------------------------------
 
@@ -165,24 +185,40 @@ function main(args: string[]): void {
     output('version', version)
   } else if (command === 'check-feed') {
     const dir = arg ?? 'dist'
-    const ymlPath = join(dir, 'latest-mac.yml')
-    if (!existsSync(ymlPath)) {
-      console.error(`::error::${ymlPath} is missing: installed copies could not update.`)
+    const feeds = FEEDS.filter((name) => existsSync(join(dir, name)))
+    if (feeds.length === 0) {
+      console.error(
+        `::error::${FEEDS.join(' and ')} are both missing from ${dir}: installed copies could not update.`
+      )
       process.exit(1)
     }
-    const yml = readFileSync(ymlPath, 'utf8')
-    const name = /^files:\s*\n\s*-\s*url:\s*(.+?)\s*$/m.exec(yml)?.[1]
-    const files: Record<string, Buffer> = {}
-    if (name && existsSync(join(dir, name))) files[name] = readFileSync(join(dir, name))
-    const result = checkUpdateFeed({ yml, version: readVersion(), files })
-    if (!result.ok) {
-      console.error(`::error::${result.error}`)
+    for (const feedName of feeds) {
+      const yml = readFileSync(join(dir, feedName), 'utf8')
+      const name = /^files:\s*\n\s*-\s*url:\s*(.+?)\s*$/m.exec(yml)?.[1]
+      const files: Record<string, Buffer> = {}
+      if (name && existsSync(join(dir, name))) files[name] = readFileSync(join(dir, name))
+      const result = checkUpdateFeed({ yml, version: readVersion(), files, feedName })
+      if (!result.ok) {
+        console.error(`::error::${result.error}`)
+        process.exit(1)
+      }
+      console.log(`${feedName} is good for ${readVersion()}`)
+    }
+  } else if (command === 'refresh-feed') {
+    // After the installer is signed: write its new checksum and size into latest.yml.
+    const dir = arg ?? 'dist'
+    const ymlPath = join(dir, 'latest.yml')
+    const yml = existsSync(ymlPath) ? readFileSync(ymlPath, 'utf8') : ''
+    const file = /^path:\s*(.+?)\s*$/m.exec(yml)?.[1]
+    if (!file || !existsSync(join(dir, file))) {
+      console.error(`::error::${ymlPath} or the installer it names is missing from ${dir}.`)
       process.exit(1)
     }
-    console.log(`latest-mac.yml is good for ${readVersion()}`)
+    writeFileSync(ymlPath, refreshFeedChecksum({ yml, file, bytes: readFileSync(join(dir, file)) }))
+    console.log(`latest.yml now carries the checksum of ${file}`)
   } else {
     console.error(
-      'Usage: node scripts/release.mts prepare <major|minor|patch|x.y.z> | check [notes-file] | check-feed [dist-dir]'
+      'Usage: node scripts/release.mts prepare <major|minor|patch|x.y.z> | check [notes-file] | check-feed [dist-dir] | refresh-feed [dist-dir]'
     )
     process.exit(2)
   }
