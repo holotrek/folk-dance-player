@@ -187,6 +187,8 @@ Applying and identity verification take real calendar time, so Q1 below is the f
 
 ## 8. Release flow and CI
 
+**Status (2026-11-02):** `windows-latest` is in the PR Gate (unit tests and end-to-end) and in Create Release's build matrix; `check-feed` checks `latest.yml` and `refresh-feed` rewrites it after signing; Prepare Release copies the Windows checklist. The signing steps are written against SignPath with every value a secret (plan `docs/superpowers/plans/2026-11-02-windows-ci.md`) but have not run against a real account. What follows is the original list.
+
 - **`package.json`:** `dist` and `test:e2e` use `env -u ELECTRON_RUN_AS_NODE`, which is Unix-only. Replace with a small Node script (`scripts/run.mts`, or `cross-env`-style but without a dependency: the variable has to be *removed*, not set to empty) and `dist` becomes per-OS (`dist:mac`, `dist:win`, with `dist` choosing from `process.platform`). `build:helper` is skipped on Windows. `test:e2e:dist` takes `FDP_APP` as the path to the packaged exe.
 - **PR Gate:** add `windows-latest` to the end-to-end matrix; add its check to the `main` ruleset's required checks (a manual Settings step, per CONTRIBUTING). Unit tests keep running on Linux, which cannot catch path-separator bugs, so also run `npm test` on Windows (cheap, and it will find the first dozen assumptions).
 - **Line endings:** add a `.gitattributes` (`* text=auto eol=lf`) and set Prettier `endOfLine: lf`; otherwise `prettier --check .` fails on a Windows checkout with autocrlf, and fixtures with exact byte comparisons (the Canva fixture, generated MP3s) break.
