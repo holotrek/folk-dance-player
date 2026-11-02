@@ -13,6 +13,15 @@ python3 -m http.server 8765 -d site
 Then open http://localhost:8765. The download buttons point at the latest release's page until
 `main.js` has read the release from GitHub, and stay there if that fails.
 
+## Search engines and Windows visitors
+
+`index.html` carries the title, description, canonical link, social tags and `SoftwareApplication`
+structured data; `robots.txt` and `sitemap.xml` sit beside it (update the sitemap's `lastmod` when the
+page changes). A visitor on Windows gets no download button, only the note that a Windows version is
+coming: `system.js` (a blocking script in the head) marks the page and `style.css` hides the
+buttons and anything marked `data-mac-only` (the Apple Music sync feature and the install steps).
+When Windows is released, replace those rules with a Windows button and Windows steps.
+
 ## Hosting
 
 Azure Static Web Apps (free tier). The `Deploy Site` workflow publishes `site/` when it changes on
@@ -27,6 +36,20 @@ One-time setup:
 Domain: `folkdanceplayer.com` is registered at GoDaddy. Static Web Apps needs a CNAME, which DNS
 doesn't allow on a bare domain, so the nameservers point to an **Azure DNS** zone and the bare domain
 is added as the app's custom domain. Registration stays at GoDaddy.
+
+The zone `folkdanceplayer.com` is in the same resource group as the app, with:
+
+- the four Azure nameservers set at GoDaddy (Domain → DNS → Nameservers → custom);
+- a TXT record at `@` holding the app's validation token, created by
+  `az staticwebapp hostname set --hostname folkdanceplayer.com --validation-method dns-txt-token`
+  (`hostname show` prints the token);
+- an **alias A record** at `@` pointing at the Static Web App resource (an alias, because the
+  bare domain can't be a CNAME);
+- a CNAME `www` to the app's `*.azurestaticapps.net` name, and `www.folkdanceplayer.com` added as a
+  second custom domain.
+
+Azure issues the HTTPS certificates itself. The bare domain can show a generic Microsoft
+certificate for up to about fifteen minutes while its status is "Adding".
 
 ## Screenshots
 

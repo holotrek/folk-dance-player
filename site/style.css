@@ -179,11 +179,27 @@ a:focus-visible {
 }
 
 .windows-note {
+  display: none;
   max-width: 34rem;
   margin: 0 auto 1rem;
   padding: 0.75rem 1rem;
   border: 1px solid var(--gold);
   border-radius: 6px;
+}
+
+/* Windows visitors get no download button, only the note that a Windows version is coming
+   (system.js marks the page). */
+[data-system='windows'] .cta {
+  display: none;
+}
+
+[data-system='windows'] .windows-note {
+  display: block;
+}
+
+/* Apple Music sync and the .dmg install steps are Mac-only. */
+[data-system='windows'] [data-mac-only] {
+  display: none;
 }
 
 /* Screenshots */
