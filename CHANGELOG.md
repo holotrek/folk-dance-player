@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- **Auto-show when playing** now appears on the same display as the Projector switch (the TV or projector), not over the screen you are working on, whenever a second display is connected.
+
 ### Changed
 
 - The projector's **Automatic** display is now the first display the app's window is not on, so on a desktop with a monitor and a TV the projector goes to the other screen. With a laptop it still picks the external display.

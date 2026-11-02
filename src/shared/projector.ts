@@ -96,7 +96,7 @@ export interface ProjectorProgress {
 export interface ProjectorStatus {
   enabled: boolean // the toggle: projector mode wanted
   open: boolean
-  mode: 'projector' | 'laptop' | null // a separate display, or covering the control window's own
+  mode: 'projector' | 'laptop' | null // 'projector': only the switch closes it; 'laptop': activity does (one display, or the idle auto-show)
   display: string | null // the display it's on
   notice: string | null // e.g. no separate display: showing on this screen
 }

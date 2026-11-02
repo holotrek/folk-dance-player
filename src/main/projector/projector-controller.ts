@@ -99,10 +99,18 @@ export class ProjectorController {
     this.announce()
   }
 
-  // The idle auto-fullscreen view (spec §7.3): only while projector mode is off.
+  // The idle auto-fullscreen view (spec §7.3): only while projector mode is off. It goes on the
+  // display the Projector switch would use, else over the control window's own; either way
+  // activity closes it (`dismiss`).
   showOnLaptop(): void {
     if (this.deps.settings.enabled() || this.window) return
-    this.open(this.controlDisplay(), 'laptop', null)
+    const separate = chooseDisplay(
+      this.deps.displays(),
+      this.deps.settings.displayId(),
+      this.deps.controlDisplayId()
+    )
+    if (separate) this.keepControlOff(separate)
+    this.open(separate ?? this.controlDisplay(), 'laptop', null)
     this.announce()
   }
 
@@ -141,9 +149,10 @@ export class ProjectorController {
       if (this.display.id === this.deps.controlDisplayId()) this.close()
     }
     if (this.window && this.mode === 'laptop') {
-      const own = this.controlDisplay()
-      this.display = own
-      this.window.setBounds(own.bounds)
+      // The display it is on (an auto-show on a separate one), else the control window's own.
+      const on = displays.find((d) => d.id === this.display?.id) ?? this.controlDisplay()
+      this.display = on
+      this.window.setBounds(on.bounds)
     }
     this.announce()
   }

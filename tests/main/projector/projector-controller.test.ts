@@ -254,10 +254,9 @@ describe('projector window', () => {
     expect(open()[0].bounds).toEqual(tv.bounds)
   })
 
-  test('the auto-fullscreen view covers the laptop only while projector mode is off', () => {
+  test('the auto-fullscreen view shows only while projector mode is off, and goes away on activity', () => {
     const { controller, open } = setup([laptop, hdmi])
     controller.showOnLaptop()
-    expect(open()[0].bounds).toEqual(laptop.bounds)
     expect(controller.status()).toMatchObject({ enabled: false, mode: 'laptop', notice: null })
     controller.dismiss()
     expect(open()).toHaveLength(0)
@@ -265,6 +264,40 @@ describe('projector window', () => {
     controller.showOnLaptop()
     expect(open()).toHaveLength(1)
     expect(open()[0].bounds).toEqual(hdmi.bounds)
+  })
+
+  test('the auto-fullscreen view uses the display the Projector switch would use', () => {
+    const monitor = { ...hdmi, label: 'Monitor' }
+    const desktop = setup([monitor, tv], { control: 2 })
+    desktop.controller.showOnLaptop()
+    expect(desktop.open()[0].bounds).toEqual(tv.bounds)
+    expect(desktop.controller.status().display).toBe('TV')
+
+    const saved = setup([laptop, hdmi, tv], { saved: 3 })
+    saved.controller.showOnLaptop()
+    expect(saved.open()[0].bounds).toEqual(tv.bounds)
+
+    const external = setup([laptop, hdmi])
+    external.controller.showOnLaptop()
+    expect(external.open()[0].bounds).toEqual(hdmi.bounds)
+  })
+
+  test('with only one display the auto-fullscreen view covers it', () => {
+    const { controller, open } = setup([laptop])
+    controller.showOnLaptop()
+    expect(open()[0].bounds).toEqual(laptop.bounds)
+  })
+
+  test('an auto-fullscreen view on a separate display follows it, and falls back to the control display when it is unplugged', () => {
+    const { controller, state, open } = setup([laptop, hdmi])
+    controller.showOnLaptop()
+    const resized = { ...hdmi, bounds: { ...hdmi.bounds, width: 1280, height: 720 } }
+    state.displays = [laptop, resized]
+    controller.displaysChanged()
+    expect(open()[0].bounds).toEqual(resized.bounds)
+    state.displays = [laptop]
+    controller.displaysChanged()
+    expect(open()[0].bounds).toEqual(laptop.bounds)
   })
 
   test('sends only to an open window, and announces every status change', () => {

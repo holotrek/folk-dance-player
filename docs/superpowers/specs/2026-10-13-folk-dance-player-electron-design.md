@@ -458,6 +458,7 @@ The keys are registered as global shortcuts in the main process and go to `Playe
   - It is opened and closed only by the control-window toggle. Mouse movement and Esc do **not** close it.
   - The control window is always placed on the non-projector display, because macOS may make the projector the main display.
 - **Laptop mode** (the view covers the control window's own display, including mirror mode and "projector unplugged"): mouse movement or Esc closes it. Esc is captured from the app's own windows, not as a system-wide shortcut.
+- **Auto-show** (§7.3) uses the display the Projector switch would use, so with a separate display connected it appears there, not over the control window. Activity (mouse, Esc) closes it either way, as in laptop mode. With one display it covers that display.
 - **Display changes:**
   - **`display-removed` for the projector:** the window closes and audio continues. It does not fall back to covering the laptop. **Known issue:** about one unplug in four leaves an orphaned grey window over the laptop until the app quits; turn the Projector switch off before unplugging (see `docs/spikes/projector-unplug.md`).
   - **`display-added`:** if projector mode is on, the window reopens on the saved display, or the first non-primary one.
