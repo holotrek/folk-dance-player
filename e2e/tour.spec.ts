@@ -394,8 +394,9 @@ async function doAdvancedTour(): Promise<void> {
   await onStep('What is in the playlist')
   await next()
   // The Apple Music folder and synced playlist exist (and have steps) only where sync does; run
-  // this spec with FDP_PLATFORM=windows to walk the Windows tour.
-  if (process.env['FDP_PLATFORM'] !== 'windows') {
+  // this spec with FDP_PLATFORM=windows to walk the Windows tour from a Mac (a Windows machine
+  // walks it as itself).
+  if (process.env['FDP_PLATFORM'] !== 'windows' && process.platform !== 'win32') {
     await onStep('Folders from Music')
     await page.getByText('Festival 2026').first().click()
     await onStep('Changing a synced playlist')
