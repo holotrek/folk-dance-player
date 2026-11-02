@@ -1,6 +1,6 @@
 # Prepare Release (spec §13.4): run from the Actions tab on main. It bumps the version, moves the
 # CHANGELOG's Unreleased notes under it, and opens a draft pull request "Release vX.Y.Z" whose
-# description carries the pre-release hardware checklist (docs/manual-testing). Click "Approve
+# description carries the pre-release hardware checklists (docs/manual-testing). Click "Approve
 # workflows to run" (GitHub holds the PR Gate of a pull request opened by a workflow), tick the
 # checklist while testing, read the notes, click "Ready for review" and merge. Then run Create
 # Release.
@@ -53,12 +53,15 @@ jobs:
             echo "Bumps the version to $VERSION and dates its CHANGELOG notes."
             echo
             echo "1. Click **Approve workflows to run** (below): that starts the PR Gate."
-            echo "2. Install this version's \`.dmg\` (a **Create Release** dry run on this branch builds one) and tick the checklist below as you go."
+            echo "2. Install this version's \`.dmg\` and \`.exe\` (a **Create Release** dry run on this branch builds both) and tick the checklists below as you go."
             echo "3. Check the version and notes, click **Ready for review**, and merge once the checks pass."
             echo "4. Then run **Create Release** on main."
             echo
-            echo "## Pre-release hardware check"
+            echo "## Pre-release hardware check (macOS)"
             tail -n +2 docs/manual-testing/pre-release-hardware.md
+            echo
+            echo "## Pre-release hardware check (Windows)"
+            tail -n +2 docs/manual-testing/pre-release-hardware-windows.md
           } > "$RUNNER_TEMP/body.md"
           gh pr create --draft --base main --head "$branch" --title "Release v$VERSION" \
             --body-file "$RUNNER_TEMP/body.md"

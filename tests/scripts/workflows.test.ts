@@ -103,3 +103,15 @@ describe('Create Release on Windows', () => {
     expect(release).toMatch(/permissions:\n\s+actions: read[^\n]*\n\s+contents: read/)
   })
 })
+
+describe('Prepare Release', () => {
+  const prepare = workflow('prepare-release.yml')
+
+  it('puts both hardware checklists in the release PR, and asks for both installers', () => {
+    expect(prepare).toContain('docs/manual-testing/pre-release-hardware.md')
+    expect(prepare).toContain('docs/manual-testing/pre-release-hardware-windows.md')
+    expect(prepare).toContain('## Pre-release hardware check (macOS)')
+    expect(prepare).toContain('## Pre-release hardware check (Windows)')
+    expect(prepare).toMatch(/\\?`\.dmg\\?`[^\n]*\\?`\.exe\\?`/) // escaped for the shell
+  })
+})
