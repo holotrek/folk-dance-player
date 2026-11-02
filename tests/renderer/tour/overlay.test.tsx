@@ -1,5 +1,5 @@
 import { MantineProvider } from '@mantine/core'
-import { act, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import TourOverlay, { cardHeight, sideFor, useHoles, type Hole } from '@renderer/tour/TourOverlay'
@@ -259,9 +259,12 @@ describe('the tour overlay', () => {
     setup(doStep)
     await userEvent.click(await screen.findByRole('button', { name: 'Leave the tour' }))
     const ask = await screen.findByRole('dialog', { name: 'Leave the tour?' })
-    expect(
-      within(ask).getByText(/take either tour again any time from the Help menu/)
-    ).toBeVisible()
+    // The dialog fades in; on a slow machine it is still transparent when it is first found.
+    await waitFor(() =>
+      expect(
+        within(ask).getByText(/take either tour again any time from the Help menu/)
+      ).toBeVisible()
+    )
   })
 
   test('Escape asks to leave', async () => {
