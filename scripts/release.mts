@@ -134,12 +134,17 @@ export function checkUpdateFeed(input: {
 export function refreshFeedChecksum(input: { yml: string; file: string; bytes: Buffer }): string {
   const { yml, file, bytes } = input
   const sha512 = createHash('sha512').update(bytes).digest('base64')
+  // electron-builder writes a `size:` only for a file with a blockmap, so it is changed if there.
   const entry = new RegExp(
-    `(-\\s*url:\\s*${file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\n\\s*)sha512:\\s*\\S+(\\s*\\n\\s*)size:\\s*\\d+`
+    `(-\\s*url:\\s*${file.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\n\\s*)sha512:[ \\t]*\\S+([ \\t]*\\n\\s*size:[ \\t]*)?(\\d+)?`
   )
   if (!entry.test(yml)) throw new Error(`The update feed does not name ${file}.`)
   return yml
-    .replace(entry, `$1sha512: ${sha512}$2size: ${bytes.length}`)
+    .replace(
+      entry,
+      (_, head, gap, size) =>
+        `${head}sha512: ${sha512}${gap ?? ''}${size === undefined ? '' : bytes.length}`
+    )
     .replace(/^sha512:[ \t]*\S+[ \t]*$/m, `sha512: ${sha512}`)
 }
 

@@ -164,6 +164,28 @@ describe('the Windows update feed (latest.yml)', () => {
     ).toEqual({ ok: true })
   })
 
+  test('a feed with no size line, as electron-builder writes it without a blockmap, is refreshed too', () => {
+    // Copied from a real build with differentialPackage: false.
+    const real = `version: 0.4.0
+files:
+  - url: ${EXE_NAME}
+    sha512: kP00Y28sS7FH+vZtK1GgxdUJyK1G9V5tJOeYlDTVCqqZruFF0JoJF2DwyfkaovIFHV5Y8B/UubKUFdkXifuTnw==
+path: ${EXE_NAME}
+sha512: kP00Y28sS7FH+vZtK1GgxdUJyK1G9V5tJOeYlDTVCqqZruFF0JoJF2DwyfkaovIFHV5Y8B/UubKUFdkXifuTnw==
+releaseDate: '2026-11-02T05:45:18.836Z'
+`
+    const refreshed = refreshFeedChecksum({ yml: real, file: EXE_NAME, bytes: signedExe })
+    expect(refreshed).not.toContain('size:')
+    expect(
+      checkUpdateFeed({
+        yml: refreshed,
+        version: '0.4.0',
+        files: { [EXE_NAME]: signedExe },
+        feedName: 'latest.yml'
+      })
+    ).toEqual({ ok: true })
+  })
+
   test('refreshing a feed that does not name the file fails, naming the file', () => {
     expect(() =>
       refreshFeedChecksum({ yml: exeFeed(exe), file: 'Other-Setup.exe', bytes: signedExe })
