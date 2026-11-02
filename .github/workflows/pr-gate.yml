@@ -58,6 +58,11 @@ jobs:
       # The Swift helper must build on macOS (sync spec §8); the release's npm run dist builds it too.
       - run: npm run build:helper
       - run: npm run test:e2e
+      # The tours as Windows runs them (no Apple Music steps), until a Windows runner joins the matrix.
+      - name: The tours as on Windows
+        run: npm run test:e2e:tour
+        env:
+          FDP_PLATFORM: windows
       - name: Keep Playwright's report of a failure
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

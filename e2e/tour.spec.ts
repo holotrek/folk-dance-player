@@ -384,11 +384,15 @@ async function doAdvancedTour(): Promise<void> {
 
   await onStep('Playlists')
   await page.getByText('Easy circle dances').first().click()
-  await onStep('Folders from Music')
-  await page.getByText('Festival 2026').first().click()
-  await onStep('Changing a synced playlist')
-  await page.getByRole('button', { name: 'Options for Balkan night' }).click()
-  await page.getByRole('menuitem', { name: 'Duplicate as my playlist' }).click()
+  // The Apple Music folder and synced playlist exist (and have steps) only where sync does; run
+  // this spec with FDP_PLATFORM=windows to walk the Windows tour.
+  if (process.env['FDP_PLATFORM'] !== 'windows') {
+    await onStep('Folders from Music')
+    await page.getByText('Festival 2026').first().click()
+    await onStep('Changing a synced playlist')
+    await page.getByRole('button', { name: 'Options for Balkan night' }).click()
+    await page.getByRole('menuitem', { name: 'Duplicate as my playlist' }).click()
+  }
 
   for (const title of [
     'Settings: Appearance',

@@ -34,7 +34,7 @@ npm run dev
 | `npm run format`        | Prettier                                        |
 | `npm run icon`          | Rebuild the app icon from the logo (macOS)      |
 | `npm run build:helper`  | Build the Music library helper (macOS, Swift)   |
-| `npm run dist`          | Build the Universal .dmg and .zip into `dist/`  |
+| `npm run dist`          | Build this system's installer into `dist/`      |
 | `npm run test:e2e`      | End-to-end tests (Playwright) on the build      |
 | `npm run test:e2e:dist` | The same tests on the packaged app              |
 
@@ -61,6 +61,16 @@ npm run dev
   2. Add it to `INVOKE_CHANNELS`. Typecheck fails until you do.
   3. Implement it in `createHandlers`.
 
+## Building the Windows installer (unsigned)
+
+On a Windows machine with Node 24 (see `.nvmrc`) and npm 12: `npm ci`, then `npm run dist`. The
+installer is `dist/Folk-Dance-Player-Setup-<version>.exe`, and the unpacked app is
+`dist/win-unpacked/`. It is not signed, so SmartScreen shows "Windows protected your PC" (More info →
+Run anyway). Installed per user, its library is in `%LOCALAPPDATA%\Folk Dance Player`. A development
+run (`npm run dev`) uses `Folk Dance Player (dev)` under `%APPDATA%`. To see the Windows interface
+from a Mac, run the unpackaged app with `FDP_PLATFORM=windows` (a packaged app ignores it); the PR Gate walks both tours that way (`npm run test:e2e:tour`). The
+hardware checklist is `docs/manual-testing/pre-release-hardware-windows.md`.
+
 ## Continuous integration
 
 GitHub Actions (spec §13.4) runs on every pull request and every push to main:
@@ -69,7 +79,7 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 - **The CHANGELOG check:** a pull request that changes `src/` must add a line to `CHANGELOG.md`. If nobody would notice the change, label the PR `no changelog`. Dependabot's PRs are skipped.
 - **Adding an OS:**
   - **End-to-end tests:** add it to the `e2e` job's `matrix.os` in `pr-gate.yml` (for example `ubuntu-latest`, under a virtual display, or `windows-latest`), and add its check to the required checks of the `main` ruleset (Settings → Rules).
-  - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml`. Windows also needs its electron-builder target and a `dist` script without `env -u`, which is Unix-only.
+  - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml` (for Windows: `windows-latest`, `dist/*.exe`, `dist/*.exe.blockmap`, `dist/latest.yml`). Windows has its electron-builder target and a cross-platform `dist` script now; what's left is signing, the update-feed check for `latest.yml` and the CI entries (Windows release spec §8).
 - **Pull requests from forks** run with read-only permissions and no secrets. GitHub asks a maintainer to approve a first-time contributor's runs.
 - **Dependabot** opens weekly update PRs (npm packages and the workflows' actions), only for releases at least 14 days old. It skips major npm upgrades: make those on purpose (Vite stays on 7 for electron-vite 5; `@types/node` follows Node's major).
 

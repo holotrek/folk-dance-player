@@ -17,6 +17,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "npm run build && node scripts/run.mts playwright test",
+    "test:e2e:tour": "node scripts/run.mts playwright test e2e/tour.spec.ts",
     "test:e2e:dist": "node scripts/dist.mts e2e",
     "format": "prettier --write .",
     "build:helper": "sh scripts/build-helper.sh",
