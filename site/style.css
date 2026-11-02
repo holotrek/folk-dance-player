@@ -197,6 +197,11 @@ a:focus-visible {
   display: block;
 }
 
+/* Apple Music sync and the .dmg install steps are Mac-only. */
+[data-system='windows'] [data-mac-only] {
+  display: none;
+}
+
 /* Screenshots */
 .shot {
   margin: 0;

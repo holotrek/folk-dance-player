@@ -41,6 +41,21 @@ describe('the visitor’s system', () => {
   })
 })
 
+describe('Mac-only content', () => {
+  it('is hidden from Windows visitors: the Apple Music sync feature and the install steps', () => {
+    expect(read('style.css')).toMatch(
+      /\[data-system='windows'\] \[data-mac-only\]\s*\{\s*display: none/
+    )
+    const marked = html.match(/<[^>]*data-mac-only[^>]*>/g) ?? []
+    expect(marked).toHaveLength(2)
+    expect(marked.some((tag) => tag.startsWith('<article'))).toBe(true)
+    expect(marked.some((tag) => tag.startsWith('<ol'))).toBe(true)
+    // The marked article is the Apple Music one, not another feature.
+    const after = html.slice(html.indexOf('<article class="feature stack" data-mac-only>'))
+    expect(after.slice(0, after.indexOf('</article>'))).toContain('Your Apple Music library')
+  })
+})
+
 describe('what search engines read', () => {
   it('has a title and a description that say what the app is', () => {
     expect(html).toMatch(/<title>[^<]*music player for folk dance organizers/i)
