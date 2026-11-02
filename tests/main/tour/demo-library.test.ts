@@ -1,12 +1,15 @@
 import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { afterEach, beforeEach, describe, expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { buildDemoLibrary } from '../../../src/main/tour/demo-library'
 import { listLibrary } from '../../../src/main/library/list'
 import { listPlaylists, listPlaylistFolders } from '../../../src/main/library/playlists'
 import { listPrograms } from '../../../src/main/programs/programs'
 import { tunePath } from '../../../scripts/make-tour-tune.mjs'
+
+// Each test copies the practice tunes, which takes several seconds on a slow (Windows) runner.
+vi.setConfig({ testTimeout: 30_000 })
 
 const TUNE_DIR = dirname(tunePath('hava-nagila'))
 
