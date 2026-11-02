@@ -254,50 +254,48 @@ describe('projector window', () => {
     expect(open()[0].bounds).toEqual(tv.bounds)
   })
 
-  test('the auto-fullscreen view shows only while projector mode is off, and goes away on activity', () => {
-    const { controller, open } = setup([laptop, hdmi])
+  test('with a separate display, auto-show is projector mode: the switch turns on, and only the switch closes it', () => {
+    const { controller, state, open } = setup([laptop, hdmi])
     controller.showOnLaptop()
-    expect(controller.status()).toMatchObject({ enabled: false, mode: 'laptop', notice: null })
-    controller.dismiss()
-    expect(open()).toHaveLength(0)
-    controller.setEnabled(true)
-    controller.showOnLaptop()
-    expect(open()).toHaveLength(1)
     expect(open()[0].bounds).toEqual(hdmi.bounds)
+    expect(state.settings.enabled).toBe(true)
+    expect(controller.status()).toMatchObject({
+      enabled: true,
+      mode: 'projector',
+      display: 'Epson Projector'
+    })
+    controller.dismiss() // mouse or Esc
+    expect(open()).toHaveLength(1)
+    controller.setEnabled(false) // the Projector switch
+    expect(open()).toHaveLength(0)
   })
 
-  test('the auto-fullscreen view uses the display the Projector switch would use', () => {
+  test('auto-show uses the display the Projector switch would use', () => {
     const monitor = { ...hdmi, label: 'Monitor' }
     const desktop = setup([monitor, tv], { control: 2 })
     desktop.controller.showOnLaptop()
     expect(desktop.open()[0].bounds).toEqual(tv.bounds)
-    expect(desktop.controller.status().display).toBe('TV')
 
     const saved = setup([laptop, hdmi, tv], { saved: 3 })
     saved.controller.showOnLaptop()
     expect(saved.open()[0].bounds).toEqual(tv.bounds)
-
-    const external = setup([laptop, hdmi])
-    external.controller.showOnLaptop()
-    expect(external.open()[0].bounds).toEqual(hdmi.bounds)
   })
 
-  test('with only one display the auto-fullscreen view covers it', () => {
-    const { controller, open } = setup([laptop])
+  test('with only one display, auto-show covers it as laptop mode, which activity closes', () => {
+    const { controller, state, open } = setup([laptop])
     controller.showOnLaptop()
     expect(open()[0].bounds).toEqual(laptop.bounds)
+    expect(controller.status()).toMatchObject({ enabled: false, mode: 'laptop', notice: null })
+    controller.dismiss()
+    expect(open()).toHaveLength(0)
+    expect(state.settings.enabled).toBe(false)
   })
 
-  test('an auto-fullscreen view on a separate display follows it, and falls back to the control display when it is unplugged', () => {
-    const { controller, state, open } = setup([laptop, hdmi])
+  test('auto-show does nothing while a view is already open', () => {
+    const { controller, open } = setup([laptop, hdmi], { enabled: true })
+    controller.setEnabled(true)
     controller.showOnLaptop()
-    const resized = { ...hdmi, bounds: { ...hdmi.bounds, width: 1280, height: 720 } }
-    state.displays = [laptop, resized]
-    controller.displaysChanged()
-    expect(open()[0].bounds).toEqual(resized.bounds)
-    state.displays = [laptop]
-    controller.displaysChanged()
-    expect(open()[0].bounds).toEqual(laptop.bounds)
+    expect(open()).toHaveLength(1)
   })
 
   test('sends only to an open window, and announces every status change', () => {

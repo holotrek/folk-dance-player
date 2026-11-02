@@ -10,7 +10,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- **Auto-show when playing** now appears on the same display as the Projector switch (the TV or projector), not over the screen you are working on, whenever a second display is connected.
+- **Auto-show when playing** now appears on the same display as the Projector switch (the TV or projector), not over the screen you are working on, whenever a second display is connected. It works as if you had turned the Projector switch on: moving the mouse or pressing Esc does not close it, and turning the switch off does.
 
 ### Changed
 
