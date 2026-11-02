@@ -1,7 +1,9 @@
 // Renders the app icon from build/icon/icon.html (the logo on the app's red tile) and writes
-// build/icon.png, build/icon.icns and resources/icon.png. Run with `npm run icon` after changing
-// the logo (src/renderer/src/assets/logo.svg) or the tile. macOS only (sips, iconutil).
-const { app, BrowserWindow } = require('electron')
+// build/icon.png, build/icon.ico (Windows), build/icon.icns and resources/icon.png. Run with
+// `npm run icon` after changing the logo (src/renderer/src/assets/logo.svg) or the tile. The .icns
+// needs macOS (sips, iconutil) and is skipped elsewhere.
+const { app, BrowserWindow, nativeImage } = require('electron')
+const { buildIco } = require('./ico.cjs')
 const { execFileSync } = require('node:child_process')
 const fs = require('node:fs')
 const os = require('node:os')
@@ -26,6 +28,20 @@ app.whenReady().then(async () => {
   fs.writeFileSync(out('build', 'icon.png'), png)
   fs.copyFileSync(out('build', 'icon.png'), out('resources', 'icon.png'))
 
+  const ico = [16, 24, 32, 48, 64, 128, 256].map((size) => ({
+    size,
+    png: nativeImage
+      .createFromBuffer(png)
+      .resize({ width: size, height: size, quality: 'best' })
+      .toPNG()
+  }))
+  fs.writeFileSync(out('build', 'icon.ico'), buildIco(ico))
+  if (process.platform !== 'darwin') {
+    console.log('wrote build/icon.png, build/icon.ico and resources/icon.png (no .icns off macOS)')
+    app.quit()
+    return
+  }
+
   const set = fs.mkdtempSync(path.join(os.tmpdir(), 'fdp-icon-')) + '/icon.iconset'
   fs.mkdirSync(set)
   for (const size of [16, 32, 128, 256, 512]) {
@@ -41,6 +57,6 @@ app.whenReady().then(async () => {
     }
   }
   execFileSync('iconutil', ['-c', 'icns', set, '-o', out('build', 'icon.icns')])
-  console.log('wrote build/icon.png, build/icon.icns and resources/icon.png')
+  console.log('wrote build/icon.png, build/icon.ico, build/icon.icns and resources/icon.png')
   app.quit()
 })

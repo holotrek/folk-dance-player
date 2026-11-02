@@ -1,4 +1,5 @@
-# Packaging (spec §9): a Universal macOS .dmg. Build with `npm run dist`; the result is in dist/.
+# Packaging (spec §9): a Universal macOS .dmg, and a Windows (x64) NSIS installer. Build with
+# `npm run dist` on the system you are building for; the result is in dist/.
 appId: com.folkdanceplayer.app
 productName: Folk Dance Player
 copyright: Copyright © 2026 Evan Kaiser
@@ -9,6 +10,12 @@ directories:
 files:
   - out/**
   - package.json
+# The guided tour's practice tunes (tour spec §5.1), for every system.
+extraResources:
+  - from: resources/tour/hava-nagila.wav
+    to: hava-nagila.wav
+  - from: resources/tour/korobushka.wav
+    to: korobushka.wav
 mac:
   target:
     - target: dmg
@@ -32,17 +39,31 @@ mac:
   extraResources:
     - from: resources/bin/fdp-music-library
       to: fdp-music-library
-    # The guided tour's practice tunes (tour spec §5.1).
-    - from: resources/tour/hava-nagila.wav
-      to: hava-nagila.wav
-    - from: resources/tour/korobushka.wav
-      to: korobushka.wav
   x64ArchFiles: Contents/Resources/fdp-music-library
   # Without this key macOS refuses Music access without asking (sync spec §9).
   extendInfo:
     NSAppleMusicUsageDescription: Folk Dance Player reads your Music library to keep its songs and playlists in step with Apple Music.
 dmg:
   title: Folk Dance Player
+# Windows (Windows release spec §7): x64 only, which Windows on ARM runs under emulation. Unsigned
+# until a signing route is accepted; the maintainer's test machine gets SmartScreen's warning.
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.ico
+  # No spaces, like the Mac names: GitHub renames an uploaded name with spaces.
+  artifactName: Folk-Dance-Player-Setup-${version}.${ext}
+nsis:
+  # Per-user, so a silent in-app update needs no administrator, and one click (no wizard).
+  oneClick: true
+  perMachine: false
+  createDesktopShortcut: always
+  createStartMenuShortcut: true
+  shortcutName: Folk Dance Player
+  # Never delete someone's library with the program.
+  deleteAppDataOnUninstall: false
 # Written into the app as app-update.yml: where the in-app updater looks for new releases.
 publish:
   provider: github
