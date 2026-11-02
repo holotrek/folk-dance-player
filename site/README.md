@@ -28,6 +28,20 @@ Domain: `folkdanceplayer.com` is registered at GoDaddy. Static Web Apps needs a 
 doesn't allow on a bare domain, so the nameservers point to an **Azure DNS** zone and the bare domain
 is added as the app's custom domain. Registration stays at GoDaddy.
 
+The zone `folkdanceplayer.com` is in the same resource group as the app, with:
+
+- the four Azure nameservers set at GoDaddy (Domain → DNS → Nameservers → custom);
+- a TXT record at `@` holding the app's validation token, created by
+  `az staticwebapp hostname set --hostname folkdanceplayer.com --validation-method dns-txt-token`
+  (`hostname show` prints the token);
+- an **alias A record** at `@` pointing at the Static Web App resource (an alias, because the
+  bare domain can't be a CNAME);
+- a CNAME `www` to the app's `*.azurestaticapps.net` name, and `www.folkdanceplayer.com` added as a
+  second custom domain.
+
+Azure issues the HTTPS certificates itself. The bare domain can show a generic Microsoft
+certificate for up to about fifteen minutes while its status is "Adding".
+
 ## Screenshots
 
 The screenshots are 2× captures of the app in dark mode (a 1440×900 window), in `images/`.
