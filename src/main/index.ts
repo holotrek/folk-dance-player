@@ -150,7 +150,13 @@ function createProjectorWindow(
   win.setAlwaysOnTop(true, 'screen-saver')
   // skipTransformProcessType: without it, macOS briefly makes the whole app a background app on
   // every call, hiding the control window and the Dock icon, and after sleep it can stay that way.
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })
+  // Spaces are a macOS idea; Windows has no equivalent to ask for.
+  if (platform === 'mac') {
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true
+    })
+  }
   win.setBounds(bounds)
   guardNavigation(win.webContents)
   win.once('ready-to-show', () => win.showInactive())
@@ -239,7 +245,7 @@ function startApp(): void {
   electronApp.setAppUserModelId('com.folkdanceplayer.app')
   // The packaged app gets its icon from the bundle (build/icon.icns); unpackaged, the Dock would
   // show Electron's.
-  if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(icon)
+  if (platform === 'mac' && !app.isPackaged) app.dock?.setIcon(icon)
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
   log.info(`Folk Dance Player ${app.getVersion()} starting (Electron ${process.versions.electron})`)
@@ -359,7 +365,7 @@ function startApp(): void {
   const appleLibraryFile = process.env['FDP_APPLE_LIBRARY']
   const now = (): string => new Date().toISOString()
   const appleSync: AppleSync = new AppleSync({
-    available: process.platform === 'darwin' || appleLibraryFile !== undefined,
+    available: caps.appleMusicSync || appleLibraryFile !== undefined,
     source: appleLibraryFile
       ? createFileSource(appleLibraryFile)
       : createHelperSource(
@@ -476,7 +482,7 @@ function startApp(): void {
   })
   // macOS delivers media keys only to an app trusted for Accessibility; other platforms don't ask.
   const trusted = (prompt: boolean) =>
-    process.platform !== 'darwin' || systemPreferences.isTrustedAccessibilityClient(prompt)
+    !caps.mediaKeyTrust || systemPreferences.isTrustedAccessibilityClient(prompt)
   const remote = {
     status: () => ({ trusted: trusted(false), keys: mediaKeys }),
     requestAccess: () => ({ trusted: trusted(true), keys: mediaKeys })
@@ -706,7 +712,7 @@ function startApp(): void {
   // sure the control window is showing.
   powerMonitor.on('resume', () => {
     controller.displaysChanged()
-    if (process.platform === 'darwin') void app.dock?.show()
+    if (platform === 'mac') void app.dock?.show()
     if (!mainWindow.isDestroyed() && !mainWindow.isVisible()) mainWindow.show()
   })
 
@@ -744,5 +750,5 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  if (platform !== 'mac') app.quit()
 })

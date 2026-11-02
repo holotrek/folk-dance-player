@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button, Checkbox, Group, Radio, ScrollArea, Stack, Text } from '@mantine/core'
 import type { AppleSelection, ApplePreview, ImportMapping } from '@shared/import'
+import { usePlatform } from '../platform'
 import ImportMappingFields from './ImportMappingFields'
 import TagPreviewTable from './TagPreviewTable'
 
@@ -16,10 +17,13 @@ export default function AppleOptionsStep(props: {
   const [mode, setMode] = useState<'all' | 'playlists'>('all')
   const [chosen, setChosen] = useState<string[]>([])
   const { preview } = props
+  const { computer } = usePlatform()
 
   return (
     <Stack>
-      <Text>{songs(preview.trackCount)} with files on this Mac</Text>
+      <Text>
+        {songs(preview.trackCount)} with files on this {computer}
+      </Text>
       <Radio.Group label="What to import" value={mode} onChange={(v) => setMode(v as typeof mode)}>
         <Stack gap="xs" mt={4}>
           <Radio
