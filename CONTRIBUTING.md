@@ -124,6 +124,30 @@ Microsoft Store version, which Microsoft signs (design: `docs/superpowers/specs/
 The site tells Windows visitors that the direct download may be blocked. SignPath's free program
 declined the project, so there is no signing service in the workflow.
 
+### The Microsoft Store package
+
+CI builds the Store package (an `appx`, unsigned: Microsoft signs it) in the PR Gate (job **Store
+package (Windows)**) and in Create Release, and keeps it as the workflow artifact `store-package`
+(it is never part of the GitHub release). To submit it:
+
+1. In Partner Center, open the app → **Product management → Product identity**, and copy three values
+   into repository **variables** (Settings → Secrets and variables → Actions → Variables; they are not
+   secrets): `STORE_IDENTITY_NAME` (Package/Identity/Name), `STORE_PUBLISHER` (Package/Identity/Publisher,
+   `CN=…`), `STORE_PUBLISHER_DISPLAY_NAME` (Package/Properties/PublisherDisplayName). Without them CI builds
+   a placeholder package that cannot be submitted.
+2. Run the PR Gate (or a Create Release dry run) and download the `store-package` artifact from the run.
+3. In the submission's **Packages** step upload the `.appx`.
+
+The package version is the app's with the major raised by one (`0.4.0` is `1.4.0.0`): the Store rejects a
+version that starts with 0, and this keeps rising when the app reaches 1.0 (`storeVersion` in
+`scripts/store.mts`). The Store version has no updater of its own (`Capabilities.store`): the Store updates
+it. `npm run dist:store` builds the package on a Windows machine with the same variables set, or
+`node scripts/store.mts --test` with a placeholder identity.
+
+Later submissions can be automated with the Microsoft Store Developer CLI (`msstore publish`), which needs
+an Azure AD app with Partner Center access (tenant, seller and client IDs and a client secret) and an
+existing app whose first submission was made by hand in Partner Center. Not set up yet.
+
 ### Updates
 
 An installed copy updates itself: it reads the newest GitHub release's `latest-mac.yml`, downloads the `.zip` it names in the background, and offers **Restart to Update** in a banner (the in-place updates design, `docs/superpowers/specs/2026-11-01-in-place-updates-design.md`). Each release therefore carries the `.dmg` (for a first install), the `.zip`, its `.blockmap` and `latest-mac.yml`, and Create Release refuses to publish unless `node scripts/release.mts check-feed dist` passes. Artifact names have no spaces on purpose: GitHub turns spaces in an uploaded name into dots, which would no longer match the names in `latest-mac.yml`.

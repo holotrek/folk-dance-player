@@ -1,6 +1,6 @@
 # Windows: the Microsoft Store version, next to the direct download (design)
 
-Status: draft for review, 2026-11-02. Builds on `2026-11-01-windows-release-design.md`.
+Status: the package build and the Store capability are done (2026-11-02); the spikes in §6 and the submission are not. Builds on `2026-11-01-windows-release-design.md`.
 
 ## 1. Intent
 
@@ -27,7 +27,7 @@ Non-goals (for now):
 
 - Moving a library between the two versions: issue #80.
 - Signing the direct installer: there is no signing service in the workflow (SignPath is removed).
-- Automating Store submission (Partner Center's submission API): the first submissions are by hand.
+- Automating Store submission: the Store's API needs a first submission made by hand in Partner Center, and `msstore publish` needs an Azure AD app (tenant, seller, client IDs and a secret). CI builds the package; uploading it is by hand until then.
 - A Windows on ARM build, or Mac App Store.
 
 ## 3. What is known and what is not
@@ -55,6 +55,8 @@ library); drag-and-drop from File Explorer; the Canva views and the projector wi
 (`.exe`, `latest.yml`) as now and also an `appx` package (`electron-builder --win appx`), kept as a
 workflow artifact. The Store package is **not** attached to the GitHub release: users can't install
 an unsigned package, and the maintainer uploads it to Partner Center.
+
+**Version.** The Store rejects a package version that starts with 0, so the package is `(major + 1).minor.patch` (`0.4.0` is `1.4.0.0`).
 
 **Identity.** `win.appx` takes `identityName`, `publisher` and `publisherDisplayName` from
 repository variables (`STORE_IDENTITY_NAME`, `STORE_PUBLISHER`, `STORE_PUBLISHER_DISPLAY_NAME`, copied
