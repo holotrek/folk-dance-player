@@ -39,13 +39,31 @@ jobs:
       - run: npm test
       - run: npx electron-vite build
 
+  # The unit tests on Windows catch what Linux cannot: path separators, line endings and the scripts.
+  # Not a required check until the maintainer adds it to the main ruleset (CONTRIBUTING).
+  windows-check:
+    name: Unit tests (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.1.0
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx electron-vite build
+
   e2e:
     name: End-to-end (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        # macOS first; ubuntu-latest (under a virtual display) and windows-latest can join later.
-        os: [macos-latest]
+        # macOS is required; windows-latest runs too but is not a required check until it is added to
+        # the main ruleset. ubuntu-latest (under a virtual display) can join later.
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -57,9 +75,12 @@ jobs:
       - run: npm ci
       # The Swift helper must build on macOS (sync spec §8); the release's npm run dist builds it too.
       - run: npm run build:helper
+        if: runner.os == 'macOS'
       - run: npm run test:e2e
-      # The tours as Windows runs them (no Apple Music steps), until a Windows runner joins the matrix.
+      # The tours as Windows runs them (no Apple Music steps), from the Mac runner; the Windows runner
+      # walks them as itself in the full run above.
       - name: The tours as on Windows
+        if: runner.os == 'macOS'
         run: npm run test:e2e:tour
         env:
           FDP_PLATFORM: windows
