@@ -530,7 +530,8 @@ UP NEXT
  Hora Mare  ♪ Hora de la Munte                          Romania
 ```
 - **Entry rows** follow the Flutter app's style: the name is left-aligned and the country is right-aligned on the same line. This applies to Now Playing, Up next, and previously played when it shows country.
-- **Dividers:** a subtle, low-contrast horizontal line separates list entries, so short titles and countries clearly pair up across the gap.
+- **Dividers:** a heavy, bright horizontal rule (0.3vh, `#6a6a6a`) separates list entries, so one song ends and the next begins clearly from across the room, and short titles and countries pair up across the gap.
+- **The middle panel:** Now playing (or Up next) sits on one full-width panel, a lighter step (`#3a3a3a`, white text) than the black page, behind its heading, dance, song and progress line. The colors live in `shared/projector-colors.ts`, and a test holds them to 7:1 for text and 3:1 for the red line.
 - **Long titles** truncate with an ellipsis before they reach the country, so the country is never pushed off or overlapped. The smaller song title is truncated first, then the dance name.
 - **Up next** is a vertical list showing as many entries as fit in its area.
 - **STOP markers** show in the list as a row reading `⌄ —— Teaching —— ⌄`, the arrows pointing down at the dance that will be taught. Several STOPs in a row show once, and a STOP with no song after it isn't shown. Halted at a STOP, the next dance in the middle row carries the same Teaching row.

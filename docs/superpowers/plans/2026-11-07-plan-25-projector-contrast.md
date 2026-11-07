@@ -25,14 +25,14 @@ Page stays `#000`. All values are starting points to tune on a real projector.
 
 | Part | Value |
 | --- | --- |
-| Rows (Previously played, Up next) | Alternating bands: odd rows `#1c1c1c`, even rows transparent, plus a 0.3vh rule `rgba(255,255,255,0.35)` between rows (replaces the 1px 12% line). Row padding 1.4vh vertical and 1.2vw horizontal so the band has air. |
-| Row text | Dance `#f2f2f2`; played rows `#d0d0d0`; song and country `#c0c0c0` (all at least 7:1 on `#1c1c1c`). |
+| Rows (Previously played, Up next) | A heavier rule only (maintainer's decision, no bands): 0.3vh `#6a6a6a` between rows, replacing the 1px 12% line, in every list including the title-only Previously played beside a slide. |
+| Row text | Dance `#f2f2f2`; played rows `#d0d0d0`; song and country `#c0c0c0` (all at least 7:1 on the black page). |
 | Now Playing / Up next panel | A lighter step: background `#3a3a3a`, 1.5vh/1.5vw padding, rounded 1vh. Text `#ffffff`; song and country `#e4e4e4`. Lighter, not darker, because the page is already black and a lighter block is what a projector shows best. |
 | Progress | Track `#121212` inside the panel, bar `#e03131` (about 3.8:1 against the track, enough for a non-text graphic at 3:1). |
 | Paused label | Amber `#f0b429` on the panel (about 6:1; the amber word is bold and large). |
 | Teaching marker | Unchanged; it sits inside the panel when `next`. |
 
-Alternating bands plus a rule is chosen over either alone: a rule survives a washed-out projector, and bands show the row's extent when the dance name is short and the country is far right.
+Rule only was chosen by the maintainer over alternating bands (so no per-row band attribute, and Teaching rows cannot disturb any parity). The contrast test enforces minimums only (7:1 text, 3:1 red bar, a minimum step for panel and rule); exact grays stay tunable.
 
 ## Files
 
@@ -52,8 +52,7 @@ Alternating bands plus a rule is chosen over either alone: a rule survives a was
 
 ### Task 2: Rows separated
 
-- [ ] Add a failing renderer test: Previously played and Up next rows render with the row class, and the band is applied by CSS nth-child (so no markup assertion beyond the class); the Teaching rows do not take a band and do not shift the band parity (use a class on `Row` only, and `:nth-child` over `li.row` is wrong with Teaching in the list, so give `Row` an explicit `data-band` computed from the count of non-Teaching rows before it). Test the attribute.
-- [ ] Implement `data-band` in `ProjectorView.tsx` and the CSS (`[data-band='odd']`), the heavier rule, and the padding. Commit.
+- [ ] The rule is pure CSS on `.row` (0.3vh, `var(--fdp-rule)`); the screen carries the colors as `--fdp-*` variables, which a renderer test checks. Commit.
 
 ### Task 3: The Now Playing / Up next panel
 
