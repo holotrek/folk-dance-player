@@ -13,6 +13,7 @@ export interface SessionPorts {
   unplayedItems(programId: number): ProgramItem[]
   markPlayed(itemId: number): void
   markUnplayed(itemId: number): void
+  clearPlayed(programId: number): void // items back to unplayed, the log hidden
   getTrack(fileId: number, danceId: number | null): Track | null
   getLoggedPlay(logId: number): { fileId: number; danceId: number | null } | null
   logPlay(entry: {
@@ -112,6 +113,17 @@ export class PlayerSession {
     if (this.state.status === 'playing' || this.state.status === 'paused') {
       this.update({ status: 'stopped' })
     }
+  }
+
+  // The Program page's Clear (1.0.0 spec §3.6): stops what plays (nothing follows it), returns the
+  // played items to the program and hides Previously played. Only the loaded program is cleared.
+  clearPlayed(programId: number): void {
+    if (this.ports.programId() !== programId) return
+    this.cancelCountdown()
+    this.stopProgram = null
+    this.stopHead = null
+    this.ports.clearPlayed(programId)
+    this.update({ status: 'idle', current: null, countdown: null, atStop: false, warning: null })
   }
 
   // ⏭: stops the song and starts the program's next song now, passing STOP markers.

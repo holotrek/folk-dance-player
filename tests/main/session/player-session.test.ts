@@ -512,3 +512,69 @@ describe('speed and volume', () => {
     expect(state().volume).toBe(0)
   })
 })
+
+describe('clearing played (1.0.0 spec §3.6)', () => {
+  test('while playing, stops the song, unloads it, and ▶ starts the first song again', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId, songs.c.fileId])
+    setup({ seconds: 0 })
+    session.play()
+    finish()
+    const staleId = state().current!.playId
+    expect(playing()).toBe('B')
+    session.clearPlayed(program)
+    expect(state()).toMatchObject({ status: 'idle', current: null, nextUp: { title: 'A' } })
+    expect(unplayed()).toEqual(['A', 'B', 'C'])
+    expect(listPlayed(db, program)).toEqual([])
+    expect(db.prepare('SELECT COUNT(*) AS n FROM play_log').get()).toEqual({ n: 2 })
+    session.ended(staleId) // a late report from the cleared song changes nothing
+    expect(state()).toMatchObject({ status: 'idle', current: null })
+    session.play()
+    expect(playing()).toBe('A')
+  })
+
+  test('during a countdown cancels it', () => {
+    addTracks(db, program, [songs.a.fileId, songs.b.fileId])
+    setup({ seconds: 3 })
+    session.play()
+    finish()
+    expect(state().status).toBe('countdown')
+    session.clearPlayed(program)
+    vi.advanceTimersByTime(5000)
+    expect(state()).toMatchObject({ status: 'idle', countdown: null, current: null })
+    expect(unplayed()).toEqual(['A', 'B'])
+  })
+
+  test('after halting at a STOP, the STOP returns and atStop is cleared', () => {
+    addTracks(db, program, [songs.a.fileId])
+    addStop(db, program)
+    addTracks(db, program, [songs.b.fileId])
+    setup({ seconds: 0 })
+    session.play()
+    finish()
+    expect(state().atStop).toBe(true)
+    session.clearPlayed(program)
+    expect(state().atStop).toBe(false)
+    expect(unplayed()).toEqual(['A', 'STOP', 'B'])
+    expect(state().nextUp).toMatchObject({ title: 'A' })
+  })
+
+  test('announces one state', () => {
+    addTracks(db, program, [songs.a.fileId])
+    setup()
+    session.play()
+    emitted = []
+    session.clearPlayed(program)
+    expect(emitted).toHaveLength(1)
+  })
+
+  test('only the loaded program is cleared', () => {
+    addTracks(db, program, [songs.a.fileId])
+    setup()
+    session.play()
+    emitted = []
+    session.clearPlayed(program + 1)
+    expect(emitted).toHaveLength(0)
+    expect(playing()).toBe('A')
+    expect(listPlayed(db, program)).toHaveLength(1)
+  })
+})

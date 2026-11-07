@@ -57,7 +57,7 @@ The GitHub issue (in the table in §2) holds the original request.
 | 3.3 | Projector: stronger separation, contrasting Now Playing | #91 | `ProjectorView.module.css` | Not started |
 | 3.4 | Remember the control window's size and state | #92 | main window creation, settings | Done |
 | 3.5 | An icon on songs whose dance has a slide or image | #82 | `list.ts`, `tracks.ts`, `holding.ts`, three lists | Not started |
-| 3.6 | Clear Previously played and Now Playing | #84 | `PlayerSession`, `history.ts`, Program page | Not started |
+| 3.6 | Clear Previously played and Now Playing | #84 | `PlayerSession`, `history.ts`, Program page | Built (Plan 28) |
 | 3.7 | Show a saved program as a filtered set in the library | #83 | `list.ts`, library store, `ProgramsSection` | Not started |
 | 3.8 | Auto-show and the Projector switch | #71 | `ProjectorController`, player bar | **Decision only** |
 | 3.9 | Resizable columns in the Music and Program tables | #81 | `LibraryTable`, settings | Done |

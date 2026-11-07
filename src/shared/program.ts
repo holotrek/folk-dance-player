@@ -40,7 +40,8 @@ export type ProgramItem = { id: number; kind: 'stop' } | ({ id: number; kind: 't
 export interface ProgramDetail {
   id: number
   name: string
-  items: ProgramItem[]
+  items: ProgramItem[] // the unplayed ones
+  playedCount: number // items played and hidden from `items`
 }
 
 export type PlayKind = 'program' | 'preview' | 'replay'

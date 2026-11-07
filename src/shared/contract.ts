@@ -156,6 +156,8 @@ export interface InvokeContract {
   'programs:removeItems': { args: [programId: number, itemIds: number[]]; result: void }
   'programs:setItemDance': { args: [itemId: number, danceId: number]; result: void }
   'programs:played': { args: [programId: number]; result: PlayedEntry[] }
+  // Hides Previously played, returns played items to the program and idles the player.
+  'programs:clearPlayed': { args: [programId: number]; result: void }
   'player:getState': { args: []; result: PlayerState }
   'player:play': { args: []; result: void }
   'player:pause': { args: []; result: void }
@@ -297,6 +299,7 @@ export const INVOKE_CHANNELS = [
   'programs:removeItems',
   'programs:setItemDance',
   'programs:played',
+  'programs:clearPlayed',
   'player:getState',
   'player:play',
   'player:pause',

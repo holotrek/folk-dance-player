@@ -6,6 +6,7 @@ import { appleSync } from './004-apple-sync'
 import { importMapping } from './005-import-mapping'
 import { danceAttachments } from './006-dance-attachments'
 import { holdingItems } from './007-holding-items'
+import { logCleared } from './008-log-cleared'
 
 // Append new migrations here; versions must stay 1..n in order.
 export const MIGRATIONS: readonly Migration[] = [
@@ -15,5 +16,6 @@ export const MIGRATIONS: readonly Migration[] = [
   appleSync,
   importMapping,
   danceAttachments,
-  holdingItems
+  holdingItems,
+  logCleared
 ]

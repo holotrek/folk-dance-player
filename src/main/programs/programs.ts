@@ -134,6 +134,11 @@ export function getProgram(db: DatabaseSync, programId: number): ProgramDetail |
   const program = db.prepare('SELECT id, name FROM programs WHERE id = ?').get(programId) as
     { id: number; name: string } | undefined
   if (!program) return null
+  const { n: playedCount } = db
+    .prepare(
+      'SELECT COUNT(*) AS n FROM program_items WHERE program_id = ? AND played_at IS NOT NULL'
+    )
+    .get(programId) as { n: number }
   const rows = db
     .prepare(
       `${ITEMS_SQL}
@@ -141,7 +146,7 @@ export function getProgram(db: DatabaseSync, programId: number): ProgramDetail |
        ORDER BY pi.position, pi.id`
     )
     .all(programId) as unknown as ItemRow[]
-  return { ...program, items: rows.map(toItem) }
+  return { ...program, items: rows.map(toItem), playedCount }
 }
 
 // The dances still to come in a program, in order: what the projector will need (an unknown
@@ -290,6 +295,16 @@ export function markPlayed(db: DatabaseSync, itemId: number): void {
     if (!item) return
     db.prepare(`UPDATE program_items SET played_at = ${NOW} WHERE id = ?`).run(itemId)
     touch(db, item.programId)
+  })
+}
+
+// "Clear" (1.0.0 spec §3.6): every item returns to its place unplayed, and the play log is hidden
+// from the list from now on. No log row and no item is deleted.
+export function clearPlayedItems(db: DatabaseSync, programId: number): void {
+  inTransaction(db, () => {
+    db.prepare('UPDATE program_items SET played_at = NULL WHERE program_id = ?').run(programId)
+    db.prepare(`UPDATE programs SET log_cleared_at = ${NOW} WHERE id = ?`).run(programId)
+    touch(db, programId)
   })
 }
 
