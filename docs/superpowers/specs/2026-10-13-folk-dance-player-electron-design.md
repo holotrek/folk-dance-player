@@ -176,7 +176,7 @@ The projector uses the same parts with a different emphasis (§8.2): the dance n
 - **Appearance:** `appearance` (`system` (default), `light` or `dark`)
 - **Apple Music sync:** `appleSync.enabled` (bool), `appleSync.libraryId` (the synced library's ID), `appleSync.lastResult` (the last sync's summary), `playlistFolders.open` (the sidebar's open Music folders, by persistent ID)
 - **Guided tour:** `tour.basic` and `tour.advanced` (each `unseen` (default), `done` or `hidden`; see §6.5)
-- **Other:** `window.bounds`, `currentProgramId`
+- **Other:** `window.control` (the control window's normal bounds and maximized flag), `currentProgramId`
 
 **Sync with Apple Music (migration 004, `2026-10-15-apple-music-sync-design.md` §4)**
 
