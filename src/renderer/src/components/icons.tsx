@@ -85,3 +85,13 @@ export const MusicNoteIcon = (p: IconProps): React.JSX.Element => (
     <circle cx="16.5" cy="15.5" r="2.5" />
   </Icon>
 )
+
+// A photo: marks a dance that has a slide or image to project (SlideBadge).
+export const SlideIcon = (p: IconProps): React.JSX.Element => (
+  <Icon {...p}>
+    <path
+      fillRule="evenodd"
+      d="M5 4h14a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2zm1.5 3.5a1.75 1.75 0 1 0 0 3.5 1.75 1.75 0 0 0 0-3.5zM5 18h14v-3.3l-3.6-4.2-4.1 4.7-2.3-2.6L5 16.4z"
+    />
+  </Icon>
+)

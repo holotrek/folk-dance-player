@@ -31,6 +31,9 @@ export interface LibraryQuery {
 }
 
 // One song as the table shows it: with its default dance (spec §4) and that pairing's teacher.
+// What a dance has to show on the projector: a linked Canva slide, a slide image, or both.
+export type SlideKind = 'canva' | 'image' | 'both'
+
 export interface LibraryRow {
   fileId: number
   songId: number
@@ -49,6 +52,7 @@ export interface LibraryRow {
   difficulty: number | null
   danceCount: number
   hasNotesPdf: boolean // the shown dance has a PDF attached (it can be opened from the row's menu)
+  slide: SlideKind | null // what the shown dance has to project; null shows no icon
   label: string
   playlistItemId: number | null // set when listing a playlist
   playlistNumber: number | null // its place in the playlist's own order (1, 2, …), in a playlist

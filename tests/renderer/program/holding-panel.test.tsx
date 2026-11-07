@@ -84,6 +84,18 @@ describe('holding panel', () => {
     ])
   })
 
+  test('a held song whose dance has a slide or image shows the icon', async () => {
+    setup({
+      rows: [
+        { id: 1, ...track(101, 'Hora', { slide: 'image' }) },
+        { id: 2, ...track(102, 'Kolo') }
+      ]
+    })
+    await screen.findByText('Hora')
+    expect(within(rowFor('Hora')).getByRole('img', { name: 'Image' })).toBeInTheDocument()
+    expect(within(rowFor('Kolo')).queryByRole('img')).toBeNull()
+  })
+
   test('a removed song is shown greyed with a badge', async () => {
     setup({ rows: [{ id: 1, ...track(101, 'Hora', { isRemoved: true }) }] })
     expect(await screen.findByText('removed')).toBeInTheDocument()

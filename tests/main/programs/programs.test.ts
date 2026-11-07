@@ -149,6 +149,22 @@ describe('program items', () => {
     expect(items.map((i) => i.hasNotesPdf)).toEqual([false, true])
   })
 
+  test('each song item reports the slide of its chosen dance, not the song’s default', () => {
+    const other = addDance(db, { name: 'Hora Mare' })
+    link(db, other, hora.songId)
+    db.prepare('INSERT INTO dance_prefs (dance_id, canva_page_id) VALUES (?, ?)').run(
+      other,
+      'PAGE1'
+    )
+    const p = createProgram(db, 'Set')
+    const [h] = addTracks(db, p, [hora.fileId])
+    const slides = (): unknown[] =>
+      (getProgram(db, p)!.items as Extract<ProgramItem, { kind: 'track' }>[]).map((i) => i.slide)
+    expect(slides()).toEqual([null])
+    setItemDance(db, h, other)
+    expect(slides()).toEqual(['canva'])
+  })
+
   test('each song item says whether its song is a favorite', () => {
     const p = createProgram(db, 'Set')
     addTracks(db, p, [hora.fileId, kolo.fileId])

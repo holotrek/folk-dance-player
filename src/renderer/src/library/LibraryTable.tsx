@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Group, Menu, Text, UnstyledButton } from '@mantine/core'
+import { Badge, Group, Menu, Text, UnstyledButton, VisuallyHidden } from '@mantine/core'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
@@ -17,6 +17,7 @@ import {
 import { useColumnOrder } from './useColumnOrder'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
+import SlideBadge from '../components/SlideBadge'
 import SongMenu, { openRowMenu } from './SongMenu'
 import classes from './LibraryTable.module.css'
 
@@ -84,6 +85,13 @@ const ALL_COLUMNS: Column[] = [
       ) : (
         <RowStar row={r} />
       )
+  },
+  {
+    key: 'slide',
+    sort: null,
+    label: 'Slide', // shown to screen readers only (see the header)
+    width: '24px',
+    render: (r) => <SlideBadge slide={r.slide} />
   },
   {
     key: 'dance',
@@ -193,7 +201,7 @@ const MENU_COLUMN: Column = {
 }
 
 // The movable columns are ordered by the organizer (0.3.0 spec §3.13); everything else is fixed.
-const FIXED_FIRST = ['favorite', 'dance']
+const FIXED_FIRST = ['favorite', 'slide', 'dance']
 const columnByKey = (key: string): Column => ALL_COLUMNS.find((c) => c.key === key)!
 
 // Spec §6.3: browse, sort, search and select songs; drag them onto playlists or the program.
@@ -393,6 +401,8 @@ export default function LibraryTable({
                 {c.label}
                 {sort.column === c.sort ? (sort.direction === 'asc' ? ' ▲' : ' ▼') : ''}
               </UnstyledButton>
+            ) : c.key === 'slide' ? (
+              <VisuallyHidden>{c.label}</VisuallyHidden>
             ) : (
               c.label
             )}

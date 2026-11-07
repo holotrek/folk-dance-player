@@ -4,6 +4,7 @@ import type { SongDance } from '@shared/library'
 import type { ProgramItem } from '@shared/program'
 import { PauseIcon } from '../components/icons'
 import NamePrompt from '../components/NamePrompt'
+import SlideBadge from '../components/SlideBadge'
 import FavoriteToggle from '../library/FavoriteToggle'
 import ProgramTimes from './ProgramTimes'
 import NewProgramPrompt from './NewProgramPrompt'
@@ -359,6 +360,7 @@ export default function ProgramList(): React.JSX.Element {
                     ⚠
                   </Text>
                 )}
+                <SlideBadge slide={item.slide} reserve />
                 <span className={classes.label}>{item.label}</span>
                 {item.isRemoved && (
                   <Badge size="xs" variant="light" color="gray">

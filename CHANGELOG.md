@@ -8,6 +8,10 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- A small photo icon now marks a song whose dance has a Canva slide or a slide image, in the library lists (Music page and Program page), Holding and the program. Hover it to see which; songs with neither show nothing.
+
 ## [0.3.0] - 2026-11-01
 
 ### Added
