@@ -106,6 +106,12 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 
 In CI, the certificate (as `CSC_LINK` and `CSC_KEY_PASSWORD`) and the notarization credentials become repo secrets, passed to Create Release's build job.
 
+### Testing the remote
+
+macOS ties the Accessibility permission to the app's code signature. A development run, an ad-hoc-signed build (such as 0.1.0) and the Developer ID release don't match each other, though a packaged copy of each is `com.folkdanceplayer.app`. An entry left by one of them can show as enabled in System Settings while the app reports it is not trusted, so the remote stays dead. When testing a real release after development builds, or after upgrading from an ad-hoc build, remove the app's entry with **−** in System Settings → Privacy & Security → Accessibility (or run `tccutil reset Accessibility com.folkdanceplayer.app`), quit, reopen, and allow it again. "Enabled in System Settings" is not proof the permission works; Settings → Remote control is the check.
+
+Keys registered before the permission is allowed stay dead, so after allowing it the app shows a notice with **Restart**. A development run (`npm run dev`) is a different app to macOS and can't be trusted the same way; test the remote on the packaged app.
+
 ### Updates
 
 An installed copy updates itself: it reads the newest GitHub release's `latest-mac.yml`, downloads the `.zip` it names in the background, and offers **Restart to Update** in a banner (the in-place updates design, `docs/superpowers/specs/2026-11-01-in-place-updates-design.md`). Each release therefore carries the `.dmg` (for a first install), the `.zip`, its `.blockmap` and `latest-mac.yml`, and Create Release refuses to publish unless `node scripts/release.mts check-feed dist` passes. Artifact names have no spaces on purpose: GitHub turns spaces in an uploaded name into dots, which would no longer match the names in `latest-mac.yml`.

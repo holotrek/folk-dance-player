@@ -99,6 +99,8 @@ export const IDLE_PLAYER_STATE: PlayerState = {
 export interface RemoteStatus {
   trusted: boolean
   keys: string[] // the media keys registered
+  // Allowed after launch: the keys were registered without trust and stay dead until a restart.
+  restartNeeded: boolean
 }
 
-export const NO_REMOTE: RemoteStatus = { trusted: false, keys: [] }
+export const NO_REMOTE: RemoteStatus = { trusted: false, keys: [], restartNeeded: false }

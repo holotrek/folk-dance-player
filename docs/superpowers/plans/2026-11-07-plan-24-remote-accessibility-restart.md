@@ -36,6 +36,8 @@ Both: `CONTRIBUTING.md`, `AGENTS.md`, `CHANGELOG.md`, `docs/manual-testing/pre-r
 
 ---
 
+> **Update (maintainer's answers on PR #100):** the spike is skipped. The maintainer already tested re-registering the keys after the grant and it needs a restart, so outcome B is built (notice with Restart). Platform gating is `process.platform === 'darwin'` (no `caps.mediaKeyTrust`). The notice is shown once per grant and its ✕ hides it until the next launch. The check runs on window focus only, with no 2 s polling in Settings (Settings refreshes on focus). The §3.2 docs ride in the same PR. Task 3 (re-register) is not built.
+
 ### Task 1: The spike (do first; no production code merges from it)
 
 **Goal:** Settle spec §3.1's two unverified points on the packaged, Developer-ID-signed app, on the maintainer's Mac. Needs the maintainer (confirm before launching; it covers their screen and needs them to click in System Settings).
