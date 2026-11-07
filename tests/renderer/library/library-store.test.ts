@@ -1,4 +1,7 @@
-import { afterEach, describe, expect, test } from 'vitest'
+import { notifications } from '@mantine/notifications'
+import { afterEach, describe, expect, test, vi } from 'vitest'
+
+vi.mock('@mantine/notifications', () => ({ notifications: { show: vi.fn() } }))
 import type { LibraryQuery, LibraryRow } from '@shared/library'
 import { createLibraryStore, type LibraryStore } from '@renderer/library/library-store'
 import { createFakeApi } from '../fake-api'
@@ -162,5 +165,51 @@ describe('library store', () => {
       { search: '', filter: { kind: 'all' }, sort: { column: 'dance', direction: 'asc' } }
     ])
     expect(store.getState()).toMatchObject({ search: '', selected: [3], scrollTo: 3 })
+  })
+
+  describe('a saved program as a filter', () => {
+    const program = {
+      id: 5,
+      name: 'Night',
+      updatedAt: '',
+      unplayedCount: 0,
+      unplayedDurationMs: 0,
+      unplayedGaps: 0
+    }
+    const sortOf = (fake: ReturnType<typeof createFakeApi>) =>
+      (fake.callsTo('library:list').at(-1)![0] as LibraryQuery).sort.column
+
+    test('opens in program order and leaving returns to the default sort', async () => {
+      const fake = createFakeApi({
+        'library:list': () => [row(1)],
+        'programs:list': [program]
+      })
+      store = createLibraryStore(fake.api)
+      await store.getState().setFilter({ kind: 'program', programId: 5 })
+      expect(sortOf(fake)).toBe('position')
+      expect(store.getState().programName).toBe('Night')
+      await store.getState().setFilter({ kind: 'all' })
+      expect(sortOf(fake)).toBe('dance')
+      expect(store.getState().programName).toBeNull()
+    })
+
+    test('refetches on programs:changed, and clears with a notice when the program is gone', async () => {
+      let programs = [program]
+      const fake = createFakeApi({
+        'library:list': () => [row(1)],
+        'programs:list': () => programs
+      })
+      store = createLibraryStore(fake.api)
+      stopWatching = store.getState().watch()
+      await store.getState().setFilter({ kind: 'program', programId: 5 })
+      const before = fake.callsTo('library:list').length
+      fake.emit('programs:changed', null)
+      await vi.waitFor(() => expect(fake.callsTo('library:list').length).toBeGreaterThan(before))
+      expect(store.getState().filter).toEqual({ kind: 'program', programId: 5 })
+      programs = []
+      fake.emit('programs:changed', null)
+      await vi.waitFor(() => expect(store.getState().filter).toEqual({ kind: 'all' }))
+      expect(notifications.show).toHaveBeenCalled()
+    })
   })
 })

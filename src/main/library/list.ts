@@ -35,7 +35,7 @@ const SORT_SQL: Record<SortColumn, string> = {
   danceType: 'd.dance_type COLLATE NOCASE',
   difficulty: 'dp.difficulty',
   duration: 'f.duration_ms',
-  position: 'pi.position'
+  position: 'pi.position' // a program's `pg.position` is swapped in (see listLibrary)
 }
 
 interface Row {
@@ -77,14 +77,29 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
   if (query.filter.kind === 'favorites') where.push('fp.is_favorite = 1')
 
   const playlistId = query.filter.kind === 'playlist' ? query.filter.playlistId : null
+  const programId = query.filter.kind === 'program' ? query.filter.programId : null
+  const program = programId !== null
   const playlist = playlistId !== null
+  // A program lists each song once, at its first position (STOPs and deleted files have no
+  // file_id); played and unplayed items both count.
   const playlistJoin = playlist
     ? 'JOIN playlist_items pi ON pi.file_id = f.id AND pi.playlist_id = ?'
-    : ''
+    : program
+      ? `JOIN (SELECT file_id, MIN(position) AS position FROM program_items
+               WHERE program_id = ? AND kind = 'track' AND file_id IS NOT NULL
+               GROUP BY file_id) pg ON pg.file_id = f.id`
+      : ''
   if (playlistId !== null) params.unshift(playlistId)
-  // Sorting by playlist position outside a playlist falls back to dance.
+  if (programId !== null) params.unshift(programId)
+  // Sorting by position outside a playlist or program falls back to dance.
   const sortExpr =
-    query.sort.column === 'position' && !playlist ? SORT_SQL.dance : SORT_SQL[query.sort.column]
+    query.sort.column === 'position'
+      ? program
+        ? 'pg.position'
+        : playlist
+          ? SORT_SQL.position
+          : SORT_SQL.dance
+      : SORT_SQL[query.sort.column]
   const direction = query.sort.direction === 'desc' ? 'DESC' : 'ASC'
 
   const rows = db
@@ -103,7 +118,13 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
              ? `(SELECT COUNT(*) FROM playlist_items x JOIN files xf ON xf.id = x.file_id
                  WHERE x.playlist_id = pi.playlist_id AND x.position <= pi.position
                    AND xf.removed_at IS NULL)`
-             : 'NULL'
+             : program
+               ? `(SELECT COUNT(*) FROM program_items x JOIN files xf ON xf.id = x.file_id
+                   WHERE x.program_id = ${Number(programId)} AND x.kind = 'track'
+                     AND x.position <= pg.position AND xf.removed_at IS NULL
+                     AND x.position = (SELECT MIN(y.position) FROM program_items y
+                                       WHERE y.program_id = x.program_id AND y.file_id = x.file_id))`
+               : 'NULL'
          } AS playlistNumber
        FROM songs s
        JOIN files f ON f.id = s.file_id

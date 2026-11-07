@@ -270,7 +270,7 @@ PROGRAMS                  [+]
   └──────────────┘
 ```
 
-- **Library and playlist entries** filter the library list. Songs can be dropped onto a playlist (or Favorites) to add them. While the list shows a playlist or Favorites, a tinted note above it says so ("Showing playlist “Balkan”", "Showing Favorites") with **Show all music**, on both the Program and Music pages.
+- **Library and playlist entries** filter the library list. A saved program's ⋯ menu has **Show in library**, which filters the list to its songs (once each, numbered in program order; "Showing program “Night”"). Songs can be dropped onto a playlist (or Favorites) to add them. While the list shows a playlist or Favorites, a tinted note above it says so ("Showing playlist “Balkan”", "Showing Favorites") with **Show all music**, on both the Program and Music pages.
 - **The playlist list** scrolls on its own once it fills 40% of the sidebar, so a large Apple Music library's playlists never push Programs off screen.
 - **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
 - **With Apple Music sync on** (sync spec §6.2, §6.3): LIBRARY gains **Removed from Apple Music (N)** while songs wait for review (Keep, Remove, Keep all, Remove all). PLAYLISTS shows Music's folders as collapsible groups and Music's playlists as read-only mirrors, marked with a note icon, before the local playlists. A mirror's only option is **Duplicate as my playlist**; dropping songs on it says "Edit this playlist in Music."

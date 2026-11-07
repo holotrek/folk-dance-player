@@ -101,6 +101,20 @@ describe('Programs in the sidebar', () => {
     expect(fake.callsTo('programs:setCurrent')).toEqual([[2]])
   })
 
+  test('Show in library filters the library to the program without loading it', async () => {
+    const fake = setup({ 'library:list': [] })
+    await within(group()).findByText('Beginner night')
+    await userEvent.click(screen.getByRole('button', { name: 'Options for Beginner night' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Show in library' }))
+    await waitFor(() =>
+      expect(fake.callsTo('library:list').at(-1)![0]).toMatchObject({
+        filter: { kind: 'program', programId: 2 },
+        sort: { column: 'position' }
+      })
+    )
+    expect(fake.callsTo('programs:setCurrent')).toEqual([])
+  })
+
   test('while a song plays, loading another program asks first', async () => {
     const fake = setup({
       'player:getState': { ...IDLE_PLAYER_STATE, programId: 1, status: 'playing' }

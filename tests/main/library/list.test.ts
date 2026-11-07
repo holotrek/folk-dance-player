@@ -194,6 +194,49 @@ describe('listLibrary', () => {
     expect(listLibrary(db, all).map((r) => r.playlistNumber)).toEqual([null, null, null])
   })
 
+  test("lists a saved program's songs once each, in program order, numbered", () => {
+    const a = addLibrarySong(db, { title: 'A' })
+    const b = addLibrarySong(db, { title: 'B' })
+    const c = addLibrarySong(db, { title: 'C' })
+    const gone = addLibrarySong(db, { title: 'Gone' })
+    addLibrarySong(db, { title: 'Other' })
+    db.prepare('UPDATE files SET removed_at = CURRENT_TIMESTAMP WHERE id = ?').run(gone.fileId)
+    const p = Number(
+      db.prepare("INSERT INTO programs (name) VALUES ('Night')").run().lastInsertRowid
+    )
+    const add = db.prepare(
+      'INSERT INTO program_items (program_id, position, kind, file_id, played_at) VALUES (?, ?, ?, ?, ?)'
+    )
+    add.run(p, 1, 'track', c.fileId, '2026-10-14') // played
+    add.run(p, 2, 'stop', null, null)
+    add.run(p, 3, 'track', gone.fileId, null)
+    add.run(p, 4, 'track', a.fileId, null)
+    add.run(p, 5, 'track', c.fileId, null) // C again
+    add.run(p, 6, 'track', b.fileId, null)
+    db.prepare("INSERT INTO program_items (program_id, position, kind) VALUES (?, 7, 'track')").run(
+      p
+    )
+    const q = (extra: Partial<LibraryQuery> = {}) =>
+      listLibrary(db, { ...all, filter: { kind: 'program', programId: p }, ...extra })
+    const pos = { column: 'position', direction: 'asc' } as const
+    expect(q({ sort: pos }).map((r) => `${r.playlistNumber} ${r.title}`)).toEqual([
+      '1 C',
+      '2 A',
+      '3 B'
+    ])
+    expect(q({ sort: pos }).every((r) => r.playlistItemId === null)).toBe(true)
+    expect(q({ sort: { column: 'position', direction: 'desc' } }).map((r) => r.title)).toEqual([
+      'B',
+      'A',
+      'C'
+    ])
+    expect(q({ sort: { column: 'title', direction: 'asc' } }).map((r) => r.playlistNumber)).toEqual(
+      [2, 3, 1]
+    )
+    expect(q({ search: 'b' }).map((r) => r.title)).toEqual(['B'])
+    expect(listLibrary(db, { ...all, filter: { kind: 'program', programId: 999 } })).toEqual([])
+  })
+
   test('sorts by a column in either direction, keeping empty values last', () => {
     addLibrarySong(db, { title: 'A', dance: { name: 'A', country: 'Serbia' } })
     addLibrarySong(db, { title: 'B', dance: { name: 'B', country: 'bulgaria' } })

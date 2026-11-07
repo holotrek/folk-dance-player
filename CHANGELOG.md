@@ -16,6 +16,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 
 - The projector view is easier to read from across the room: a heavier line separates the songs in Previously played and Up next, and Now playing (or Up next) sits on a lighter panel that stands out from the lists.
+- A saved program can be shown in the Music page's list: choose **Show in library** in its ⋯ menu (or right-click it). The list shows the program's songs once each, numbered in program order, and you can search, sort and select within it. **Show all music** goes back.
 
 ## [0.3.0] - 2026-11-01
 

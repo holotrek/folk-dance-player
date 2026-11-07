@@ -307,6 +307,24 @@ describe('Music page in a playlist', () => {
     await screen.findByText('A')
   }
 
+  test('says which program the list shows, numbers its songs, and Show all music leaves it', async () => {
+    const program = {
+      id: 5,
+      name: 'Night',
+      updatedAt: '',
+      unplayedCount: 0,
+      unplayedDurationMs: 0,
+      unplayedGaps: 0
+    }
+    setup({ 'library:list': inPlaylist, 'programs:list': [program] }, true)
+    await userEvent.click(await screen.findByRole('button', { name: 'Options for Night' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Show in library' }))
+    expect(await screen.findByText('Showing program “Night”')).toBeInTheDocument()
+    expect(within(rowFor('C')).getByText('3')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Show all music' }))
+    expect(screen.queryByText(/Showing/)).toBeNull()
+  })
+
   test('says which playlist the list shows, and numbers its songs', async () => {
     setup({ 'library:list': inPlaylist, 'playlists:list': playlist }, true)
     await openPlaylist()
