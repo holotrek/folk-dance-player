@@ -11,6 +11,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 
 - A small photo icon now marks a song whose dance has a Canva slide or a slide image, in the library lists (Music page and Program page), Holding and the program. Hover it to see which; songs with neither show nothing.
+- Drag the right edge of a column header to resize it, on the Music page and the Program page's library list (Alt+Shift+←/→ with a header focused also works). Sizes are remembered, scale with the window, and **Reset columns** clears them along with the order.
 
 ## [0.3.0] - 2026-11-01
 

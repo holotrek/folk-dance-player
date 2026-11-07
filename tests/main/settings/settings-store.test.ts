@@ -118,6 +118,33 @@ describe('SettingsStore', () => {
     expect(store.get('library.columns.music')).toEqual([])
   })
 
+  test('column widths default to empty and round-trip', () => {
+    expect(store.get('library.columnWidths.music')).toEqual({})
+    expect(store.get('library.columnWidths.program')).toEqual({})
+    store.set('library.columnWidths.music', { country: 12.5 })
+    expect(new SettingsStore(db).get('library.columnWidths.music')).toEqual({ country: 12.5 })
+  })
+
+  test('rejects column widths that are not a map of percentages', () => {
+    const bad = [[1], { a: 'x' }, { a: 0 }, { a: 101 }, { a: Infinity }, { '': 5 }, 'x', null]
+    for (const v of bad) {
+      expect(() => store.set('library.columnWidths.music', v as never)).toThrow(InvalidSettingError)
+    }
+    expect(() =>
+      store.set(
+        'library.columnWidths.program',
+        Object.fromEntries(Array.from({ length: 41 }, (_, i) => [`c${i}`, 5]))
+      )
+    ).toThrow(InvalidSettingError)
+  })
+
+  test('corrupt stored column widths fall back to the default', () => {
+    db.prepare(
+      "INSERT INTO settings (key, value) VALUES ('library.columnWidths.music', '\"x\"')"
+    ).run()
+    expect(store.get('library.columnWidths.music')).toEqual({})
+  })
+
   test('Apple Music sync settings are validated', () => {
     expect(store.get('appleSync.enabled')).toBe(false)
     store.set('appleSync.libraryId', '0123456789ABCDEF')
