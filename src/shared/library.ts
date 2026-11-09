@@ -5,6 +5,7 @@ export type LibraryFilter =
   | { kind: 'all' }
   | { kind: 'favorites' }
   | { kind: 'playlist'; playlistId: number }
+  | { kind: 'program'; programId: number } // a saved program's songs, once each (a view only)
   | { kind: 'review' } // "Removed from Apple Music" (sync spec §6.2)
 
 export type SortColumn =
@@ -17,7 +18,7 @@ export type SortColumn =
   | 'danceType'
   | 'difficulty'
   | 'duration'
-  | 'position' // playlist order; only meaningful with a playlist filter
+  | 'position' // playlist or program order; only meaningful with one of those filters
 
 export interface LibrarySort {
   column: SortColumn

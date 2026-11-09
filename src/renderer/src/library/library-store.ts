@@ -1,6 +1,7 @@
 import { createStore, type StoreApi } from 'zustand/vanilla'
 import type { PlaylistFolder } from '@shared/apple-sync'
 import type { RendererApi } from '@shared/contract'
+import { notifications } from '@mantine/notifications'
 import type { LibraryFilter, LibraryRow, LibrarySort, PlaylistSummary } from '@shared/library'
 
 export type SelectMode = 'single' | 'toggle' | 'range'
@@ -11,6 +12,7 @@ export interface LibraryState {
   sort: LibrarySort
   rows: LibraryRow[]
   playlists: PlaylistSummary[]
+  programName: string | null // the name of the program a program filter shows
   folders: PlaylistFolder[] // Music's playlist folders (sync spec §6.2)
   selected: number[] // song ids, in the order they were selected
   anchor: number | null // last clicked song, for shift-click ranges
@@ -46,6 +48,7 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
     sort: DEFAULT_SORT,
     rows: [],
     playlists: [],
+    programName: null,
     folders: [],
     selected: [],
     anchor: null,
@@ -54,12 +57,25 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
     async refresh() {
       const request = ++latest
       const { search, filter, sort } = get()
-      const [rows, playlists, folders] = await Promise.all([
+      const [rows, playlists, folders, programs] = await Promise.all([
         api.invoke('library:list', { search, filter, sort }),
         api.invoke('playlists:list'),
-        api.invoke('playlists:folders')
+        api.invoke('playlists:folders'),
+        // Unsearched, so the sidebar's search can't hide the shown program.
+        filter.kind === 'program' ? api.invoke('programs:list', '') : Promise.resolve(null)
       ])
       if (request !== latest) return // a newer refresh already started
+      if (filter.kind === 'program') {
+        const shown = programs?.find((p) => p.id === filter.programId)
+        if (!shown) {
+          // Deleted while shown: back to the whole library, with a notice.
+          notifications.show({ message: 'That program was deleted, so all music is shown.' })
+          set({ filter: { kind: 'all' }, programName: null, selected: [], anchor: null })
+          await get().refresh()
+          return
+        }
+        set({ programName: shown.name })
+      }
       const present = new Set(rows.map((r) => r.songId))
       set((s) => ({
         rows,
@@ -73,12 +89,18 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
     async setFilter(filter) {
       // A playlist opens in its own order; leaving one returns to title order.
       const sort =
-        filter.kind === 'playlist'
+        filter.kind === 'playlist' || filter.kind === 'program'
           ? PLAYLIST_SORT
           : get().sort.column === 'position'
             ? DEFAULT_SORT
             : get().sort
-      set({ filter, sort, selected: [], anchor: null })
+      set({
+        filter,
+        sort,
+        programName: filter.kind === 'program' ? get().programName : null,
+        selected: [],
+        anchor: null
+      })
       await get().refresh()
     },
 
@@ -123,7 +145,7 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
     async reveal(songId) {
       if (!get().rows.some((r) => r.songId === songId)) {
         const sort = get().sort.column === 'position' ? DEFAULT_SORT : get().sort
-        set({ filter: { kind: 'all' }, search: '', sort })
+        set({ filter: { kind: 'all' }, programName: null, search: '', sort })
         await get().refresh()
       }
       set({ selected: [songId], anchor: songId, scrollTo: songId })
@@ -131,7 +153,16 @@ export function createLibraryStore(api: RendererApi): LibraryStore {
 
     scrolled: () => set({ scrollTo: null }),
 
-    watch: () => api.on('library:changed', () => void get().refresh())
+    watch() {
+      const stops = [
+        api.on('library:changed', () => void get().refresh()),
+        // A program's songs, name or existence can change.
+        api.on('programs:changed', () => {
+          if (get().filter.kind === 'program') void get().refresh()
+        })
+      ]
+      return () => stops.forEach((stop) => stop())
+    }
   }))
   return store
 }

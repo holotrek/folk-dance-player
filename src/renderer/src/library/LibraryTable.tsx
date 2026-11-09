@@ -228,7 +228,7 @@ export default function LibraryTable({
   const select = useLibrary((s) => s.select)
   const scrollTo = useLibrary((s) => s.scrollTo)
   const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
-  const inPlaylist = filter.kind === 'playlist'
+  const inPlaylist = filter.kind === 'playlist' || filter.kind === 'program' // numbered rows
   const playlists = useLibrary((s) => s.playlists)
   // The Program page's library list (spec §6.2) shows fewer columns than the Music page's table. As
   // it narrows, the CSS drops columns completely in this order, wherever they are: Artist, Teacher,
