@@ -34,6 +34,14 @@ describe('holding', () => {
     expect(titles()).toEqual(['B', 'C', 'A'])
   })
 
+  test('a held song reports the slide of the dance it is held as', () => {
+    db.prepare(
+      "INSERT INTO dance_prefs (dance_id, slide_image_name, slide_image_path) VALUES (?, 'a.png', '1-ab.png')"
+    ).run(a.danceId)
+    holdSongs(db, [a.fileId, b.fileId], null)
+    expect(listHolding(db).map((h) => h.slide)).toEqual(['image', null])
+  })
+
   test('returns the holding ids of the songs, in the order given', () => {
     const ids = holdSongs(db, [b.fileId, a.fileId], null)
     expect(listHolding(db).map((h) => h.id)).toEqual(ids)

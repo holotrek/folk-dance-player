@@ -1,4 +1,4 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import type { LibraryQuery, LibraryRow } from '@shared/library'
@@ -26,6 +26,7 @@ const row = (songId: number, extra: Partial<LibraryRow> = {}): LibraryRow => ({
   difficulty: null,
   danceCount: 1,
   hasNotesPdf: false,
+  slide: null,
   label: `Song ${songId} | Dance ${songId}`,
   playlistItemId: null,
   playlistNumber: null,
@@ -106,6 +107,7 @@ describe('Music page library table', () => {
       screen.getAllByRole('columnheader').map((h) => h.textContent?.replace(/ [▲▼]$/, ''))
     ).toEqual([
       '',
+      'Slide',
       'Dance / Song',
       'Country',
       'Choreographer',
@@ -361,5 +363,47 @@ describe('Music page in a playlist', () => {
       dataTransfer: { types: [FILES_MIME], getData: () => JSON.stringify([103]) }
     })
     expect(fake.callsTo('playlists:reorder')).toEqual([])
+  })
+})
+
+describe('slide icon column', () => {
+  const withSlides = [
+    row(1, { title: 'Has', label: 'Has', slide: 'canva' }),
+    row(2, { title: 'Both', label: 'Both', slide: 'both' }),
+    row(3, { title: 'Bare', label: 'Bare', slide: null })
+  ]
+
+  test('marks rows whose dance has a slide or image, and leaves the others bare', async () => {
+    setup({ 'library:list': withSlides })
+    await screen.findByText('Has')
+    expect(within(rowFor('Has')).getByRole('img', { name: 'Canva slide' })).toBeInTheDocument()
+    expect(
+      within(rowFor('Both')).getByRole('img', { name: 'Canva slide and image' })
+    ).toBeInTheDocument()
+    expect(within(rowFor('Bare')).queryByRole('img')).toBeNull()
+  })
+
+  test('is a fixed, unsortable, unmovable column right after the star', async () => {
+    setup({ 'library:list': withSlides })
+    await screen.findByText('Has')
+    const headers = screen.getAllByRole('columnheader')
+    expect(headers.slice(0, 3).map((h) => h.getAttribute('data-column'))).toEqual([
+      'favorite',
+      'slide',
+      'dance'
+    ])
+    const slide = headers[1]
+    expect(slide).not.toHaveAttribute('draggable', 'true')
+    expect(within(slide).queryByRole('button')).toBeNull()
+    expect(slide).toHaveTextContent('Slide')
+  })
+
+  test('the icon follows a refetch after the slide is removed', async () => {
+    let current = withSlides
+    const fake = setup({ 'library:list': () => current })
+    await screen.findByText('Has')
+    current = [row(1, { title: 'Has', label: 'Has', slide: null })]
+    act(() => fake.emit('library:changed', null))
+    await waitFor(() => expect(screen.queryByRole('img', { name: 'Canva slide' })).toBeNull())
   })
 })

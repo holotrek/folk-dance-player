@@ -47,6 +47,7 @@ describe('listLibrary', () => {
         difficulty: null,
         danceCount: 1,
         hasNotesPdf: false,
+        slide: null,
         label: 'Hora Mare ♪ Hora de la Munte',
         playlistItemId: null,
         playlistNumber: null
@@ -64,6 +65,32 @@ describe('listLibrary', () => {
       ['Hora', true],
       ['Kolo', false]
     ])
+  })
+
+  test('says whether the shown dance has a Canva slide, an image, both or neither', () => {
+    const slideOnly = addLibrarySong(db, { title: 'A', dance: { name: 'A' } })
+    const imageOnly = addLibrarySong(db, { title: 'B', dance: { name: 'B' } })
+    const both = addLibrarySong(db, { title: 'C', dance: { name: 'C' } })
+    addLibrarySong(db, { title: 'D', dance: { name: 'D' } })
+    const slide = db.prepare('INSERT INTO dance_prefs (dance_id, canva_page_id) VALUES (?, ?)')
+    const image = db.prepare(
+      "INSERT INTO dance_prefs (dance_id, slide_image_name, slide_image_path) VALUES (?, 'a.png', '1-ab.png')"
+    )
+    slide.run(slideOnly.danceId, 'PAGE1')
+    image.run(imageOnly.danceId)
+    image.run(both.danceId)
+    db.prepare('UPDATE dance_prefs SET canva_page_id = ? WHERE dance_id = ?').run(
+      'PAGE2',
+      both.danceId
+    )
+    expect(listLibrary(db, all).map((r) => [r.title, r.slide])).toEqual([
+      ['A', 'canva'],
+      ['B', 'image'],
+      ['C', 'both'],
+      ['D', null]
+    ])
+    db.prepare('UPDATE dance_prefs SET canva_page_id = NULL WHERE dance_id = ?').run(both.danceId)
+    expect(listLibrary(db, all).find((r) => r.title === 'C')!.slide).toBe('image')
   })
 
   test('shows the default dance of a song with several, and the choreographer to tell them apart', () => {

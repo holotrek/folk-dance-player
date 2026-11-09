@@ -1,7 +1,15 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { formatLabel, labelParts } from '@shared/labels'
-import type { LibraryQuery, LibraryRow, SortColumn } from '@shared/library'
+import type { LibraryQuery, LibraryRow, SlideKind, SortColumn } from '@shared/library'
 import { toFtsQuery } from '../db/fts'
+
+// What a dance has to project, from its prefs' Canva page ID and slide image path expressions: a
+// linked slide counts even before its image is captured, or after it has left its deck (it keeps
+// its image). NULL when the dance has neither (or no prefs row).
+export const slideKindSql = (pageId: string, imagePath: string): string => `CASE
+  WHEN ${pageId} IS NOT NULL AND ${imagePath} IS NOT NULL THEN 'both'
+  WHEN ${pageId} IS NOT NULL THEN 'canva'
+  WHEN ${imagePath} IS NOT NULL THEN 'image' END`
 
 // The pairing a song is shown with (spec §4): its default dance if still linked, else its
 // earliest-linked dance. `songId` is a SQL expression for the song's id.
@@ -48,6 +56,7 @@ interface Row {
   difficulty: number | null
   danceCount: number
   hasNotesPdf: number
+  slide: SlideKind | null
   choreographerCount: number
   playlistItemId: number | null
   playlistNumber: number | null
@@ -86,6 +95,7 @@ export function listLibrary(db: DatabaseSync, query: LibraryQuery): LibraryRow[]
          d.dance_type AS danceType, dp.difficulty,
          (SELECT COUNT(*) FROM dance_songs c WHERE c.song_id = s.id) AS danceCount,
          (dp.notes_pdf_path IS NOT NULL) AS hasNotesPdf,
+         ${slideKindSql('dp.canva_page_id', 'dp.slide_image_path')} AS slide,
          ${choreographerCountSql('s.id')} AS choreographerCount,
          ${playlist ? 'pi.id' : 'NULL'} AS playlistItemId,
          ${

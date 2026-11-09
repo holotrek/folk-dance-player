@@ -18,6 +18,7 @@ const track = (id: number, dance: string, extra: Partial<Track> = {}): Track => 
   isFavorite: false,
   danceCount: 1,
   hasNotesPdf: false,
+  slide: null,
   ...extra
 })
 const item = (id: number, t: Track): ProgramItem => ({ id, kind: 'track', ...t })

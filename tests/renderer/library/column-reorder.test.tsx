@@ -59,6 +59,7 @@ const TIME_ARTIST_FIRST = [
 
 const MUSIC_DEFAULT = [
   '',
+  'Slide',
   'Dance / Song',
   'Country',
   'Choreographer',
@@ -76,6 +77,7 @@ describe('saved column orders', () => {
     await waitFor(() =>
       expect(headers()).toEqual([
         '',
+        'Slide',
         'Dance / Song',
         'Time',
         'Artist',
@@ -97,6 +99,7 @@ describe('saved column orders', () => {
     await waitFor(() =>
       expect(headers()).toEqual([
         '',
+        'Slide',
         'Dance / Song',
         'Time',
         'Country',
@@ -113,6 +116,7 @@ describe('saved column orders', () => {
     await waitFor(() =>
       expect(headers()).toEqual([
         '',
+        'Slide',
         'Dance / Song',
         'Country',
         'Choreographer',
@@ -129,6 +133,7 @@ describe('saved column orders', () => {
     await waitFor(() =>
       expect(headers()).toEqual([
         '',
+        'Slide',
         'Dance / Song',
         'Artist',
         'Country',
@@ -150,8 +155,8 @@ describe('saved column orders', () => {
   test('in a playlist the # column stays first', async () => {
     setup('music', { 'library.columns.music': TIME_ARTIST_FIRST })
     await userEvent.click(await screen.findByText('Couple dances'))
-    await waitFor(() => expect(headers().slice(0, 3)).toEqual(['#', '', 'Dance / Song']))
-    expect(headers().slice(3, 5)).toEqual(['Time', 'Artist'])
+    await waitFor(() => expect(headers().slice(0, 4)).toEqual(['#', '', 'Slide', 'Dance / Song']))
+    expect(headers().slice(4, 6)).toEqual(['Time', 'Artist'])
   })
 })
 
@@ -190,7 +195,7 @@ describe('dragging a column header', () => {
     await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
     dragColumn('Artist', 'Country')
     await waitFor(() =>
-      expect(headers().slice(1, 5)).toEqual(['Dance / Song', 'Artist', 'Country', 'Choreographer'])
+      expect(headers().slice(2, 6)).toEqual(['Dance / Song', 'Artist', 'Country', 'Choreographer'])
     )
     expect(savedOrder(fake, 'library.columns.music')).toEqual([
       'artist',
@@ -207,7 +212,7 @@ describe('dragging a column header', () => {
     setup('music')
     await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
     dragColumn('Time', 'Dance / Song')
-    await waitFor(() => expect(headers()[2]).toBe('Time'))
+    await waitFor(() => expect(headers()[3]).toBe('Time'))
   })
 
   test('onto the ⋯ header moves it to the end', async () => {
@@ -235,7 +240,7 @@ describe('dragging a column header', () => {
     const fake = setup('program')
     await waitFor(() => expect(headers()).toContain('Artist'))
     dragColumn('Time', 'Country')
-    await waitFor(() => expect(headers()[2]).toBe('Time'))
+    await waitFor(() => expect(headers()[3]).toBe('Time'))
     expect(savedOrder(fake, 'library.columns.program')).toEqual([
       'time',
       'country',
@@ -295,7 +300,7 @@ describe('moving columns with the keyboard, and Reset columns', () => {
     const button = focusHeader('Choreographer')
     await userEvent.keyboard('{Alt>}{ArrowRight}{/Alt}')
     await waitFor(() =>
-      expect(headers().slice(2, 5)).toEqual(['Country', 'Teacher', 'Choreographer'])
+      expect(headers().slice(3, 6)).toEqual(['Country', 'Teacher', 'Choreographer'])
     )
     expect(within(header('Choreographer')).getByRole('button')).toBe(button)
     expect(button).toHaveFocus()
@@ -326,7 +331,7 @@ describe('moving columns with the keyboard, and Reset columns', () => {
 
   test('right-click on a header offers Reset columns, which saves an empty order', async () => {
     const fake = setup('music', { 'library.columns.music': TIME_ARTIST_FIRST })
-    await waitFor(() => expect(headers()[2]).toBe('Time'))
+    await waitFor(() => expect(headers()[3]).toBe('Time'))
     fireEvent.contextMenu(header('Artist'), { clientX: 20, clientY: 20 })
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Reset columns' }))
     await waitFor(() => expect(headers()).toEqual(MUSIC_DEFAULT))
@@ -358,7 +363,7 @@ describe('review fixes', () => {
     dragAt('dragOver', header('Choreographer'), dt, 900)
     dragAt('drop', header('Choreographer'), dt, 900)
     await waitFor(() =>
-      expect(headers().slice(2, 5)).toEqual(['Choreographer', 'Country', 'Teacher'])
+      expect(headers().slice(3, 6)).toEqual(['Choreographer', 'Country', 'Teacher'])
     )
     expect(savedOrder(fake, 'library.columns.music')?.slice(0, 3)).toEqual([
       'choreographer',
@@ -394,7 +399,7 @@ describe('review fixes', () => {
       within(header('Choreographer')).getByRole('button').focus()
       await userEvent.keyboard('{Alt>}{ArrowRight}{/Alt}')
       await waitFor(() =>
-        expect(headers().slice(2, 5)).toEqual(['Country', 'Teacher', 'Choreographer'])
+        expect(headers().slice(3, 6)).toEqual(['Country', 'Teacher', 'Choreographer'])
       )
       expect(document.activeElement).toBe(within(header('Choreographer')).getByRole('button'))
     } finally {

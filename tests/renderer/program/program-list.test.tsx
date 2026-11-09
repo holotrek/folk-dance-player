@@ -36,6 +36,7 @@ const libraryRow = (fileId: number, title: string): LibraryRow => ({
   difficulty: null,
   danceCount: 1,
   hasNotesPdf: false,
+  slide: null,
   label: title,
   playlistItemId: null,
   playlistNumber: null
@@ -150,6 +151,27 @@ describe('program list', () => {
       [5, [1]],
       [5, [2]]
     ])
+  })
+
+  test('an item whose dance has a slide or image shows the icon before its label', async () => {
+    setup({
+      programs: {
+        ...program,
+        items: [
+          item(1, track(101, 'Hora', { slide: 'canva' })),
+          item(2, track(102, 'Kolo')),
+          stop(3)
+        ]
+      }
+    })
+    await screen.findByText('Hora')
+    const icon = within(rowFor('Hora')).getByRole('img', { name: 'Canva slide' })
+    expect(icon.compareDocumentPosition(screen.getByText('Hora'))).toBe(
+      Node.DOCUMENT_POSITION_FOLLOWING
+    )
+    expect(within(rowFor('Kolo')).queryByRole('img')).toBeNull()
+    const stopRow = screen.getByText('STOP / TEACHING').closest('[role=option]') as HTMLElement
+    expect(within(stopRow).queryByRole('img')).toBeNull()
   })
 
   test('a STOP marker is drawn with an icon, not an emoji', async () => {

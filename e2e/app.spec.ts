@@ -226,7 +226,7 @@ test('a column dragged to a new place stays there after a restart', async () => 
       .getByRole('table', { name: 'Songs' })
       .getByRole('columnheader')
       .allTextContents()
-      .then((names) => names.map((n) => n.replace(/ [▲▼]$/, '')).filter(Boolean))
+      .then((names) => names.map((n) => n.replace(/ [▲▼]$/, '')).filter((n) => n && n !== 'Slide')) // the star and the fixed Slide column
   const DEFAULT = ['Dance / Song', 'Country', 'Choreographer', 'Teacher', 'Artist', 'Type']
 
   await running.page.getByRole('tab', { name: 'Music' }).click()
@@ -254,13 +254,13 @@ test('Alt+→ moves a column and the focus stays on its header', async () => {
   await button.focus()
   await running.page.keyboard.press('Alt+ArrowRight')
   await expect(table.getByRole('columnheader')).toContainText(
-    ['', 'Dance / Song', 'Country', 'Teacher', 'Choreographer', 'Artist'],
+    ['', 'Slide', 'Dance / Song', 'Country', 'Teacher', 'Choreographer', 'Artist'],
     { useInnerText: true }
   )
   await expect(button).toBeFocused()
   await running.page.keyboard.press('Alt+ArrowRight') // and it can be pressed again
-  await expect(table.getByRole('columnheader').nth(4)).toContainText('Artist')
-  await expect(table.getByRole('columnheader').nth(5)).toContainText('Choreographer')
+  await expect(table.getByRole('columnheader').nth(5)).toContainText('Artist')
+  await expect(table.getByRole('columnheader').nth(6)).toContainText('Choreographer')
 })
 
 test('renaming a song renames its same-named dance', async () => {

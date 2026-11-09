@@ -53,7 +53,17 @@ describe('Program page', () => {
       within(library)
         .getAllByRole('columnheader')
         .map((h) => h.textContent)
-    ).toEqual(['', 'Dance / Song ▲', 'Country', 'Choreographer', 'Teacher', 'Artist', 'Time', '']) // the last: each row's ⋯ menu
+    ).toEqual([
+      '',
+      'Slide',
+      'Dance / Song ▲',
+      'Country',
+      'Choreographer',
+      'Teacher',
+      'Artist',
+      'Time',
+      ''
+    ]) // the last: each row's ⋯ menu
     expect(within(library).getByText('Sonia Dion')).toBeInTheDocument()
   })
 

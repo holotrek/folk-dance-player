@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { ActionIcon, Badge, Text, Title } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import type { HoldingItem } from '@shared/program'
+import SlideBadge from '../components/SlideBadge'
 import FavoriteToggle from '../library/FavoriteToggle'
 import {
   carriesFiles,
@@ -201,6 +202,7 @@ export default function HoldingPanel(): React.JSX.Element {
                 ⚠
               </Text>
             )}
+            <SlideBadge slide={r.slide} reserve />
             <span className={classes.label}>{r.label}</span>
             {r.isRemoved && (
               <Badge size="xs" variant="light" color="gray">
