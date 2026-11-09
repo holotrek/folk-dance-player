@@ -13,6 +13,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A small photo icon now marks a song whose dance has a Canva slide or a slide image, in the library lists (Music page and Program page), Holding and the program. Hover it to see which; songs with neither show nothing.
 - Drag the right edge of a column header to resize it, on the Music page and the Program page's library list (Alt+Shift+←/→ with a header focused also works). Sizes are remembered, scale with the window, and **Reset columns** clears them along with the order.
 - A saved program can be shown in the Music page's list: choose **Show in library** in its ⋯ menu (or right-click it). The list shows the program's songs once each, numbered in program order, and you can search, sort and select within it. **Show all music** goes back.
+- The window now reopens at the size and position you left it, and maximized if it was. If the screen it was on is gone, it opens on one that is connected.
 
 ### Changed
 

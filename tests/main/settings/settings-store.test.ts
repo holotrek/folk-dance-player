@@ -37,9 +37,15 @@ describe('SettingsStore', () => {
   })
 
   test('stores structured values', () => {
-    store.set('window.bounds', { x: 10, y: 20, width: 1200, height: 800 })
+    store.set('window.control', { x: 10, y: 20, width: 1200, height: 800, maximized: true })
     store.set('danceTypeSuggestions', ['Line', 'Couple'])
-    expect(store.get('window.bounds')).toEqual({ x: 10, y: 20, width: 1200, height: 800 })
+    expect(store.get('window.control')).toEqual({
+      x: 10,
+      y: 20,
+      width: 1200,
+      height: 800,
+      maximized: true
+    })
     expect(store.get('danceTypeSuggestions')).toEqual(['Line', 'Couple'])
   })
 
@@ -67,7 +73,11 @@ describe('SettingsStore', () => {
     ['import.artistTagTarget', 'artist'], // an old key is no longer a setting
     ['import.genreIsCountry', 'yes'],
     ['danceTypeSuggestions', ['Line', '']],
-    ['window.bounds', { x: 0, y: 0, width: 0, height: 10 }],
+    ['window.control', { x: 0, y: 0, width: 0, height: 10, maximized: false }],
+    ['window.control', { x: 0, y: 0, width: 10, height: 10 }],
+    ['window.control', { x: 0, y: 0, width: 10, height: 10, maximized: 'yes' }],
+    ['window.control', { x: NaN, y: 0, width: 10, height: 10, maximized: false }],
+    ['window.control', 'big'],
     ['currentProgramId', 0]
   ])('rejects invalid value for %s: %j', (key, value) => {
     expect(() => store.set(key, value)).toThrow(InvalidSettingError)

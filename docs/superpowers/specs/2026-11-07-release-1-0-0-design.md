@@ -55,7 +55,7 @@ The GitHub issue (in the table in §2) holds the original request.
 | 3.1 | Offer a Restart when Accessibility is allowed | #90 | Remote section, `remote:status`, app menu | Not started |
 | 3.2 | Document stale Accessibility entries | #90 | `CONTRIBUTING.md`, `AGENTS.md` | Not started |
 | 3.3 | Projector: stronger separation, contrasting Now Playing | #91 | `ProjectorView.module.css` | Not started |
-| 3.4 | Remember the control window's size and state | #92 | main window creation, settings | Not started |
+| 3.4 | Remember the control window's size and state | #92 | main window creation, settings | Done |
 | 3.5 | An icon on songs whose dance has a slide or image | #82 | `list.ts`, `tracks.ts`, `holding.ts`, three lists | Not started |
 | 3.6 | Clear Previously played and Now Playing | #84 | `PlayerSession`, `history.ts`, Program page | Not started |
 | 3.7 | Show a saved program as a filtered set in the library | #83 | `list.ts`, library store, `ProgramsSection` | Not started |
@@ -181,9 +181,9 @@ size on a display that exists.
 - **Not the projector or the tour:** only the control window; the projector is placed by the
   display rules, and a tour never resizes the window (AGENTS.md, 2026-10-31).
 - **Full screen** is not restored (a new macOS Space); maximized is.
-- **Windows' content size:** `useContentSize` makes `width` and `height` the content's, so save
-  `getContentBounds()` there and `getNormalBounds()` on macOS, or the window grows by a title bar
-  at each launch.
+- **Outer bounds everywhere** (maintainer's answer): no window sets `useContentSize`, so
+  `getNormalBounds()` is used on macOS and Windows alike. If the saved display is gone, maximized
+  is still restored, on the fallback display.
 - `FDP_USER_DATA` test runs start with no saved bounds, so the end-to-end specs are unaffected;
   one new spec resizes, quits, relaunches and checks the size.
 

@@ -75,6 +75,7 @@ import { guardNavigation } from './navigation'
 import { userDataOverride } from './user-data'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
+import { createWindowStateSaver, restoreBounds } from './window-state'
 
 // A separate library for end-to-end tests, smoke runs and development builds, so they never
 // touch the real one.
@@ -169,18 +170,35 @@ const toDisplay = (d: Electron.Display): DisplayInfo => ({
   bounds: d.bounds
 })
 
-function createMainWindow(): BrowserWindow {
+const MAIN_WINDOW_MIN = { width: 1000, height: 640 }
+
+// Opens where it was left (1.0.0 spec §3.4): the saved bounds, fitted to the displays that exist.
+function createMainWindow(settings: SettingsStore): BrowserWindow {
+  const { bounds, maximized } = restoreBounds(
+    settings.get('window.control'),
+    screen
+      .getAllDisplays()
+      .map((d) => ({ workArea: d.workArea, primary: d.id === screen.getPrimaryDisplay().id })),
+    MAIN_WINDOW_MIN
+  )
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
-    minWidth: 1000,
-    minHeight: 640,
+    ...bounds,
+    minWidth: MAIN_WINDOW_MIN.width,
+    minHeight: MAIN_WINDOW_MIN.height,
     title: 'Folk Dance Player',
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true
     }
+  })
+  if (maximized) win.maximize()
+  createWindowStateSaver({
+    window: win,
+    save: (state) => settings.set('window.control', state),
+    onError: (err) => log.error("Couldn't save the window's size", err)
   })
   win.on('ready-to-show', () => win.show())
   guardNavigation(win.webContents)
@@ -477,7 +495,7 @@ function startApp(): void {
   }
 
   // One control window; closing it quits, so the projector is never left on its own.
-  const mainWindow = createMainWindow()
+  const mainWindow = createMainWindow(settings)
   mainWindow.on('closed', () => app.quit())
   // Sync triggers (sync spec §3.3): once the window is shown, and whenever it gains focus.
   mainWindow.once('show', () => appleSync.started())

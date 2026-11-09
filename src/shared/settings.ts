@@ -7,11 +7,13 @@ export type TagSource = 'artistTag' | 'albumArtistTag' | 'ignore'
 // The control window's colors: the Mac's light/dark choice, or always light or dark.
 export type Appearance = 'system' | 'light' | 'dark'
 
-export interface WindowBounds {
+// The control window's normal (not maximized) bounds, and whether it was maximized.
+export interface WindowState {
   x: number
   y: number
   width: number
   height: number
+  maximized: boolean
 }
 
 // Spec §4 "Settings keys".
@@ -28,7 +30,7 @@ export interface Settings {
   'projector.displayId': number | null
   'autoFullscreen.enabled': boolean
   'autoFullscreen.seconds': number
-  'window.bounds': WindowBounds | null
+  'window.control': WindowState | null
   currentProgramId: number | null
   appearance: Appearance
   // Sync with Apple Music (sync spec §4).
@@ -77,7 +79,7 @@ export const DEFAULT_SETTINGS: Settings = {
   'projector.displayId': null,
   'autoFullscreen.enabled': true,
   'autoFullscreen.seconds': 15,
-  'window.bounds': null,
+  'window.control': null,
   currentProgramId: null,
   appearance: 'system',
   'appleSync.enabled': false,
@@ -106,14 +108,15 @@ const isIntIn =
 const isTagSource = (v: unknown): boolean => TAG_SOURCES.includes(v)
 const isIdOrNull = (v: unknown): boolean => v === null || (Number.isInteger(v) && (v as number) > 0)
 const isDisplayIdOrNull = (v: unknown): boolean => v === null || Number.isInteger(v)
-const isBoundsOrNull = (v: unknown): boolean => {
+const isWindowStateOrNull = (v: unknown): boolean => {
   if (v === null) return true
   if (typeof v !== 'object') return false
   const b = v as Record<string, unknown>
   return (
     ['x', 'y', 'width', 'height'].every((k) => Number.isFinite(b[k])) &&
     (b.width as number) > 0 &&
-    (b.height as number) > 0
+    (b.height as number) > 0 &&
+    typeof b.maximized === 'boolean'
   )
 }
 const isSuggestionList = (v: unknown): boolean =>
@@ -156,7 +159,7 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'projector.displayId': isDisplayIdOrNull,
   'autoFullscreen.enabled': isBool,
   'autoFullscreen.seconds': isIntIn(5, 3600),
-  'window.bounds': isBoundsOrNull,
+  'window.control': isWindowStateOrNull,
   currentProgramId: isIdOrNull,
   appearance: (v) => v === 'system' || v === 'light' || v === 'dark',
   'appleSync.enabled': isBool,
