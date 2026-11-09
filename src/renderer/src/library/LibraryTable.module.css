@@ -164,3 +164,23 @@
 .options:focus-visible {
   opacity: 1;
 }
+
+/* A movable header resize edge (1.0.0 spec section 3.9). */
+.resizable {
+  position: relative;
+}
+
+.handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.handle:hover,
+.handle:active {
+  box-shadow: inset -2px 0 0 var(--mantine-primary-color-filled);
+}

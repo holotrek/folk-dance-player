@@ -15,6 +15,9 @@ import {
   setDraggedFiles
 } from './drag'
 import { useColumnOrder } from './useColumnOrder'
+import { useColumnWidths } from './useColumnWidths'
+import { nudgeWidth, widthTrack } from './column-widths'
+import ResizeHandle from './ResizeHandle'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
 import SlideBadge from '../components/SlideBadge'
@@ -243,10 +246,24 @@ export default function LibraryTable({
     ...(filter.kind === 'review' ? [FILE_COLUMN] : []),
     MENU_COLUMN
   ]
-  // Each column's own width, as the rows' grid; the CSS can set `--w-<key>` to 0 to collapse one.
-  const template = COLUMNS.map(
-    (c) => `var(--w-${c.key}, ${compact ? (c.compactWidth ?? c.width) : c.width})`
-  ).join(' ')
+  const { widths, save: saveWidths, reset: resetWidths } = useColumnWidths(api, list)
+  // A column being dragged wider or narrower: its live percentage, saved at release.
+  const [live, setLive] = useState<{ key: string; percent: number } | null>(null)
+  const widthOf = (key: string): number | undefined =>
+    live?.key === key ? live.percent : widths[key]
+  const isDefault = isDefaultOrder && Object.keys(widths).length === 0
+  // Each column's own width, as the rows' grid; the CSS can set `--w-<key>` to 0 to collapse one,
+  // which beats a width the organizer set (it is only the fallback of the variable).
+  const template = COLUMNS.map((c) => {
+    const percent = order.includes(c.key) ? widthOf(c.key) : undefined
+    const track =
+      percent !== undefined
+        ? widthTrack(c.key, percent)
+        : compact
+          ? (c.compactWidth ?? c.width)
+          : c.width
+    return `var(--w-${c.key}, ${track})`
+  }).join(' ')
   const scroll = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -334,7 +351,13 @@ export default function LibraryTable({
           />
         </Menu.Target>
         <Menu.Dropdown>
-          <Menu.Item disabled={isDefaultOrder} onClick={reset}>
+          <Menu.Item
+            disabled={isDefault}
+            onClick={() => {
+              reset()
+              resetWidths()
+            }}
+          >
             Reset columns
           </Menu.Item>
         </Menu.Dropdown>
@@ -354,11 +377,16 @@ export default function LibraryTable({
             role="columnheader"
             data-column={c.key}
             className={
-              landing === c.key
-                ? classes.dropColumn
-                : landing === 'end' && c.key === order.at(-1)
-                  ? classes.dropColumnEnd
-                  : undefined
+              [
+                landing === c.key
+                  ? classes.dropColumn
+                  : landing === 'end' && c.key === order.at(-1)
+                    ? classes.dropColumnEnd
+                    : '',
+                order.includes(c.key) ? classes.resizable : ''
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined
             }
             draggable={order.includes(c.key)}
             onDragStart={(e) => order.includes(c.key) && setDraggedColumn(e.dataTransfer, c.key)}
@@ -396,6 +424,16 @@ export default function LibraryTable({
                   if (!e.altKey || !order.includes(c.key)) return
                   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
                   e.preventDefault()
+                  // Alt+Shift+←/→ resizes by 1% of the table (1.0.0 spec §3.9).
+                  if (e.shiftKey) {
+                    const cell = e.currentTarget.closest('[role=columnheader]')!
+                    const table = cell.closest('[role=table]')!.getBoundingClientRect().width
+                    const current =
+                      widths[c.key] ?? (cell.getBoundingClientRect().width / table) * 100
+                    const next = nudgeWidth(current, c.key, table, e.key === 'ArrowLeft' ? -1 : 1)
+                    if (next !== widths[c.key]) saveWidths({ ...widths, [c.key]: next })
+                    return
+                  }
                   const next = nudgeColumn(order, c.key, e.key === 'ArrowLeft' ? -1 : 1)
                   if (next.join() !== order.join()) save(next)
                 }}
@@ -407,6 +445,18 @@ export default function LibraryTable({
               <VisuallyHidden>{c.label}</VisuallyHidden>
             ) : (
               c.label
+            )}
+            {order.includes(c.key) && (
+              <ResizeHandle
+                columnKey={c.key}
+                label={c.label}
+                onChange={(percent) => setLive({ key: c.key, percent })}
+                onCommit={(percent) => {
+                  setLive(null)
+                  saveWidths({ ...widths, [c.key]: percent })
+                }}
+                onCancel={() => setLive(null)}
+              />
             )}
           </div>
         ))}

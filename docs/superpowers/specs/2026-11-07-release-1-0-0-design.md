@@ -60,7 +60,7 @@ The GitHub issue (in the table in §2) holds the original request.
 | 3.6 | Clear Previously played and Now Playing | #84 | `PlayerSession`, `history.ts`, Program page | Not started |
 | 3.7 | Show a saved program as a filtered set in the library | #83 | `list.ts`, library store, `ProgramsSection` | Not started |
 | 3.8 | Auto-show and the Projector switch | #71 | `ProjectorController`, player bar | **Decision only** |
-| 3.9 | Resizable columns in the Music and Program tables | #81 | `LibraryTable`, settings | Not started |
+| 3.9 | Resizable columns in the Music and Program tables | #81 | `LibraryTable`, settings | Done |
 
 ## 3. Details
 

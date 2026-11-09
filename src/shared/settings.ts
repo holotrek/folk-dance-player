@@ -41,6 +41,10 @@ export interface Settings {
   // column key. The empty list is the default order (0.3.0 spec §3.13).
   'library.columns.music': string[]
   'library.columns.program': string[]
+  // The widths the organizer gave columns, by column key, each a percentage of the table's width.
+  // The empty map is every column's default width (1.0.0 spec §3.9).
+  'library.columnWidths.music': Record<string, number>
+  'library.columnWidths.program': Record<string, number>
   // The guided tour's two parts: not finished, finished, or "don't show this again" (tour spec §2.2).
   'tour.basic': TourFlag
   'tour.advanced': TourFlag
@@ -82,6 +86,8 @@ export const DEFAULT_SETTINGS: Settings = {
   'playlistFolders.open': [],
   'library.columns.music': [],
   'library.columns.program': [],
+  'library.columnWidths.music': {},
+  'library.columnWidths.program': {},
   'tour.basic': 'unseen',
   'tour.advanced': 'unseen',
   'updates.check': true
@@ -120,6 +126,23 @@ const isColumnOrder = (v: unknown): boolean =>
   v.length <= 40 &&
   v.every((k) => typeof k === 'string' && k.length > 0 && k.length <= 40)
 
+const isColumnWidths = (v: unknown): boolean => {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return false
+  const entries = Object.entries(v)
+  return (
+    entries.length <= 40 &&
+    entries.every(
+      ([k, w]) =>
+        k.length > 0 &&
+        k.length <= 40 &&
+        typeof w === 'number' &&
+        Number.isFinite(w) &&
+        w > 0 &&
+        w <= 100
+    )
+  )
+}
+
 const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'import.artistFrom': isTagSource,
   'import.teacherFrom': isTagSource,
@@ -142,6 +165,8 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'playlistFolders.open': (v) => Array.isArray(v) && v.length <= 1000 && v.every(isPersistentId),
   'library.columns.music': isColumnOrder,
   'library.columns.program': isColumnOrder,
+  'library.columnWidths.music': isColumnWidths,
+  'library.columnWidths.program': isColumnWidths,
   'tour.basic': isTourFlag,
   'tour.advanced': isTourFlag,
   'updates.check': isBool
