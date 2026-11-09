@@ -47,6 +47,31 @@ describe('play log', () => {
     expect(listPlayed(db, p)).toMatchObject([{ kind: 'program', track: null }])
   })
 
+  test('clearing hides earlier entries but deletes none, and later plays show again', () => {
+    const hora = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
+    const kolo = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })
+    const sirba = addLibrarySong(db, { title: 'Sârba', dance: { name: 'Sârba' } })
+    const p = createProgram(db, 'Set')
+    const other = createProgram(db, 'Other')
+    const ids = [hora, kolo, sirba].map((song) =>
+      logPlay(db, { fileId: song.fileId, danceId: song.danceId, programId: p, kind: 'program' })
+    )
+    logPlay(db, { fileId: hora.fileId, danceId: hora.danceId, programId: other, kind: 'program' })
+    db.prepare("UPDATE play_log SET played_at = '2026-10-14T20:00:00.000Z' WHERE id <= ?").run(
+      ids[1]
+    )
+    db.prepare("UPDATE play_log SET played_at = '2026-10-14T20:10:00.000Z' WHERE id = ?").run(
+      ids[2]
+    )
+    db.prepare("UPDATE programs SET log_cleared_at = '2026-10-14T20:05:00.000Z' WHERE id = ?").run(
+      p
+    )
+    expect(listPlayed(db, p).map((e) => e.track?.title)).toEqual(['Sârba'])
+    expect(listPlayed(db, other)).toHaveLength(1)
+    expect(db.prepare('SELECT COUNT(*) AS n FROM play_log').get()).toEqual({ n: 4 })
+    expect(getLoggedPlay(db, ids[0])).toEqual({ fileId: hora.fileId, danceId: hora.danceId })
+  })
+
   test('a replay reads the file and dance that were logged', () => {
     const hora = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
     const id = logPlay(db, {

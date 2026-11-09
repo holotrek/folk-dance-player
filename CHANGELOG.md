@@ -14,6 +14,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Drag the right edge of a column header to resize it, on the Music page and the Program page's library list (Alt+Shift+←/→ with a header focused also works). Sizes are remembered, scale with the window, and **Reset columns** clears them along with the order.
 - A saved program can be shown in the Music page's list: choose **Show in library** in its ⋯ menu (or right-click it). The list shows the program's songs once each, numbered in program order, and you can search, sort and select within it. **Show all music** goes back.
 - The window now reopens at the size and position you left it, and maximized if it was. If the screen it was on is gone, it opens on one that is connected.
+- A **Clear** button in Previously played on the Program page stops the song that is playing and empties Previously played, so the page is ready for the next run. Songs already played stay played (nothing returns to the program) and the history is kept; the projector clears too.
 
 ### Changed
 

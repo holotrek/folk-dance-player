@@ -1,11 +1,11 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, test } from 'vitest'
-import type { PlayedEntry } from '@shared/program'
+import type { PlayedEntry, PlayerState } from '@shared/program'
 import PlayedList from '@renderer/program/PlayedList'
 import { createFakeApi } from '../fake-api'
 import { renderWithLibrary } from '../library/render-library'
-import { playerState, track } from './fixtures'
+import { playerState, playing, track } from './fixtures'
 
 const played: PlayedEntry[] = [
   { logId: 1, kind: 'program', playedAt: '2026-10-14T20:00:00Z', track: null },
@@ -13,10 +13,11 @@ const played: PlayedEntry[] = [
   { logId: 3, kind: 'preview', playedAt: '2026-10-14T20:10:00Z', track: track(102, 'Kolo') }
 ]
 
-function setup() {
+function setup(options: { entries?: PlayedEntry[]; state?: PlayerState } = {}) {
   const fake = createFakeApi({
-    'player:getState': playerState(),
-    'programs:played': played,
+    'player:getState': options.state ?? playerState(),
+    'programs:played': options.entries ?? played,
+    'programs:clearPlayed': undefined,
     'player:replay': undefined
   })
   renderWithLibrary(<PlayedList />, fake.api)
@@ -51,5 +52,24 @@ describe('previously played', () => {
     await userEvent.dblClick(await screen.findByText('Hora'))
     await userEvent.dblClick(screen.getByText('Removed from the library'))
     expect(fake.callsTo('player:replay')).toEqual([[2]])
+  })
+
+  test('Clear calls programs:clearPlayed for the loaded program', async () => {
+    const fake = setup()
+    await screen.findByText('Kolo')
+    await userEvent.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(fake.callsTo('programs:clearPlayed')).toEqual([[5]])
+  })
+
+  test('Clear is shown but disabled when nothing is played, loaded or logged', async () => {
+    setup({ entries: [] })
+    await screen.findByText('Nothing played yet')
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled()
+  })
+
+  test('Clear is enabled for a song that is loaded, even with an empty list', async () => {
+    setup({ entries: [], state: playing(track(101, 'Hora')) })
+    await screen.findByText('Nothing played yet')
+    expect(screen.getByRole('button', { name: 'Clear' })).toBeEnabled()
   })
 })

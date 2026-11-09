@@ -6,6 +6,7 @@ import { setFavorite } from '../../../src/main/library/playlists'
 import {
   addStop,
   addTracks,
+  clearPlayLog,
   createProgram,
   deleteProgram,
   duplicateProgram,
@@ -260,5 +261,36 @@ describe('program items', () => {
     deleteProgram(db, p)
     expect(() => addTracks(db, p, [hora.fileId])).toThrow(ProgramError)
     expect(() => addStop(db, p)).toThrow(ProgramError)
+  })
+})
+
+describe('clearing the play log', () => {
+  test('only sets the program’s mark: played items stay played, nothing returns', () => {
+    const p = createProgram(db, 'Set')
+    const other = createProgram(db, 'Other')
+    addTracks(db, p, [hora.fileId])
+    addStop(db, p)
+    addTracks(db, p, [kolo.fileId])
+    addTracks(db, other, [tune.fileId])
+    const [h, s] = ids(p)
+    markPlayed(db, h)
+    markPlayed(db, s) // the STOP too
+    const playedAt = () =>
+      db.prepare('SELECT id, played_at AS at FROM program_items ORDER BY id').all()
+    const before = playedAt()
+    clearPlayLog(db, p)
+    expect(playedAt()).toEqual(before)
+    expect(labels(p)).toEqual(['Žikino Kolo ♪ Kolo'])
+    const mark = (id: number) =>
+      (
+        db.prepare('SELECT log_cleared_at AS at FROM programs WHERE id = ?').get(id) as {
+          at: string | null
+        }
+      ).at
+    expect(mark(p)).toMatch(/^\d{4}-\d\d-\d\dT/)
+    expect(mark(other)).toBeNull()
+    db.prepare('UPDATE programs SET log_cleared_at = ? WHERE id = ?').run('2000-01-01T00:00:00Z', p)
+    clearPlayLog(db, p)
+    expect(mark(p)! > '2000-01-01T00:00:00Z').toBe(true)
   })
 })
