@@ -90,7 +90,9 @@ const ALL_COLUMNS: Column[] = [
     key: 'slide',
     sort: null,
     label: 'Slide', // shown to screen readers only (see the header)
-    width: '24px',
+    // The 16px icon plus the cell's 5px padding on each side; narrower, the icon overflows the
+    // cell and its `text-overflow: ellipsis` draws a stray "…".
+    width: '26px',
     render: (r) => <SlideBadge slide={r.slide} />
   },
   {
