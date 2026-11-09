@@ -33,7 +33,7 @@ export interface HandlerDeps {
   // Whether a file is on disk (the program pre-check); defaults to the real file system.
   fileExists?: (path: string) => boolean
   // The remote's media keys (spec §7.4); reported off when absent.
-  remote?: { status(): RemoteStatus; requestAccess(): RemoteStatus }
+  remote?: { status(): RemoteStatus; requestAccess(): RemoteStatus; restart(): void }
   // The projector window (spec §8); reported off when absent.
   projector?: ProjectorDeps
   // A dance's PDF and slide image (0.3.0 spec §3.6, §3.7); attaching fails when absent.

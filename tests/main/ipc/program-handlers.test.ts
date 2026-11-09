@@ -165,8 +165,10 @@ describe('program handlers', () => {
 
   test('remote status comes from the app; without one, the remote is reported off', async () => {
     const { h } = setup()
-    expect(await h['remote:status']()).toEqual({ trusted: false, keys: [] })
-    expect(await h['remote:requestAccess']()).toEqual({ trusted: false, keys: [] })
+    const off = { trusted: false, keys: [], restartNeeded: false }
+    expect(await h['remote:status']()).toEqual(off)
+    expect(await h['remote:requestAccess']()).toEqual(off)
+    expect(await h['remote:restart']()).toBeUndefined()
   })
 
   test('auto-continue is changed from the player bar', async () => {

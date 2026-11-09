@@ -443,7 +443,7 @@ A media remote (or a keyboard's media keys) controls playback, whether the app i
 - **Stop** (keyboards): ⏹.
 - **Volume:** left to the system.
 
-The keys are registered as global shortcuts in the main process and go to `PlayerSession`. Chromium's own media-key handling is switched off, so nothing can pause the `<audio>` element behind the session's back. On macOS, media keys reach an app only when it is trusted for Accessibility; Settings says whether the remote works and asks for the permission when it doesn't. See `docs/spikes/remote-control.md`.
+The keys are registered as global shortcuts in the main process and go to `PlayerSession`. Chromium's own media-key handling is switched off, so nothing can pause the `<audio>` element behind the session's back. On macOS, media keys reach an app only when it is trusted for Accessibility; Settings says whether the remote works and asks for the permission when it doesn't. Keys registered before the permission is allowed stay dead (re-registering them in the running app was tried and doesn't work), so when the window regains focus and the permission has gone from not trusted to trusted, the app offers a notice with a **Restart** button; it asks first while music plays (1.0.0 spec §3.1). See `docs/spikes/remote-control.md`.
 
 ## 8. Projector view
 

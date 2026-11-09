@@ -94,6 +94,7 @@ export function programHandlers(deps: HandlerDeps): Pick<InvokeHandlers, Program
     'player:dismissWarning': () => player.dismissWarning(),
     'player:restart': () => player.restart(),
     'remote:status': () => deps.remote?.status() ?? NO_REMOTE,
-    'remote:requestAccess': () => deps.remote?.requestAccess() ?? NO_REMOTE
+    'remote:requestAccess': () => deps.remote?.requestAccess() ?? NO_REMOTE,
+    'remote:restart': () => deps.remote?.restart()
   }
 }

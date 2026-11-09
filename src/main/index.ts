@@ -66,6 +66,7 @@ import {
 import { createProjectorFeed } from './projector/projector-feed'
 import { followProjectorWindow, LiveSlide } from './projector/live-slide'
 import { registerMediaKeys } from './remote/media-keys'
+import { RemoteWatcher } from './remote/remote-watcher'
 import { checkProgramFiles } from './programs/file-check'
 import { getProgram, upcomingDanceIds } from './programs/programs'
 import { trackPath } from './programs/tracks'
@@ -489,9 +490,26 @@ function startApp(): void {
   // macOS delivers media keys only to an app trusted for Accessibility; other platforms don't ask.
   const trusted = (prompt: boolean) =>
     process.platform !== 'darwin' || systemPreferences.isTrustedAccessibilityClient(prompt)
+  // Keys registered before the permission was allowed stay dead, so a grant after launch means a
+  // restart (1.0.0 spec §3.1). Checked whenever the control window gains focus.
+  const remoteWatcher = new RemoteWatcher({
+    isTrusted: () => trusted(false),
+    registeredKeys: () => mediaKeys,
+    trustedAtStart: trusted(false),
+    onChange: (status) => {
+      if (!tour.active()) broadcast('remote:changed', status)
+    }
+  })
   const remote = {
-    status: () => ({ trusted: trusted(false), keys: mediaKeys }),
-    requestAccess: () => ({ trusted: trusted(true), keys: mediaKeys })
+    status: () => remoteWatcher.check(),
+    requestAccess: () => {
+      trusted(true)
+      return remoteWatcher.check()
+    },
+    restart: () => {
+      app.relaunch()
+      app.exit()
+    }
   }
 
   // One control window; closing it quits, so the projector is never left on its own.
@@ -500,6 +518,7 @@ function startApp(): void {
   // Sync triggers (sync spec §3.3): once the window is shown, and whenever it gains focus.
   mainWindow.once('show', () => appleSync.started())
   mainWindow.on('focus', () => appleSync.focused())
+  mainWindow.on('focus', () => remoteWatcher.check())
   // Back from editing a deck in Canva: re-read the decks so slide numbers and titles follow.
   mainWindow.on('focus', () => void canva.focused())
   app.setAboutPanelOptions({

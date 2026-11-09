@@ -15,6 +15,7 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A saved program can be shown in the Music page's list: choose **Show in library** in its ⋯ menu (or right-click it). The list shows the program's songs once each, numbered in program order, and you can search, sort and select within it. **Show all music** goes back.
 - The window now reopens at the size and position you left it, and maximized if it was. If the screen it was on is gone, it opens on one that is connected.
 - A **Clear** button in Previously played on the Program page stops the song that is playing and empties Previously played, so the page is ready for the next run. Songs already played stay played (nothing returns to the program) and the history is kept; the projector clears too.
+- When you allow Folk Dance Player in System Settings → Accessibility, a notice (and Settings → Remote control) offers a **Restart** button so the remote starts working; Settings also explains how to fix an Accessibility entry that looks on but doesn't work.
 
 ### Changed
 
