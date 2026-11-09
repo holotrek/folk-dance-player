@@ -38,6 +38,10 @@ System Settings → Displays: not mirrored, with the laptop as the main display.
   - [ ] Previously played fills in as songs play.
   - [ ] A preview double-clicked on the Music page shows on the projector too.
 - [ ] 7. Drag the control window onto the projector: it moves back to the laptop.
+- [ ] 7a. From across the room, with the program playing and then stopped (Up next), with and without a dance that has a slide:
+  - [ ] Each song in Previously played and Up next is clearly separated from the next by its rule.
+  - [ ] Now playing (or Up next) sits on a lighter panel that stands out from the lists, with the red progress line readable on it.
+  - [ ] The panel never overlaps the slide, and the Ending line is still visible.
 
 ## C. Canva
 
