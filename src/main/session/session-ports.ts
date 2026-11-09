@@ -2,7 +2,7 @@ import { existsSync } from 'node:fs'
 import type { DatabaseSync } from 'node:sqlite'
 import type { SettingsStore } from '../settings/settings-store'
 import { getLoggedPlay, logPlay } from '../programs/history'
-import { clearPlayedItems, getProgram, markPlayed, markUnplayed } from '../programs/programs'
+import { clearPlayLog, getProgram, markPlayed, markUnplayed } from '../programs/programs'
 import { getTrack, trackPath } from '../programs/tracks'
 import type { SessionPorts } from './player-session'
 
@@ -32,7 +32,7 @@ export function createSessionPorts(
       notices.programsChanged()
     },
     // The caller announces this one (`programs:clearPlayed` sends the one programs notice).
-    clearPlayed: (programId) => clearPlayedItems(db, programId),
+    clearPlayLog: (programId) => clearPlayLog(db, programId),
     getTrack: (fileId, danceId) => getTrack(db, fileId, danceId),
     getLoggedPlay: (logId) => getLoggedPlay(db, logId),
     logPlay: (entry) => {

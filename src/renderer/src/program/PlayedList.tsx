@@ -17,11 +17,10 @@ export default function PlayedList(): React.JSX.Element {
   const played = useProgram((s) => s.played)
   const programId = useProgram((s) => s.player.programId)
   const loaded = useProgram((s) => s.player.current !== null)
-  const hiddenPlayed = useProgram((s) => s.program?.playedCount ?? 0)
   const [error, setError] = useState<string | null>(null)
   const list = useFollowBottom(played.length, programId)
-  // Nothing to clear: no entries shown, no song loaded, no played items waiting to return.
-  const canClear = programId !== null && (played.length > 0 || loaded || hiddenPlayed > 0)
+  // Nothing to clear: no entries shown and nothing loaded in Now Playing.
+  const canClear = programId !== null && (played.length > 0 || loaded)
   return (
     <section className={classes.panel} aria-label="Previously played">
       <Group justify="space-between" mb="xs" wrap="nowrap">
@@ -30,7 +29,7 @@ export default function PlayedList(): React.JSX.Element {
           size="compact-xs"
           variant="default"
           disabled={!canClear}
-          title="Stop, return the played songs to the program and clear this list; the history is kept"
+          title="Stop the song and clear this list; played songs stay played and the history is kept"
           onClick={() =>
             void api
               .invoke('programs:clearPlayed', programId!)

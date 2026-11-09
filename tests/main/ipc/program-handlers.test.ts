@@ -177,7 +177,7 @@ describe('program handlers', () => {
     expect((await h['player:getState']()).autoContinue).toEqual({ enabled: false, seconds: 8 })
   })
 
-  test('programs:clearPlayed hides the played list, returns the songs, and idles the player', async () => {
+  test('programs:clearPlayed hides the played list and idles the player, leaving played songs played', async () => {
     const { h, counts, songs } = setup()
     const p = await h['programs:create']('Set')
     await h['programs:addTracks'](p, [songs.hora.fileId, songs.kolo.fileId], null)
@@ -188,7 +188,7 @@ describe('program handlers', () => {
     await h['programs:clearPlayed'](p)
     expect(await h['programs:played'](p)).toEqual([])
     expect(counts.programs).toBe(before + 1)
-    expect((await h['programs:get'](p))?.items).toHaveLength(2)
+    expect((await h['programs:get'](p))?.items).toHaveLength(1)
     expect(await h['player:getState']()).toMatchObject({ status: 'idle', current: null })
   })
 

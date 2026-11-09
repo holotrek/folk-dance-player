@@ -13,7 +13,7 @@ export interface SessionPorts {
   unplayedItems(programId: number): ProgramItem[]
   markPlayed(itemId: number): void
   markUnplayed(itemId: number): void
-  clearPlayed(programId: number): void // items back to unplayed, the log hidden
+  clearPlayLog(programId: number): void // hides the program's play log (nothing is deleted)
   getTrack(fileId: number, danceId: number | null): Track | null
   getLoggedPlay(logId: number): { fileId: number; danceId: number | null } | null
   logPlay(entry: {
@@ -115,14 +115,15 @@ export class PlayerSession {
     }
   }
 
-  // The Program page's Clear (1.0.0 spec §3.6): stops what plays (nothing follows it), returns the
-  // played items to the program and hides Previously played. Only the loaded program is cleared.
+  // The Program page's Clear (1.0.0 spec §3.6): stops what plays (nothing follows it) and hides
+  // Previously played. Played items stay played and nothing returns to the program, so next up is
+  // unchanged. Only the loaded program is cleared.
   clearPlayed(programId: number): void {
     if (this.ports.programId() !== programId) return
     this.cancelCountdown()
     this.stopProgram = null
     this.stopHead = null
-    this.ports.clearPlayed(programId)
+    this.ports.clearPlayLog(programId)
     this.update({ status: 'idle', current: null, countdown: null, atStop: false, warning: null })
   }
 

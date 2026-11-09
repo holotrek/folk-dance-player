@@ -8,8 +8,7 @@ import { createFakeApi } from '../fake-api'
 const detail: ProgramDetail = {
   id: 5,
   name: 'Set',
-  items: [{ id: 1, kind: 'stop' }],
-  playedCount: 0
+  items: [{ id: 1, kind: 'stop' }]
 }
 const summaries = [{ id: 5, name: 'Set', updatedAt: '2026-10-14T00:00:00Z', unplayedCount: 0 }]
 
@@ -97,8 +96,7 @@ describe('program store', () => {
     const three: ProgramDetail = {
       id: 5,
       name: 'Set',
-      items: [1, 2, 3].map((id) => ({ id, kind: 'stop' as const })),
-      playedCount: 0
+      items: [1, 2, 3].map((id) => ({ id, kind: 'stop' as const }))
     }
     const loaded = async () => {
       current = three
@@ -127,7 +125,7 @@ describe('program store', () => {
     test('loading a program with no matching items clears the selection', async () => {
       const fake = await loaded()
       store.getState().selectItem(2, 'single')
-      current = { id: 6, name: 'Other', items: [{ id: 9, kind: 'stop' }], playedCount: 0 }
+      current = { id: 6, name: 'Other', items: [{ id: 9, kind: 'stop' }] }
       fake.emit('programs:changed', null)
       await vi.waitFor(() => expect(store.getState().selection).toEqual(EMPTY_SELECTION))
     })

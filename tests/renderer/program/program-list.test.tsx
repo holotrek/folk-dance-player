@@ -15,8 +15,7 @@ const kolo = track(102, 'Kolo', { danceCount: 2, isMissing: true })
 const program: ProgramDetail = {
   id: 5,
   name: 'Tue Oct 14',
-  items: [item(1, hora), stop(2), item(3, kolo)],
-  playedCount: 0
+  items: [item(1, hora), stop(2), item(3, kolo)]
 }
 
 const libraryRow = (fileId: number, title: string): LibraryRow => ({

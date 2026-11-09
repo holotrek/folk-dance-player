@@ -1,6 +1,6 @@
 import { screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test } from 'vitest'
 import type { PlayedEntry, PlayerState } from '@shared/program'
 import PlayedList from '@renderer/program/PlayedList'
 import { createFakeApi } from '../fake-api'
@@ -13,13 +13,10 @@ const played: PlayedEntry[] = [
   { logId: 3, kind: 'preview', playedAt: '2026-10-14T20:10:00Z', track: track(102, 'Kolo') }
 ]
 
-function setup(
-  options: { entries?: PlayedEntry[]; state?: PlayerState; playedCount?: number } = {}
-) {
+function setup(options: { entries?: PlayedEntry[]; state?: PlayerState } = {}) {
   const fake = createFakeApi({
     'player:getState': options.state ?? playerState(),
     'programs:played': options.entries ?? played,
-    'programs:get': { id: 5, name: 'Set', items: [], playedCount: options.playedCount ?? 0 },
     'programs:clearPlayed': undefined,
     'player:replay': undefined
   })
@@ -70,15 +67,9 @@ describe('previously played', () => {
     expect(screen.getByRole('button', { name: 'Clear' })).toBeDisabled()
   })
 
-  test('Clear is enabled for a song that is loaded, or for played items with an empty log', async () => {
+  test('Clear is enabled for a song that is loaded, even with an empty list', async () => {
     setup({ entries: [], state: playing(track(101, 'Hora')) })
     await screen.findByText('Nothing played yet')
     expect(screen.getByRole('button', { name: 'Clear' })).toBeEnabled()
-  })
-
-  test('Clear is enabled when items were played but the log is already cleared', async () => {
-    setup({ entries: [], playedCount: 2 })
-    await screen.findByText('Nothing played yet')
-    await vi.waitFor(() => expect(screen.getByRole('button', { name: 'Clear' })).toBeEnabled())
   })
 })
