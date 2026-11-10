@@ -17,7 +17,6 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - The projector's **Automatic** display is now the first display the app's window is not on, so on a desktop with a monitor and a TV the projector goes to the other screen. With a laptop it still picks the external display.
 - In the Advanced tour, clicking a playlist now stops on a step that shows what is in it, with a **Next**, instead of moving on at once. The Remote control step mentions macOS's permission only on a Mac.
-
 - The projector view is easier to read from across the room: a heavier line separates the songs in Previously played and Up next, and Now playing (or Up next) sits on a lighter panel that stands out from the lists.
 
 ### Added

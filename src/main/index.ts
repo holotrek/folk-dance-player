@@ -215,7 +215,7 @@ function createMainWindow(settings: SettingsStore): BrowserWindow {
   })
   // useContentSize makes the constructor's sizes the content's, but the saved bounds are the
   // window's own, so they are applied here (setBounds is always the outer frame).
-  if (platform === 'windows') win.setBounds(bounds)
+  if (platform === 'windows' && bounds) win.setBounds(bounds)
   if (maximized) win.maximize()
   createWindowStateSaver({
     window: win,
