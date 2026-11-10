@@ -31,7 +31,7 @@ describe('migration 007: holding items', () => {
     link(db, other, hora.songId) // a second dance; the default stays Hora
     hold(db, kolo.fileId, 2)
     hold(db, hora.fileId, 1)
-    expect(migrate(db, MIGRATIONS)).toEqual({ from: 6, to: 7 })
+    expect(migrate(db, MIGRATIONS.slice(0, 7))).toEqual({ from: 6, to: 7 })
     expect(getSchemaVersion(db)).toBe(7)
     expect(rows(db)).toEqual([
       { fileId: hora.fileId, danceId: hora.danceId, position: 1 },

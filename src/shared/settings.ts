@@ -7,11 +7,13 @@ export type TagSource = 'artistTag' | 'albumArtistTag' | 'ignore'
 // The control window's colors: the Mac's light/dark choice, or always light or dark.
 export type Appearance = 'system' | 'light' | 'dark'
 
-export interface WindowBounds {
+// The control window's normal (not maximized) bounds, and whether it was maximized.
+export interface WindowState {
   x: number
   y: number
   width: number
   height: number
+  maximized: boolean
 }
 
 // Spec §4 "Settings keys".
@@ -28,7 +30,7 @@ export interface Settings {
   'projector.displayId': number | null
   'autoFullscreen.enabled': boolean
   'autoFullscreen.seconds': number
-  'window.bounds': WindowBounds | null
+  'window.control': WindowState | null
   currentProgramId: number | null
   appearance: Appearance
   // Sync with Apple Music (sync spec §4).
@@ -41,6 +43,10 @@ export interface Settings {
   // column key. The empty list is the default order (0.3.0 spec §3.13).
   'library.columns.music': string[]
   'library.columns.program': string[]
+  // The widths the organizer gave columns, by column key, each a percentage of the table's width.
+  // The empty map is every column's default width (1.0.0 spec §3.9).
+  'library.columnWidths.music': Record<string, number>
+  'library.columnWidths.program': Record<string, number>
   // The guided tour's two parts: not finished, finished, or "don't show this again" (tour spec §2.2).
   'tour.basic': TourFlag
   'tour.advanced': TourFlag
@@ -73,7 +79,7 @@ export const DEFAULT_SETTINGS: Settings = {
   'projector.displayId': null,
   'autoFullscreen.enabled': true,
   'autoFullscreen.seconds': 15,
-  'window.bounds': null,
+  'window.control': null,
   currentProgramId: null,
   appearance: 'system',
   'appleSync.enabled': false,
@@ -82,6 +88,8 @@ export const DEFAULT_SETTINGS: Settings = {
   'playlistFolders.open': [],
   'library.columns.music': [],
   'library.columns.program': [],
+  'library.columnWidths.music': {},
+  'library.columnWidths.program': {},
   'tour.basic': 'unseen',
   'tour.advanced': 'unseen',
   'updates.check': true
@@ -100,14 +108,15 @@ const isIntIn =
 const isTagSource = (v: unknown): boolean => TAG_SOURCES.includes(v)
 const isIdOrNull = (v: unknown): boolean => v === null || (Number.isInteger(v) && (v as number) > 0)
 const isDisplayIdOrNull = (v: unknown): boolean => v === null || Number.isInteger(v)
-const isBoundsOrNull = (v: unknown): boolean => {
+const isWindowStateOrNull = (v: unknown): boolean => {
   if (v === null) return true
   if (typeof v !== 'object') return false
   const b = v as Record<string, unknown>
   return (
     ['x', 'y', 'width', 'height'].every((k) => Number.isFinite(b[k])) &&
     (b.width as number) > 0 &&
-    (b.height as number) > 0
+    (b.height as number) > 0 &&
+    typeof b.maximized === 'boolean'
   )
 }
 const isSuggestionList = (v: unknown): boolean =>
@@ -119,6 +128,23 @@ const isColumnOrder = (v: unknown): boolean =>
   Array.isArray(v) &&
   v.length <= 40 &&
   v.every((k) => typeof k === 'string' && k.length > 0 && k.length <= 40)
+
+const isColumnWidths = (v: unknown): boolean => {
+  if (typeof v !== 'object' || v === null || Array.isArray(v)) return false
+  const entries = Object.entries(v)
+  return (
+    entries.length <= 40 &&
+    entries.every(
+      ([k, w]) =>
+        k.length > 0 &&
+        k.length <= 40 &&
+        typeof w === 'number' &&
+        Number.isFinite(w) &&
+        w > 0 &&
+        w <= 100
+    )
+  )
+}
 
 const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'import.artistFrom': isTagSource,
@@ -133,7 +159,7 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'projector.displayId': isDisplayIdOrNull,
   'autoFullscreen.enabled': isBool,
   'autoFullscreen.seconds': isIntIn(5, 3600),
-  'window.bounds': isBoundsOrNull,
+  'window.control': isWindowStateOrNull,
   currentProgramId: isIdOrNull,
   appearance: (v) => v === 'system' || v === 'light' || v === 'dark',
   'appleSync.enabled': isBool,
@@ -142,6 +168,8 @@ const VALIDATORS: { [K in SettingKey]: (v: unknown) => boolean } = {
   'playlistFolders.open': (v) => Array.isArray(v) && v.length <= 1000 && v.every(isPersistentId),
   'library.columns.music': isColumnOrder,
   'library.columns.program': isColumnOrder,
+  'library.columnWidths.music': isColumnWidths,
+  'library.columnWidths.program': isColumnWidths,
   'tour.basic': isTourFlag,
   'tour.advanced': isTourFlag,
   'updates.check': isBool

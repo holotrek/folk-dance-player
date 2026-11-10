@@ -290,7 +290,7 @@ describe('the tour’s targets exist on the screen', () => {
   test('the Settings page', async () => {
     const fake = createFakeApi({
       'settings:getAll': DEFAULT_SETTINGS,
-      'remote:status': { trusted: true, keys: [] },
+      'remote:status': { trusted: true, keys: [], restartNeeded: false },
       'appleSync:status': APPLE_SYNC_OFF,
       'projector:displays': [],
       'app:getInfo': { version: '0.3.0', dbPath: '/x', schemaVersion: 7, platform: 'mac' }

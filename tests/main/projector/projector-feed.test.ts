@@ -84,6 +84,23 @@ describe('projector feed', () => {
     expect(snap.played).toEqual([]) // Hora is playing: shown in the middle, not twice
   })
 
+  test('after a clear, nothing is playing or previously played, and the next unplayed dance is next', () => {
+    const [hora, kolo, sirba] = ['Hora', 'Kolo', 'Sirba'].map((title) =>
+      addLibrarySong(db, { title, dance: { name: title } })
+    )
+    const p = createProgram(db, 'Set')
+    addTracks(db, p, [hora.fileId, kolo.fileId, sirba.fileId])
+    settings.set('currentProgramId', p)
+    const { player, feed } = setup()
+    player.play()
+    player.next()
+    expect(feed.snapshot().played).toHaveLength(1)
+    player.clearPlayed(p)
+    const snap = feed.snapshot()
+    expect(snap.played).toEqual([])
+    expect(snap.middle).toMatchObject({ kind: 'next', entry: { parts: { dance: 'Sirba' } } })
+  })
+
   test("the middle dance's slide: its saved image, and the live view asked to show it", () => {
     const hora = addLibrarySong(db, { title: 'Hora', dance: { name: 'Hora' } })
     const kolo = addLibrarySong(db, { title: 'Kolo', dance: { name: 'Kolo' } })

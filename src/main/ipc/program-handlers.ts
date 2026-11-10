@@ -40,6 +40,10 @@ export function programHandlers(deps: HandlerDeps): Pick<InvokeHandlers, Program
     'programs:list': (search) => listPrograms(db, search),
     'programs:get': (programId) => getProgram(db, programId),
     'programs:played': (programId) => listPlayed(db, programId),
+    'programs:clearPlayed': (programId) => {
+      player.clearPlayed(programId) // one state broadcast
+      deps.onProgramsChanged() // and one programs notice
+    },
     'programs:create': edit((name) => createProgram(db, name)),
     'programs:rename': edit((programId, name) => renameProgram(db, programId, name)),
     'programs:duplicate': edit((programId) => duplicateProgram(db, programId)),
@@ -90,6 +94,7 @@ export function programHandlers(deps: HandlerDeps): Pick<InvokeHandlers, Program
     'player:dismissWarning': () => player.dismissWarning(),
     'player:restart': () => player.restart(),
     'remote:status': () => deps.remote?.status() ?? NO_REMOTE,
-    'remote:requestAccess': () => deps.remote?.requestAccess() ?? NO_REMOTE
+    'remote:requestAccess': () => deps.remote?.requestAccess() ?? NO_REMOTE,
+    'remote:restart': () => deps.remote?.restart()
   }
 }

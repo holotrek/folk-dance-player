@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Badge, Group, Menu, Text, UnstyledButton } from '@mantine/core'
+import { Badge, Group, Menu, Text, UnstyledButton, VisuallyHidden } from '@mantine/core'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import type { LibraryRow, SortColumn } from '@shared/library'
 import { formatTime } from '../format-time'
@@ -15,8 +15,12 @@ import {
   setDraggedFiles
 } from './drag'
 import { useColumnOrder } from './useColumnOrder'
+import { useColumnWidths } from './useColumnWidths'
+import { nudgeWidth, widthTrack } from './column-widths'
+import ResizeHandle from './ResizeHandle'
 import { useLibrary, useLibraryApi, useLibraryStore } from './LibraryProvider'
 import { moveBefore } from './reorder'
+import SlideBadge from '../components/SlideBadge'
 import SongMenu, { openRowMenu } from './SongMenu'
 import classes from './LibraryTable.module.css'
 
@@ -84,6 +88,15 @@ const ALL_COLUMNS: Column[] = [
       ) : (
         <RowStar row={r} />
       )
+  },
+  {
+    key: 'slide',
+    sort: null,
+    label: 'Slide', // shown to screen readers only (see the header)
+    // The 16px icon plus the cell's 5px padding on each side; narrower, the icon overflows the
+    // cell and its `text-overflow: ellipsis` draws a stray "…".
+    width: '26px',
+    render: (r) => <SlideBadge slide={r.slide} />
   },
   {
     key: 'dance',
@@ -193,7 +206,7 @@ const MENU_COLUMN: Column = {
 }
 
 // The movable columns are ordered by the organizer (0.3.0 spec §3.13); everything else is fixed.
-const FIXED_FIRST = ['favorite', 'dance']
+const FIXED_FIRST = ['favorite', 'slide', 'dance']
 const columnByKey = (key: string): Column => ALL_COLUMNS.find((c) => c.key === key)!
 
 // Spec §6.3: browse, sort, search and select songs; drag them onto playlists or the program.
@@ -215,7 +228,7 @@ export default function LibraryTable({
   const select = useLibrary((s) => s.select)
   const scrollTo = useLibrary((s) => s.scrollTo)
   const [dropTarget, setDropTarget] = useState<number | 'end' | null>(null)
-  const inPlaylist = filter.kind === 'playlist'
+  const inPlaylist = filter.kind === 'playlist' || filter.kind === 'program' // numbered rows
   const playlists = useLibrary((s) => s.playlists)
   // The Program page's library list (spec §6.2) shows fewer columns than the Music page's table. As
   // it narrows, the CSS drops columns completely in this order, wherever they are: Artist, Teacher,
@@ -233,10 +246,24 @@ export default function LibraryTable({
     ...(filter.kind === 'review' ? [FILE_COLUMN] : []),
     MENU_COLUMN
   ]
-  // Each column's own width, as the rows' grid; the CSS can set `--w-<key>` to 0 to collapse one.
-  const template = COLUMNS.map(
-    (c) => `var(--w-${c.key}, ${compact ? (c.compactWidth ?? c.width) : c.width})`
-  ).join(' ')
+  const { widths, save: saveWidths, reset: resetWidths } = useColumnWidths(api, list)
+  // A column being dragged wider or narrower: its live percentage, saved at release.
+  const [live, setLive] = useState<{ key: string; percent: number } | null>(null)
+  const widthOf = (key: string): number | undefined =>
+    live?.key === key ? live.percent : widths[key]
+  const isDefault = isDefaultOrder && Object.keys(widths).length === 0
+  // Each column's own width, as the rows' grid; the CSS can set `--w-<key>` to 0 to collapse one,
+  // which beats a width the organizer set (it is only the fallback of the variable).
+  const template = COLUMNS.map((c) => {
+    const percent = order.includes(c.key) ? widthOf(c.key) : undefined
+    const track =
+      percent !== undefined
+        ? widthTrack(c.key, percent)
+        : compact
+          ? (c.compactWidth ?? c.width)
+          : c.width
+    return `var(--w-${c.key}, ${track})`
+  }).join(' ')
   const scroll = useRef<HTMLDivElement>(null)
   const virtualizer = useVirtualizer({
     count: rows.length,
@@ -325,7 +352,13 @@ export default function LibraryTable({
           />
         </Menu.Target>
         <Menu.Dropdown>
-          <Menu.Item disabled={isDefaultOrder} onClick={reset}>
+          <Menu.Item
+            disabled={isDefault}
+            onClick={() => {
+              reset()
+              resetWidths()
+            }}
+          >
             Reset columns
           </Menu.Item>
         </Menu.Dropdown>
@@ -345,11 +378,16 @@ export default function LibraryTable({
             role="columnheader"
             data-column={c.key}
             className={
-              landing === c.key
-                ? classes.dropColumn
-                : landing === 'end' && c.key === order.at(-1)
-                  ? classes.dropColumnEnd
-                  : undefined
+              [
+                landing === c.key
+                  ? classes.dropColumn
+                  : landing === 'end' && c.key === order.at(-1)
+                    ? classes.dropColumnEnd
+                    : '',
+                order.includes(c.key) ? classes.resizable : ''
+              ]
+                .filter(Boolean)
+                .join(' ') || undefined
             }
             draggable={order.includes(c.key)}
             onDragStart={(e) => order.includes(c.key) && setDraggedColumn(e.dataTransfer, c.key)}
@@ -387,6 +425,16 @@ export default function LibraryTable({
                   if (!e.altKey || !order.includes(c.key)) return
                   if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
                   e.preventDefault()
+                  // Alt+Shift+←/→ resizes by 1% of the table (1.0.0 spec §3.9).
+                  if (e.shiftKey) {
+                    const cell = e.currentTarget.closest('[role=columnheader]')!
+                    const table = cell.closest('[role=table]')!.getBoundingClientRect().width
+                    const current =
+                      widths[c.key] ?? (cell.getBoundingClientRect().width / table) * 100
+                    const next = nudgeWidth(current, c.key, table, e.key === 'ArrowLeft' ? -1 : 1)
+                    if (next !== widths[c.key]) saveWidths({ ...widths, [c.key]: next })
+                    return
+                  }
                   const next = nudgeColumn(order, c.key, e.key === 'ArrowLeft' ? -1 : 1)
                   if (next.join() !== order.join()) save(next)
                 }}
@@ -394,8 +442,22 @@ export default function LibraryTable({
                 {c.label}
                 {sort.column === c.sort ? (sort.direction === 'asc' ? ' ▲' : ' ▼') : ''}
               </UnstyledButton>
+            ) : c.key === 'slide' ? (
+              <VisuallyHidden>{c.label}</VisuallyHidden>
             ) : (
               c.label
+            )}
+            {order.includes(c.key) && (
+              <ResizeHandle
+                columnKey={c.key}
+                label={c.label}
+                onChange={(percent) => setLive({ key: c.key, percent })}
+                onCommit={(percent) => {
+                  setLive(null)
+                  saveWidths({ ...widths, [c.key]: percent })
+                }}
+                onCancel={() => setLive(null)}
+              />
             )}
           </div>
         ))}

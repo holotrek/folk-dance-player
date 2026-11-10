@@ -21,16 +21,17 @@ export function logPlay(db: DatabaseSync, entry: PlayLogEntry): number {
 type PlayedRow = { logId: number; kind: PlayKind; playedAt: string } & Partial<TrackRow>
 
 // "Previously played" for a program (spec §6.2): its play log, oldest first, each with the
-// dance it was played as.
+// dance it was played as. Entries from before the program was last cleared are hidden, not gone.
 export function listPlayed(db: DatabaseSync, programId: number): PlayedEntry[] {
   const rows = db
     .prepare(
       `SELECT l.id AS logId, l.kind, l.played_at AS playedAt, ${TRACK_COLUMNS}
        FROM play_log l
+       JOIN programs prog ON prog.id = l.program_id
        LEFT JOIN files f ON f.id = l.file_id
        LEFT JOIN songs s ON s.file_id = f.id
        ${trackJoins('l.dance_id')}
-       WHERE l.program_id = ?
+       WHERE l.program_id = ? AND (prog.log_cleared_at IS NULL OR l.played_at > prog.log_cleared_at)
        ORDER BY l.played_at ASC, l.id ASC`
     )
     .all(programId) as unknown as PlayedRow[]

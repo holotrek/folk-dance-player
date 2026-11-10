@@ -17,6 +17,7 @@ import { PlatformProvider } from './platform'
 import { TourProvider, useTour } from './tour/TourProvider'
 import TourBanner from './tour/TourBanner'
 import UpdateBanner from './updates/UpdateBanner'
+import RemoteNotice from './remote/RemoteNotice'
 import classes from './App.module.css'
 
 type Page = 'program' | 'music' | 'settings'
@@ -54,6 +55,7 @@ export default function App(): React.JSX.Element {
                     <div ref={header.ref} className={classes.header}>
                       <TourBannerSlot />
                       <UpdateBanner />
+                      <RemoteNotice />
                       <PlayerBar />
                       <Group gap="sm" wrap="nowrap">
                         <Logo

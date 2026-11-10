@@ -308,3 +308,42 @@ describe('projector view (spec §8.2)', () => {
     })
   })
 })
+
+describe('contrast (issue #91)', () => {
+  test('the screen carries the look as --fdp- variables', () => {
+    const { container } = render(<ProjectorView snapshot={playing} progress={null} />)
+    const root = container.firstElementChild as HTMLElement
+    expect(root.style.getPropertyValue('--fdp-panel')).toBe('#3a3a3a')
+    expect(root.style.getPropertyValue('--fdp-rule')).not.toBe('')
+  })
+
+  test('Now playing, with its heading, dance, song and progress, is in the panel', () => {
+    render(
+      <ProjectorView snapshot={playing} progress={{ playId: 4, positionMs: 1, durationMs: 9 }} />
+    )
+    const panel = region('Now playing')
+    expect(panel).toHaveAttribute('data-panel')
+    expect(within(panel).getByText('Now playing')).toBeInTheDocument()
+    expect(within(panel).getByText('Pravo Rhodopsko Oro (Yves Moreau)')).toBeInTheDocument()
+    expect(within(panel).getByText('♪ Pusteno Ludo')).toBeInTheDocument()
+    expect(within(panel).getByTestId('progress')).toBeInTheDocument()
+  })
+
+  test('Up next (nothing playing) gets the same panel', () => {
+    render(
+      <ProjectorView
+        snapshot={{
+          ...playing,
+          middle: { kind: 'next', entry: svornato, countdown: null, teaching: false }
+        }}
+        progress={null}
+      />
+    )
+    expect(region('Up next')).toHaveAttribute('data-panel')
+  })
+
+  test('the lists are not panels', () => {
+    render(<ProjectorView snapshot={playing} progress={null} />)
+    expect(region('Previously played')).not.toHaveAttribute('data-panel')
+  })
+})

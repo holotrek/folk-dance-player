@@ -176,7 +176,7 @@ The projector uses the same parts with a different emphasis (§8.2): the dance n
 - **Appearance:** `appearance` (`system` (default), `light` or `dark`)
 - **Apple Music sync:** `appleSync.enabled` (bool), `appleSync.libraryId` (the synced library's ID), `appleSync.lastResult` (the last sync's summary), `playlistFolders.open` (the sidebar's open Music folders, by persistent ID)
 - **Guided tour:** `tour.basic` and `tour.advanced` (each `unseen` (default), `done` or `hidden`; see §6.5)
-- **Other:** `window.bounds`, `currentProgramId`
+- **Other:** `window.control` (the control window's normal bounds and maximized flag), `currentProgramId`
 
 **Sync with Apple Music (migration 004, `2026-10-15-apple-music-sync-design.md` §4)**
 
@@ -270,7 +270,7 @@ PROGRAMS                  [+]
   └──────────────┘
 ```
 
-- **Library and playlist entries** filter the library list. Songs can be dropped onto a playlist (or Favorites) to add them. While the list shows a playlist or Favorites, a tinted note above it says so ("Showing playlist “Balkan”", "Showing Favorites") with **Show all music**, on both the Program and Music pages.
+- **Library and playlist entries** filter the library list. A saved program's ⋯ menu has **Show in library**, which filters the list to its songs (once each, numbered in program order; "Showing program “Night”"). Songs can be dropped onto a playlist (or Favorites) to add them. While the list shows a playlist or Favorites, a tinted note above it says so ("Showing playlist “Balkan”", "Showing Favorites") with **Show all music**, on both the Program and Music pages.
 - **The playlist list** scrolls on its own once it fills 40% of the sidebar, so a large Apple Music library's playlists never push Programs off screen.
 - **Each playlist's options** are on a "⋯" button that appears on hover, or by right-clicking: Rename…, Duplicate, and Delete… (with a confirmation).
 - **With Apple Music sync on** (sync spec §6.2, §6.3): LIBRARY gains **Removed from Apple Music (N)** while songs wait for review (Keep, Remove, Keep all, Remove all). PLAYLISTS shows Music's folders as collapsible groups and Music's playlists as read-only mirrors, marked with a note icon, before the local playlists. A mirror's only option is **Duplicate as my playlist**; dropping songs on it says "Edit this playlist in Music."
@@ -312,7 +312,7 @@ PROGRAMS                  [+]
   - When nothing is playing, the bar shows what's next ("Next up: …", "Starting in N…", or "Next: … in N…").
   - Previews and replays are marked as such.
   - A warning (a skipped missing file, a file that can't be played) appears under the bar until dismissed. It is never shown on the projector.
-- **Previously played:** the play log for the current program, oldest first, so the newest is last. It scrolls and stays at the bottom: new songs scroll into view while you are at (or within two rows of) the bottom, and are not forced on you if you scrolled up to look at an earlier one.
+- **Previously played:** the play log for the current program, oldest first, so the newest is last. **Clear** (in its header; disabled when the list is empty and nothing is loaded in Now Playing) stops the song that is playing and hides the entries logged so far (the log itself is kept). Songs already played stay played: clearing never puts anything back in the program. It scrolls and stays at the bottom: new songs scroll into view while you are at (or within two rows of) the bottom, and are not forced on you if you scrolled up to look at an earlier one.
 - **Program list:** only **unplayed** items, in order. Played items stay in storage (`played_at`) but are not shown here.
   - **Times** (header): the same **Total play time**, and **Ending about 9:42 PM** (now, plus what is left of the song that is loaded, plus the rest of the program and its auto-continue gaps), centered between the title and the buttons when the panel is wide, on a centered line of their own when it is narrow. STOP markers add no time, so the ending time assumes no pauses and says "if no pauses" when the program has a STOP; the playback speed is ignored. Missing and removed songs are left out. The clock refreshes once a minute: the ending time stays steady while a song plays and moves later while paused.
   - **End Program** (header, after Add selected) unloads the program: the list and Previously played go empty, and the program, its order and its play log stay saved in the sidebar. It asks nothing; a song that is playing finishes and nothing follows it. With no program loaded the list shows **Start New Program**, which opens the sidebar's New program dialog (name, then Create).
@@ -339,7 +339,8 @@ PROGRAMS                  [+]
 
 - **Table:** one row per song, for browsing, sorting, searching and selecting. It is virtualized, so it stays fast with large libraries. Editing happens in the side editor, not in the table. Click selects, ⌘-click adds to the selection, Shift-click selects a range, and ⌘A (Ctrl+A on Windows) selects every song shown while the table has focus. Selected rows can be dragged onto a playlist or Favorites.
   - **Columns:** song title, artist, dance (the default dance's name), country, teacher, choreographer, dance type, difficulty, favorite, slide, duration, path and status.
-  - **Columns can be reordered** by dragging a header (or Alt+←/→ with a header focused); Dance / Song, the star and the ⋯ menu stay put. Each list (this table, the Program page's library list) keeps its own order, saved in settings; right-click a header for **Reset columns**.
+  - **Columns can be reordered** by dragging a header (or Alt+←/→ with a header focused); Dance / Song, the star, the slide icon and the ⋯ menu stay put. Each list (this table, the Program page's library list) keeps its own order, saved in settings; right-click a header for **Reset columns**. **Columns can be resized** by dragging the right edge of a movable header (or Alt+Shift+←/→ with a header focused, 1% of the table per press); Dance / Song takes the remaining width. Each width is saved as a percentage of the table, so columns keep their proportions when the window resizes, and **Reset columns** clears sizes as well as order.
+  - **Slide icon:** a narrow fixed column after the star shows a photo icon when the dance on the row has a Canva slide, a slide image or both (a slide that has gone from its deck still counts, since it keeps its image). Hovering says which; screen readers read "Canva slide", "Image" or "Canva slide and image". Holding and the program's items show the same icon before the label. Main reports it as `slide` on each row (derived from the dance, never stored).
   - **Dance / Song** shows the label (§4) and sorts by dance name, then song title, with a "+N" badge when the song has more than one dance.
   - **In a playlist** (shown in its own order), a **#** column numbers the songs in the playlist's order (whatever the sort or search). Dropping rows onto another row moves them there, and onto the space below the last row moves them to the end. **Remove from playlist** removes the selection. Reordering is off while a search is active, because the search hides part of the playlist.
   - **PDF:** each dance in the editor has an **Attach PDF…** button (its written notes, for example). Main copies the chosen PDF into the app's data folder (`dance-notes/`), so moving or deleting the original does not break it; the editor then shows its file name with **Open** (the system's PDF viewer) and **Remove**, or "The PDF is missing" when the copy has gone. One PDF per dance; merging dances keeps the kept dance's, or adopts the other's when it has none.
@@ -442,7 +443,7 @@ A media remote (or a keyboard's media keys) controls playback, whether the app i
 - **Stop** (keyboards): ⏹.
 - **Volume:** left to the system.
 
-The keys are registered as global shortcuts in the main process and go to `PlayerSession`. Chromium's own media-key handling is switched off, so nothing can pause the `<audio>` element behind the session's back. On macOS, media keys reach an app only when it is trusted for Accessibility; Settings says whether the remote works and asks for the permission when it doesn't. See `docs/spikes/remote-control.md`.
+The keys are registered as global shortcuts in the main process and go to `PlayerSession`. Chromium's own media-key handling is switched off, so nothing can pause the `<audio>` element behind the session's back. On macOS, media keys reach an app only when it is trusted for Accessibility; Settings says whether the remote works and asks for the permission when it doesn't. Keys registered before the permission is allowed stay dead (re-registering them in the running app was tried and doesn't work), so when the window regains focus and the permission has gone from not trusted to trusted, the app offers a notice with a **Restart** button; it asks first while music plays (1.0.0 spec §3.1). See `docs/spikes/remote-control.md`.
 
 ## 8. Projector view
 
@@ -530,7 +531,8 @@ UP NEXT
  Hora Mare  ♪ Hora de la Munte                          Romania
 ```
 - **Entry rows** follow the Flutter app's style: the name is left-aligned and the country is right-aligned on the same line. This applies to Now Playing, Up next, and previously played when it shows country.
-- **Dividers:** a subtle, low-contrast horizontal line separates list entries, so short titles and countries clearly pair up across the gap.
+- **Dividers:** a heavy, bright horizontal rule (0.3vh, `#6a6a6a`) separates list entries, so one song ends and the next begins clearly from across the room, and short titles and countries pair up across the gap.
+- **The middle panel:** Now playing (or Up next) sits on one full-width panel, a lighter step (`#3a3a3a`, white text) than the black page, behind its heading, dance, song and progress line. The colors live in `shared/projector-colors.ts`, and a test holds them to 7:1 for text and 3:1 for the red line.
 - **Long titles** truncate with an ellipsis before they reach the country, so the country is never pushed off or overlapped. The smaller song title is truncated first, then the dance name.
 - **Up next** is a vertical list showing as many entries as fit in its area.
 - **STOP markers** show in the list as a row reading `⌄ —— Teaching —— ⌄`, the arrows pointing down at the dance that will be taught. Several STOPs in a row show once, and a STOP with no song after it isn't shown. Halted at a STOP, the next dance in the middle row carries the same Teaching row.

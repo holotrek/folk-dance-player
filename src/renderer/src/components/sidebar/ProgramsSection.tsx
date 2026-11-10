@@ -4,7 +4,7 @@ import SearchInput from '../SearchInput'
 import { useDebouncedValue } from '@mantine/hooks'
 import type { ProgramSummary } from '@shared/program'
 import { formatTotal, totalMs, type AutoContinue } from '@shared/program-time'
-import { useLibraryApi } from '../../library/LibraryProvider'
+import { useLibrary, useLibraryApi } from '../../library/LibraryProvider'
 import NewProgramPrompt from '../../program/NewProgramPrompt'
 import { useProgram } from '../../program/ProgramProvider'
 import ConfirmDialog from '../ConfirmDialog'
@@ -24,6 +24,7 @@ function ProgramEntry(props: {
   onDelete: () => void
 }): React.JSX.Element {
   const api = useLibraryApi()
+  const setFilter = useLibrary((s) => s.setFilter)
   const options = useRef<HTMLButtonElement>(null)
   const p = props.program
   return (
@@ -72,6 +73,9 @@ function ProgramEntry(props: {
           </ActionIcon>
         </Menu.Target>
         <Menu.Dropdown>
+          <Menu.Item onClick={() => void setFilter({ kind: 'program', programId: p.id })}>
+            Show in library
+          </Menu.Item>
           <Menu.Item onClick={props.onRename}>Rename…</Menu.Item>
           <Menu.Item onClick={() => void api.invoke('programs:duplicate', p.id)}>
             Duplicate

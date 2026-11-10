@@ -47,6 +47,7 @@ describe('listLibrary', () => {
         difficulty: null,
         danceCount: 1,
         hasNotesPdf: false,
+        slide: null,
         label: 'Hora Mare ♪ Hora de la Munte',
         playlistItemId: null,
         playlistNumber: null
@@ -64,6 +65,32 @@ describe('listLibrary', () => {
       ['Hora', true],
       ['Kolo', false]
     ])
+  })
+
+  test('says whether the shown dance has a Canva slide, an image, both or neither', () => {
+    const slideOnly = addLibrarySong(db, { title: 'A', dance: { name: 'A' } })
+    const imageOnly = addLibrarySong(db, { title: 'B', dance: { name: 'B' } })
+    const both = addLibrarySong(db, { title: 'C', dance: { name: 'C' } })
+    addLibrarySong(db, { title: 'D', dance: { name: 'D' } })
+    const slide = db.prepare('INSERT INTO dance_prefs (dance_id, canva_page_id) VALUES (?, ?)')
+    const image = db.prepare(
+      "INSERT INTO dance_prefs (dance_id, slide_image_name, slide_image_path) VALUES (?, 'a.png', '1-ab.png')"
+    )
+    slide.run(slideOnly.danceId, 'PAGE1')
+    image.run(imageOnly.danceId)
+    image.run(both.danceId)
+    db.prepare('UPDATE dance_prefs SET canva_page_id = ? WHERE dance_id = ?').run(
+      'PAGE2',
+      both.danceId
+    )
+    expect(listLibrary(db, all).map((r) => [r.title, r.slide])).toEqual([
+      ['A', 'canva'],
+      ['B', 'image'],
+      ['C', 'both'],
+      ['D', null]
+    ])
+    db.prepare('UPDATE dance_prefs SET canva_page_id = NULL WHERE dance_id = ?').run(both.danceId)
+    expect(listLibrary(db, all).find((r) => r.title === 'C')!.slide).toBe('image')
   })
 
   test('shows the default dance of a song with several, and the choreographer to tell them apart', () => {
@@ -165,6 +192,49 @@ describe('listLibrary', () => {
     expect(numbers({ sort: { column: 'title', direction: 'asc' } })).toEqual(['2 A', '3 B', '1 C'])
     expect(numbers({ search: 'b' })).toEqual(['3 B'])
     expect(listLibrary(db, all).map((r) => r.playlistNumber)).toEqual([null, null, null])
+  })
+
+  test("lists a saved program's songs once each, in program order, numbered", () => {
+    const a = addLibrarySong(db, { title: 'A' })
+    const b = addLibrarySong(db, { title: 'B' })
+    const c = addLibrarySong(db, { title: 'C' })
+    const gone = addLibrarySong(db, { title: 'Gone' })
+    addLibrarySong(db, { title: 'Other' })
+    db.prepare('UPDATE files SET removed_at = CURRENT_TIMESTAMP WHERE id = ?').run(gone.fileId)
+    const p = Number(
+      db.prepare("INSERT INTO programs (name) VALUES ('Night')").run().lastInsertRowid
+    )
+    const add = db.prepare(
+      'INSERT INTO program_items (program_id, position, kind, file_id, played_at) VALUES (?, ?, ?, ?, ?)'
+    )
+    add.run(p, 1, 'track', c.fileId, '2026-10-14') // played
+    add.run(p, 2, 'stop', null, null)
+    add.run(p, 3, 'track', gone.fileId, null)
+    add.run(p, 4, 'track', a.fileId, null)
+    add.run(p, 5, 'track', c.fileId, null) // C again
+    add.run(p, 6, 'track', b.fileId, null)
+    db.prepare("INSERT INTO program_items (program_id, position, kind) VALUES (?, 7, 'track')").run(
+      p
+    )
+    const q = (extra: Partial<LibraryQuery> = {}) =>
+      listLibrary(db, { ...all, filter: { kind: 'program', programId: p }, ...extra })
+    const pos = { column: 'position', direction: 'asc' } as const
+    expect(q({ sort: pos }).map((r) => `${r.playlistNumber} ${r.title}`)).toEqual([
+      '1 C',
+      '2 A',
+      '3 B'
+    ])
+    expect(q({ sort: pos }).every((r) => r.playlistItemId === null)).toBe(true)
+    expect(q({ sort: { column: 'position', direction: 'desc' } }).map((r) => r.title)).toEqual([
+      'B',
+      'A',
+      'C'
+    ])
+    expect(q({ sort: { column: 'title', direction: 'asc' } }).map((r) => r.playlistNumber)).toEqual(
+      [2, 3, 1]
+    )
+    expect(q({ search: 'b' }).map((r) => r.title)).toEqual(['B'])
+    expect(listLibrary(db, { ...all, filter: { kind: 'program', programId: 999 } })).toEqual([])
   })
 
   test('sorts by a column in either direction, keeping empty values last', () => {

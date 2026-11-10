@@ -293,6 +293,15 @@ export function markPlayed(db: DatabaseSync, itemId: number): void {
   })
 }
 
+// "Clear" (1.0.0 spec §3.6): hides the play log from the list from now on. No log row is deleted
+// and no item changes: played items stay played and nothing returns to the program.
+export function clearPlayLog(db: DatabaseSync, programId: number): void {
+  inTransaction(db, () => {
+    db.prepare(`UPDATE programs SET log_cleared_at = ${NOW} WHERE id = ?`).run(programId)
+    touch(db, programId)
+  })
+}
+
 // Puts an interrupted item back as unplayed: ⏹, a preview or a replay stopped it before it ended.
 export function markUnplayed(db: DatabaseSync, itemId: number): void {
   inTransaction(db, () => {

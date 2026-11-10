@@ -1,5 +1,6 @@
 // Types for programs, the play log and the player, shared by main and renderer. Spec §6.2, §7.
 import type { LabelParts } from './labels'
+import type { SlideKind } from './library'
 
 // A program in the sidebar list (spec §6.1): newest edit first.
 export interface ProgramSummary {
@@ -27,6 +28,7 @@ export interface Track {
   isFavorite: boolean
   danceCount: number // dances linked to the song; > 1 offers the Dance menu
   hasNotesPdf: boolean // the dance has a PDF attached; the item's menu offers Open PDF
+  slide: SlideKind | null // what the dance has to project; null shows no icon
 }
 
 // A held song with the dance it is held as (0.3.0 spec §3.12); `id` is its place in Holding.
@@ -97,6 +99,8 @@ export const IDLE_PLAYER_STATE: PlayerState = {
 export interface RemoteStatus {
   trusted: boolean
   keys: string[] // the media keys registered
+  // Allowed after launch: the keys were registered without trust and stay dead until a restart.
+  restartNeeded: boolean
 }
 
-export const NO_REMOTE: RemoteStatus = { trusted: false, keys: [] }
+export const NO_REMOTE: RemoteStatus = { trusted: false, keys: [], restartNeeded: false }

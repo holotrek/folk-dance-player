@@ -1,8 +1,8 @@
-import { screen } from '@testing-library/react'
+import { act, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, test } from 'vitest'
 import type { RendererApi } from '@shared/contract'
-import type { RemoteStatus } from '@shared/program'
+import { IDLE_PLAYER_STATE, type RemoteStatus } from '@shared/program'
 import { APPLE_SYNC_OFF } from '@shared/apple-sync'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 import SettingsPage from '@renderer/pages/SettingsPage'
@@ -11,7 +11,7 @@ import { renderWithMantine } from './render'
 
 function fakeApi(
   initial: Settings = DEFAULT_SETTINGS,
-  remote: () => RemoteStatus = () => ({ trusted: true, keys: ALL_KEYS })
+  remote: () => RemoteStatus = () => ({ trusted: true, keys: ALL_KEYS, restartNeeded: false })
 ) {
   let current: Settings = { ...initial }
   const calls: unknown[][] = []
@@ -20,6 +20,8 @@ function fakeApi(
       calls.push([channel, ...args])
       if (channel === 'settings:getAll') return current
       if (channel === 'remote:status' || channel === 'remote:requestAccess') return remote()
+      if (channel === 'remote:restart') return undefined
+      if (channel === 'player:getState') return IDLE_PLAYER_STATE
       if (channel === 'appleSync:status') return APPLE_SYNC_OFF
       if (channel === 'projector:displays')
         return [
@@ -206,7 +208,11 @@ describe('SettingsPage', () => {
 
   test('without Accessibility permission, explains and asks macOS for it', async () => {
     let trusted = false
-    const { api, calls } = fakeApi(DEFAULT_SETTINGS, () => ({ trusted, keys: ALL_KEYS }))
+    const { api, calls } = fakeApi(DEFAULT_SETTINGS, () => ({
+      trusted,
+      keys: ALL_KEYS,
+      restartNeeded: false
+    }))
     renderWithMantine(<SettingsPage api={api} />)
     expect(await screen.findByText(/needs Accessibility permission/)).toBeInTheDocument()
     trusted = true
@@ -215,8 +221,37 @@ describe('SettingsPage', () => {
     expect(await screen.findByText(/The remote is ready/)).toBeInTheDocument()
   })
 
+  test('when not allowed, says to come back, and explains a stale entry', async () => {
+    const { api } = fakeApi(DEFAULT_SETTINGS, () => ({
+      trusted: false,
+      keys: ALL_KEYS,
+      restartNeeded: false
+    }))
+    renderWithMantine(<SettingsPage api={api} />)
+    expect(await screen.findByText(/then come back to this window/)).toBeInTheDocument()
+    expect(screen.getByText(/Already allowed but still not working/)).toBeInTheDocument()
+  })
+
+  test('after Accessibility is allowed, offers Restart; focus re-checks the status', async () => {
+    let status: RemoteStatus = { trusted: false, keys: ALL_KEYS, restartNeeded: false }
+    const { api, calls } = fakeApi(DEFAULT_SETTINGS, () => status)
+    renderWithMantine(<SettingsPage api={api} />)
+    await screen.findByText(/needs Accessibility permission/)
+    status = { trusted: true, keys: ALL_KEYS, restartNeeded: true }
+    act(() => {
+      window.dispatchEvent(new Event('focus'))
+    })
+    expect(await screen.findByText(/Restart Folk Dance Player to turn it on/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Restart' }))
+    expect(calls).toContainEqual(['remote:restart'])
+  })
+
   test('names media keys another app is holding', async () => {
-    const { api } = fakeApi(DEFAULT_SETTINGS, () => ({ trusted: true, keys: ALL_KEYS.slice(1) }))
+    const { api } = fakeApi(DEFAULT_SETTINGS, () => ({
+      trusted: true,
+      keys: ALL_KEYS.slice(1),
+      restartNeeded: false
+    }))
     renderWithMantine(<SettingsPage api={api} />)
     expect(await screen.findByText(/Another app is using: play\/pause/)).toBeInTheDocument()
   })

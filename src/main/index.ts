@@ -66,6 +66,7 @@ import {
 import { createProjectorFeed } from './projector/projector-feed'
 import { followProjectorWindow, LiveSlide } from './projector/live-slide'
 import { registerMediaKeys } from './remote/media-keys'
+import { RemoteWatcher } from './remote/remote-watcher'
 import { checkProgramFiles } from './programs/file-check'
 import { getProgram, upcomingDanceIds } from './programs/programs'
 import { trackPath } from './programs/tracks'
@@ -76,6 +77,7 @@ import { userDataOverride } from './user-data'
 import { capabilitiesFor, platformFrom, storeFrom } from '@shared/platform'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
+import { createWindowStateSaver, restoreBounds } from './window-state'
 
 // A separate library for end-to-end tests, smoke runs and development builds, so they never
 // touch the real one.
@@ -184,21 +186,41 @@ const toDisplay = (d: Electron.Display): DisplayInfo => ({
   bounds: d.bounds
 })
 
-function createMainWindow(): BrowserWindow {
+const MAIN_WINDOW_MIN = { width: 1000, height: 640 }
+
+// Opens where it was left (1.0.0 spec §3.4): the saved bounds, fitted to the displays that exist.
+function createMainWindow(settings: SettingsStore): BrowserWindow {
+  const { bounds, maximized } = restoreBounds(
+    settings.get('window.control'),
+    screen
+      .getAllDisplays()
+      .map((d) => ({ workArea: d.workArea, primary: d.id === screen.getPrimaryDisplay().id })),
+    MAIN_WINDOW_MIN
+  )
   const win = new BrowserWindow({
     // On Windows the sizes are of the content: its title bar and menu bar would otherwise leave
     // about 575 of the 640, where macOS's title bar leaves 612, and the tour's cards would not fit.
     useContentSize: platform === 'windows',
     width: 1280,
     height: 800,
-    minWidth: 1000,
-    minHeight: platform === 'windows' ? 612 : 640,
+    ...bounds,
+    minWidth: MAIN_WINDOW_MIN.width,
+    minHeight: platform === 'windows' ? 612 : MAIN_WINDOW_MIN.height,
     title: 'Folk Dance Player',
     show: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: true
     }
+  })
+  // useContentSize makes the constructor's sizes the content's, but the saved bounds are the
+  // window's own, so they are applied here (setBounds is always the outer frame).
+  if (platform === 'windows') win.setBounds(bounds)
+  if (maximized) win.maximize()
+  createWindowStateSaver({
+    window: win,
+    save: (state) => settings.set('window.control', state),
+    onError: (err) => log.error("Couldn't save the window's size", err)
   })
   win.on('ready-to-show', () => win.show())
   guardNavigation(win.webContents)
@@ -492,17 +514,35 @@ function startApp(): void {
   // macOS delivers media keys only to an app trusted for Accessibility; other platforms don't ask.
   const trusted = (prompt: boolean) =>
     !caps.mediaKeyTrust || systemPreferences.isTrustedAccessibilityClient(prompt)
+  // Keys registered before the permission was allowed stay dead, so a grant after launch means a
+  // restart (1.0.0 spec §3.1). Checked whenever the control window gains focus.
+  const remoteWatcher = new RemoteWatcher({
+    isTrusted: () => trusted(false),
+    registeredKeys: () => mediaKeys,
+    trustedAtStart: trusted(false),
+    onChange: (status) => {
+      if (!tour.active()) broadcast('remote:changed', status)
+    }
+  })
   const remote = {
-    status: () => ({ trusted: trusted(false), keys: mediaKeys }),
-    requestAccess: () => ({ trusted: trusted(true), keys: mediaKeys })
+    status: () => remoteWatcher.check(),
+    requestAccess: () => {
+      trusted(true)
+      return remoteWatcher.check()
+    },
+    restart: () => {
+      app.relaunch()
+      app.exit()
+    }
   }
 
   // One control window; closing it quits, so the projector is never left on its own.
-  const mainWindow = createMainWindow()
+  const mainWindow = createMainWindow(settings)
   mainWindow.on('closed', () => app.quit())
   // Sync triggers (sync spec §3.3): once the window is shown, and whenever it gains focus.
   mainWindow.once('show', () => appleSync.started())
   mainWindow.on('focus', () => appleSync.focused())
+  mainWindow.on('focus', () => remoteWatcher.check())
   // Back from editing a deck in Canva: re-read the decks so slide numbers and titles follow.
   mainWindow.on('focus', () => void canva.focused())
   app.setAboutPanelOptions({

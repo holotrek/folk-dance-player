@@ -7,6 +7,7 @@ import {
   type ProjectorSnapshot
 } from '@shared/projector'
 import { formatClock } from '@shared/program-time'
+import { projectorCssVars } from '@shared/projector-colors'
 import { ChevronDownIcon } from '../components/icons'
 import Logo from '../components/Logo'
 import { useNow } from '../program/useNow'
@@ -58,6 +59,8 @@ function percent(snapshot: ProjectorSnapshot, progress: ProjectorProgress | null
   return Math.min(100, Math.max(0, (progress.positionMs / progress.durationMs) * 100))
 }
 
+const colors = projectorCssVars() as React.CSSProperties
+
 function useWindowSize(): { width: number; height: number } {
   const read = () => ({ width: window.innerWidth, height: window.innerHeight })
   const [size, setSize] = useState(read)
@@ -86,7 +89,7 @@ export default function ProjectorView({
   // a blank screen.
   if (!middle && upcoming.length === 0 && played.length === 0) {
     return (
-      <div className={classes.screen}>
+      <div className={classes.screen} style={colors}>
         <div className={classes.empty}>
           <Logo size="32vh" />
           <div>Folk Dance Player</div>
@@ -121,7 +124,7 @@ export default function ProjectorView({
     </section>
   )
   return (
-    <div className={classes.screen}>
+    <div className={classes.screen} style={colors}>
       {slide && box ? (
         <div className={classes.slideRow} style={{ height: box.height }} data-testid="slide-row">
           {playedList || <div />}
@@ -145,6 +148,7 @@ export default function ProjectorView({
       {middle && (
         <section
           className={classes.middle}
+          data-panel
           aria-label={middle.kind === 'now' ? 'Now playing' : 'Up next'}
         >
           <h2 className={classes.heading}>

@@ -37,9 +37,15 @@ describe('SettingsStore', () => {
   })
 
   test('stores structured values', () => {
-    store.set('window.bounds', { x: 10, y: 20, width: 1200, height: 800 })
+    store.set('window.control', { x: 10, y: 20, width: 1200, height: 800, maximized: true })
     store.set('danceTypeSuggestions', ['Line', 'Couple'])
-    expect(store.get('window.bounds')).toEqual({ x: 10, y: 20, width: 1200, height: 800 })
+    expect(store.get('window.control')).toEqual({
+      x: 10,
+      y: 20,
+      width: 1200,
+      height: 800,
+      maximized: true
+    })
     expect(store.get('danceTypeSuggestions')).toEqual(['Line', 'Couple'])
   })
 
@@ -67,7 +73,11 @@ describe('SettingsStore', () => {
     ['import.artistTagTarget', 'artist'], // an old key is no longer a setting
     ['import.genreIsCountry', 'yes'],
     ['danceTypeSuggestions', ['Line', '']],
-    ['window.bounds', { x: 0, y: 0, width: 0, height: 10 }],
+    ['window.control', { x: 0, y: 0, width: 0, height: 10, maximized: false }],
+    ['window.control', { x: 0, y: 0, width: 10, height: 10 }],
+    ['window.control', { x: 0, y: 0, width: 10, height: 10, maximized: 'yes' }],
+    ['window.control', { x: NaN, y: 0, width: 10, height: 10, maximized: false }],
+    ['window.control', 'big'],
     ['currentProgramId', 0]
   ])('rejects invalid value for %s: %j', (key, value) => {
     expect(() => store.set(key, value)).toThrow(InvalidSettingError)
@@ -116,6 +126,33 @@ describe('SettingsStore', () => {
   test('a corrupt stored column order falls back to the default', () => {
     db.prepare("INSERT INTO settings (key, value) VALUES ('library.columns.music', '\"x\"')").run()
     expect(store.get('library.columns.music')).toEqual([])
+  })
+
+  test('column widths default to empty and round-trip', () => {
+    expect(store.get('library.columnWidths.music')).toEqual({})
+    expect(store.get('library.columnWidths.program')).toEqual({})
+    store.set('library.columnWidths.music', { country: 12.5 })
+    expect(new SettingsStore(db).get('library.columnWidths.music')).toEqual({ country: 12.5 })
+  })
+
+  test('rejects column widths that are not a map of percentages', () => {
+    const bad = [[1], { a: 'x' }, { a: 0 }, { a: 101 }, { a: Infinity }, { '': 5 }, 'x', null]
+    for (const v of bad) {
+      expect(() => store.set('library.columnWidths.music', v as never)).toThrow(InvalidSettingError)
+    }
+    expect(() =>
+      store.set(
+        'library.columnWidths.program',
+        Object.fromEntries(Array.from({ length: 41 }, (_, i) => [`c${i}`, 5]))
+      )
+    ).toThrow(InvalidSettingError)
+  })
+
+  test('corrupt stored column widths fall back to the default', () => {
+    db.prepare(
+      "INSERT INTO settings (key, value) VALUES ('library.columnWidths.music', '\"x\"')"
+    ).run()
+    expect(store.get('library.columnWidths.music')).toEqual({})
   })
 
   test('Apple Music sync settings are validated', () => {

@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react'
 import { Button, Stack, Text, Title } from '@mantine/core'
 import type { RendererApi } from '@shared/contract'
-import type { RemoteStatus } from '@shared/program'
+import RestartButton from '../remote/RestartButton'
+import { useRemoteStatus } from '../remote/use-remote-status'
 import { usePlatform } from '../platform'
 
 const KEY_NAMES: Record<string, string> = {
@@ -14,29 +14,36 @@ const KEY_NAMES: Record<string, string> = {
 // Spec §7.4: a remote's play/pause, next and back buttons are media keys, which the app takes as
 // global shortcuts. macOS delivers them only to an app trusted for Accessibility.
 export default function RemoteSection({ api }: { api: RendererApi }): React.JSX.Element {
-  const [status, setStatus] = useState<RemoteStatus | null>(null)
+  const [status, refresh] = useRemoteStatus(api)
   const { computer } = usePlatform()
-  useEffect(() => {
-    void api.invoke('remote:status').then(setStatus)
-  }, [api])
   if (!status) return <></>
   const missing = Object.keys(KEY_NAMES).filter((key) => !status.keys.includes(key))
   return (
     <Stack gap="xs">
       <Title order={4}>Remote control</Title>
-      {!status.trusted ? (
+      {status.restartNeeded ? (
+        <>
+          <Text size="sm">Remote control is allowed. Restart Folk Dance Player to turn it on.</Text>
+          <RestartButton api={api} />
+        </>
+      ) : !status.trusted ? (
         <>
           <Text size="sm">
             The remote needs Accessibility permission to reach Folk Dance Player. Allow it in System
-            Settings → Privacy &amp; Security → Accessibility, then quit and reopen the app.
+            Settings → Privacy &amp; Security → Accessibility, then come back to this window.
           </Text>
           <Button
             variant="default"
             w="fit-content"
-            onClick={() => void api.invoke('remote:requestAccess').then(setStatus)}
+            onClick={() => void api.invoke('remote:requestAccess').then(refresh)}
           >
             Allow remote control…
           </Button>
+          <Text size="xs" c="dimmed">
+            Already allowed but still not working? An entry left by an older copy of the app can
+            show as on while it doesn&apos;t count. Remove Folk Dance Player from the list with the
+            − button, then add it again.
+          </Text>
         </>
       ) : missing.length ? (
         <Text size="sm">

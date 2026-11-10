@@ -5,7 +5,11 @@ import { EMPTY_SELECTION } from '@renderer/program/selection'
 import { createProgramStore, type ProgramStore } from '@renderer/program/program-store'
 import { createFakeApi } from '../fake-api'
 
-const detail: ProgramDetail = { id: 5, name: 'Set', items: [{ id: 1, kind: 'stop' }] }
+const detail: ProgramDetail = {
+  id: 5,
+  name: 'Set',
+  items: [{ id: 1, kind: 'stop' }]
+}
 const summaries = [{ id: 5, name: 'Set', updatedAt: '2026-10-14T00:00:00Z', unplayedCount: 0 }]
 
 let store: ProgramStore

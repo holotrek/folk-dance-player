@@ -38,6 +38,10 @@ System Settings → Displays: not mirrored, with the laptop as the main display.
   - [ ] Previously played fills in as songs play.
   - [ ] A preview double-clicked on the Music page shows on the projector too.
 - [ ] 7. Drag the control window onto the projector: it moves back to the laptop.
+- [ ] 7a. From across the room, with the program playing and then stopped (Up next), with and without a dance that has a slide:
+  - [ ] Each song in Previously played and Up next is clearly separated from the next by its rule.
+  - [ ] Now playing (or Up next) sits on a lighter panel that stands out from the lists, with the red progress line readable on it.
+  - [ ] The panel never overlaps the slide, and the Ending line is still visible.
 
 ## C. Canva
 
@@ -112,3 +116,14 @@ Use a Mac whose Music library has local songs and playlists in a folder.
 - [ ] 50. In the rehearsal, quit with ⌘Q while a downloaded update is waiting (before pressing the button): the next launch is the newer version. After updating, **Check for Updates…** in the app menu says you have the latest version.
 - [ ] 51. **Check for Updates…** in the app menu while offline shows a clear message rather than hanging, and a copy run straight from the mounted `.dmg` says to move it to Applications to update it. Turning off **Check for updates automatically** in Settings stops the background check, while the menu item still works.
 - [ ] 52. The first update after this release ships (for example 0.3.0 to 0.3.1) works on your Mac from the real GitHub release, not only in the rehearsal: watch for the banner a few minutes after publishing the newer release.
+- [ ] 53. Link a Canva slide to a dance, attach a slide image to another, and give a third both: the photo icon shows on each in the Music page, the Program page's library list, Holding and the program (hover names which one). Remove the slide or image, and the icon goes (or changes to the one left) without a restart. A dance with neither shows no icon, and the Program page's narrow list keeps the icon column at the smallest window size.
+- [ ] 54. Drag the right edge of a column header (Country, say) on the Music page and on the Program page's list, with a real mouse and with the trackpad: the column follows the pointer, stops at a minimum, and never starts a reorder drag. Release, then make the window wider and narrower: the columns keep their proportions. Quit and reopen: the sizes are still there. Narrow the Program list: columns still disappear in the same order. Right-click a header, **Reset columns**: order and sizes both return to the default.
+- [ ] 55. In the sidebar, open a saved program's ⋯ menu (and right-click it) and choose **Show in library**: the Music page lists its songs once each, numbered in program order, and the note reads **Showing program “…”**. Search and sort inside it, drag a song to Holding, then **Show all music**. Show a program again and delete it from the sidebar: the list returns to all music with a notice.
+
+## J. 1.0.0 window state
+
+- [ ] 56. Resize and move the control window, then quit and reopen the app: it opens at that size and position. Maximize it, quit and reopen: it opens maximized, and un-maximizing returns to the size it had before. A window left in full screen reopens as a normal window.
+- [ ] 57. With a second display, move the control window onto it, quit, unplug that display and reopen: the window is fully visible on the remaining display and at least 1000x640. Maximized stays maximized. On Windows, do the same with the display arrangement changed (a monitor left of the main one has negative coordinates).
+- [ ] 58. Clear: play two songs from a program (a STOP between them is fine), then press **Clear** in Previously played while the second plays. The music stops, Now Playing goes idle on the control window and the projector, and Previously played is empty on both. The played songs and the STOP do not come back into the program, and the next unplayed song is still next up (▶ plays it). Repeat with a long history (more than fits on the projector), and with the button pressed during a countdown. With nothing played and nothing loaded the button is disabled. A double-click replay of a new song still works afterwards.
+- [ ] 59. Remote after a fresh grant: with the packaged app not trusted for Accessibility (`tccutil reset Accessibility com.folkdanceplayer.app`), open Settings → Remote control, press **Allow remote control…** and allow it in System Settings. Back in the app, the notice "Remote control is allowed. Restart Folk Dance Player to turn it on." appears once; Settings shows the same with **Restart**. With music playing, Restart asks first; without, it relaunches. After the restart, the remote's Play/Pause toggles the player and Apple Music stays closed. ✕ hides the notice until the next launch.
+- [ ] 60. Remote after a stale entry: with an entry from a development or old ad-hoc build showing on in System Settings → Accessibility, Settings → Remote control still says it needs permission and explains the stale entry. Remove the entry with −, quit, reopen, allow again: the notice and Restart work as above.

@@ -5,6 +5,7 @@ export type LibraryFilter =
   | { kind: 'all' }
   | { kind: 'favorites' }
   | { kind: 'playlist'; playlistId: number }
+  | { kind: 'program'; programId: number } // a saved program's songs, once each (a view only)
   | { kind: 'review' } // "Removed from Apple Music" (sync spec §6.2)
 
 export type SortColumn =
@@ -17,7 +18,7 @@ export type SortColumn =
   | 'danceType'
   | 'difficulty'
   | 'duration'
-  | 'position' // playlist order; only meaningful with a playlist filter
+  | 'position' // playlist or program order; only meaningful with one of those filters
 
 export interface LibrarySort {
   column: SortColumn
@@ -31,6 +32,9 @@ export interface LibraryQuery {
 }
 
 // One song as the table shows it: with its default dance (spec §4) and that pairing's teacher.
+// What a dance has to show on the projector: a linked Canva slide, a slide image, or both.
+export type SlideKind = 'canva' | 'image' | 'both'
+
 export interface LibraryRow {
   fileId: number
   songId: number
@@ -49,6 +53,7 @@ export interface LibraryRow {
   difficulty: number | null
   danceCount: number
   hasNotesPdf: boolean // the shown dance has a PDF attached (it can be opened from the row's menu)
+  slide: SlideKind | null // what the shown dance has to project; null shows no icon
   label: string
   playlistItemId: number | null // set when listing a playlist
   playlistNumber: number | null // its place in the playlist's own order (1, 2, …), in a playlist

@@ -31,15 +31,18 @@ Object.defineProperty(document, 'fonts', {
 })
 
 // jsdom lays nothing out, so every element measures 0×0. Popovers (menus) then treat their anchor
-// as detached and hide, and virtualized lists (which read offsetWidth/offsetHeight) render no
-// rows. Give elements a plausible size.
+// as detached and hide, and virtualized lists (which read offsetWidth/offsetHeight, and since
+// @tanstack/virtual-core 3.19.6 clientWidth/clientHeight) render no rows. Give elements a
+// plausible size.
 Element.prototype.getBoundingClientRect = function (): DOMRect {
   const rect = { x: 0, y: 0, top: 0, left: 0, width: 1000, height: 600, right: 1000, bottom: 600 }
   return { ...rect, toJSON: () => rect } as DOMRect
 }
 for (const [prop, value] of [
   ['offsetWidth', 1000],
-  ['offsetHeight', 600]
+  ['offsetHeight', 600],
+  ['clientWidth', 1000],
+  ['clientHeight', 600]
 ] as const) {
   Object.defineProperty(HTMLElement.prototype, prop, { configurable: true, get: () => value })
 }

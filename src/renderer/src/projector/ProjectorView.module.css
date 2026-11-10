@@ -5,8 +5,8 @@
   flex-direction: column;
   gap: 2.5vh;
   padding: 3vh 4vw;
-  background: #000;
-  color: #f2f2f2;
+  background: var(--fdp-page);
+  color: var(--fdp-text);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   overflow: hidden;
   cursor: none;
@@ -18,7 +18,7 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: #9a9a9a;
+  color: var(--fdp-heading);
 }
 
 .played {
@@ -47,8 +47,18 @@
   margin-top: auto;
 }
 
+/* Now playing / Up next: one lighter panel behind the whole section, so the middle always reads
+   as the middle from across the room (issue #91). */
 .middle {
   flex: 0 0 auto;
+  padding: 1.5vh 1.5vw 2vh;
+  border-radius: 1vh;
+  background: var(--fdp-panel);
+  color: var(--fdp-panel-text);
+}
+
+.middle .heading {
+  color: var(--fdp-panel-heading);
 }
 
 /* With a slide: previously played on the left, the slide in the top-right box (slideBox). */
@@ -94,13 +104,14 @@
   align-items: baseline;
   gap: 2vw;
   padding: 1vh 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  /* A heavy rule between songs, readable from across the room. */
+  border-bottom: 0.3vh solid var(--fdp-rule);
   font-size: 4.2vh;
 }
 
 .played .row {
   font-size: 3.4vh;
-  color: #c8c8c8;
+  color: var(--fdp-played-text);
 }
 
 /* The name truncates (the song first, then the dance) so the country is never pushed off. */
@@ -127,12 +138,12 @@
   overflow: hidden;
   text-overflow: ellipsis;
   font-size: 0.7em;
-  color: #a8a8a8;
+  color: var(--fdp-sub-text);
 }
 
 .country {
   flex: 0 0 auto;
-  color: #c8c8c8;
+  color: var(--fdp-played-text);
 }
 
 .nowLine {
@@ -155,7 +166,7 @@
 .nowCountry {
   flex: 0 0 auto;
   font-size: 4.5vh;
-  color: #c8c8c8;
+  color: var(--fdp-panel-sub-text);
 }
 
 .nowSong {
@@ -164,13 +175,13 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   font-size: 4vh;
-  color: #a8a8a8;
+  color: var(--fdp-panel-sub-text);
 }
 
 .paused {
   margin-left: 1.5vw;
   font-size: 2.4vh;
-  color: #f0b429;
+  color: var(--fdp-paused);
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
@@ -178,14 +189,14 @@
 .track {
   height: 0.8vh;
   margin-top: 2vh;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--fdp-track);
   border-radius: 0.4vh;
   overflow: hidden;
 }
 
 .bar {
   height: 100%;
-  background: #e03131;
+  background: var(--fdp-bar);
   transition: width 0.25s linear;
 }
 

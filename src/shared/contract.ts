@@ -159,6 +159,8 @@ export interface InvokeContract {
   'programs:removeItems': { args: [programId: number, itemIds: number[]]; result: void }
   'programs:setItemDance': { args: [itemId: number, danceId: number]; result: void }
   'programs:played': { args: [programId: number]; result: PlayedEntry[] }
+  // Hides Previously played, returns played items to the program and idles the player.
+  'programs:clearPlayed': { args: [programId: number]; result: void }
   'player:getState': { args: []; result: PlayerState }
   'player:play': { args: []; result: void }
   'player:pause': { args: []; result: void }
@@ -181,6 +183,8 @@ export interface InvokeContract {
   'remote:status': { args: []; result: RemoteStatus }
   // Asks macOS for Accessibility permission (its own dialog), then reports the status.
   'remote:requestAccess': { args: []; result: RemoteStatus }
+  // Relaunches the app, so media keys registered before Accessibility was allowed start working.
+  'remote:restart': { args: []; result: void }
   // The player bar's projector toggle (spec §8.1).
   'projector:status': { args: []; result: ProjectorStatus }
   'projector:setEnabled': { args: [on: boolean]; result: ProjectorStatus }
@@ -300,6 +304,7 @@ export const INVOKE_CHANNELS = [
   'programs:removeItems',
   'programs:setItemDance',
   'programs:played',
+  'programs:clearPlayed',
   'player:getState',
   'player:play',
   'player:pause',
@@ -317,6 +322,7 @@ export const INVOKE_CHANNELS = [
   'player:restart',
   'remote:status',
   'remote:requestAccess',
+  'remote:restart',
   'projector:status',
   'projector:setEnabled',
   'projector:displays',
@@ -383,6 +389,8 @@ export interface EventContract {
   'tour:intro': TourPart
   // To the control window: the updater's state changed (updates spec §3.1).
   'updates:state': UpdateState
+  // To the control window: Accessibility was allowed or taken away (1.0.0 spec §3.1).
+  'remote:changed': RemoteStatus
 }
 
 export type EventChannel = keyof EventContract
@@ -400,7 +408,8 @@ export const EVENT_CHANNELS = [
   'appleSync:state',
   'appleSync:notice',
   'tour:intro',
-  'updates:state'
+  'updates:state',
+  'remote:changed'
 ] as const satisfies readonly EventChannel[]
 
 type MissingEvents = Exclude<EventChannel, (typeof EVENT_CHANNELS)[number]>

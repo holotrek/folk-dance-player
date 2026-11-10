@@ -165,8 +165,10 @@ describe('program handlers', () => {
 
   test('remote status comes from the app; without one, the remote is reported off', async () => {
     const { h } = setup()
-    expect(await h['remote:status']()).toEqual({ trusted: false, keys: [] })
-    expect(await h['remote:requestAccess']()).toEqual({ trusted: false, keys: [] })
+    const off = { trusted: false, keys: [], restartNeeded: false }
+    expect(await h['remote:status']()).toEqual(off)
+    expect(await h['remote:requestAccess']()).toEqual(off)
+    expect(await h['remote:restart']()).toBeUndefined()
   })
 
   test('auto-continue is changed from the player bar', async () => {
@@ -175,6 +177,21 @@ describe('program handlers', () => {
     await h['player:setAutoContinue']({ seconds: 8 })
     expect(settings.get('autoContinue.enabled')).toBe(false)
     expect((await h['player:getState']()).autoContinue).toEqual({ enabled: false, seconds: 8 })
+  })
+
+  test('programs:clearPlayed hides the played list and idles the player, leaving played songs played', async () => {
+    const { h, counts, songs } = setup()
+    const p = await h['programs:create']('Set')
+    await h['programs:addTracks'](p, [songs.hora.fileId, songs.kolo.fileId], null)
+    await h['programs:setCurrent'](p)
+    await h['player:play']()
+    expect(await h['programs:played'](p)).toHaveLength(1)
+    const before = counts.programs
+    await h['programs:clearPlayed'](p)
+    expect(await h['programs:played'](p)).toEqual([])
+    expect(counts.programs).toBe(before + 1)
+    expect((await h['programs:get'](p))?.items).toHaveLength(1)
+    expect(await h['player:getState']()).toMatchObject({ status: 'idle', current: null })
   })
 
   test('holding a song is announced as a library change, and the list keeps the order', async () => {

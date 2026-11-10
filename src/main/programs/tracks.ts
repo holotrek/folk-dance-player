@@ -1,7 +1,8 @@
 import type { DatabaseSync } from 'node:sqlite'
 import { formatLabel, labelParts } from '@shared/labels'
 import type { Track } from '@shared/program'
-import { choreographerCountSql, shownPairingSql } from '../library/list'
+import type { SlideKind } from '@shared/library'
+import { choreographerCountSql, shownPairingSql, slideKindSql } from '../library/list'
 
 // The columns of a Track, for a song `s` joined to its file `f`, the dance shown `d`, and that
 // pairing's teacher `dsp`. Every query that returns tracks selects these.
@@ -12,6 +13,8 @@ export const TRACK_COLUMNS = `f.id AS fileId, s.id AS songId, d.id AS danceId, s
   (SELECT COUNT(*) FROM dance_songs c WHERE c.song_id = s.id) AS danceCount,
   EXISTS (SELECT 1 FROM dance_prefs dp WHERE dp.dance_id = d.id AND dp.notes_pdf_path IS NOT NULL)
     AS hasNotesPdf,
+  (SELECT ${slideKindSql('dp.canva_page_id', 'dp.slide_image_path')} FROM dance_prefs dp
+    WHERE dp.dance_id = d.id) AS slide,
   ${choreographerCountSql('s.id')} AS choreographerCount`
 
 // Joins the pairing for dance `danceExpr` (falling back to the song's shown dance when it is
@@ -38,6 +41,7 @@ export interface TrackRow {
   isFavorite: number
   danceCount: number
   hasNotesPdf: number
+  slide: SlideKind | null
   choreographerCount: number
 }
 
@@ -62,7 +66,8 @@ export function toTrack(row: TrackRow): Track {
     isRemoved: row.isRemoved === 1,
     isFavorite: row.isFavorite === 1,
     danceCount: row.danceCount,
-    hasNotesPdf: row.hasNotesPdf === 1
+    hasNotesPdf: row.hasNotesPdf === 1,
+    slide: row.slide
   }
 }
 
