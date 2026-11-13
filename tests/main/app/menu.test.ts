@@ -1,19 +1,27 @@
 import type { MenuItemConstructorOptions } from 'electron'
 import { describe, expect, test, vi } from 'vitest'
+import { capabilitiesFor, type Platform } from '../../../src/shared/platform'
 import { menuTemplate, syncAppleMusicFromMenu } from '../../../src/main/menu'
 
-function setup(dev = false, appleSync = false) {
+function setup(dev = false, appleSync = false, platform: Platform = 'mac', store = false) {
   const actions = {
     showSettings: vi.fn(),
     revealLogs: vi.fn(),
     revealBackups: vi.fn(),
     syncAppleMusic: vi.fn(),
     takeTour: vi.fn(),
-    checkForUpdates: vi.fn()
+    checkForUpdates: vi.fn(),
+    showAbout: vi.fn()
   }
   return {
     actions,
-    menu: menuTemplate({ appName: 'Folk Dance Player', dev, appleSync, ...actions })
+    menu: menuTemplate({
+      appName: 'Folk Dance Player',
+      dev,
+      appleSync,
+      caps: capabilitiesFor(platform, store),
+      ...actions
+    })
   }
 }
 
@@ -97,5 +105,65 @@ describe('the app menu', () => {
     syncAppleMusicFromMenu('off', actions)
     syncAppleMusicFromMenu('idle', actions)
     expect(calls).toEqual([['showPage', { page: 'music', highlight: 'appleSync' }], ['syncNow']])
+  })
+})
+
+const MAC_ONLY = ['about', 'services', 'hide', 'hideOthers', 'unhide', 'windowMenu']
+const walk = (items: MenuItemConstructorOptions[]): MenuItemConstructorOptions[] =>
+  items.flatMap((i) => [i, ...(Array.isArray(i.submenu) ? walk(i.submenu) : [])])
+
+describe('the Windows menu in the Microsoft Store version', () => {
+  test('has no Check for Updates…: the Store updates the app', () => {
+    const labels = (store: boolean): string[] =>
+      submenu(setup(false, false, 'windows', store).menu, 'help').map((i) => i.label ?? '')
+    expect(labels(false)).toContain('Check for Updates…')
+    expect(labels(true)).not.toContain('Check for Updates…')
+    expect(labels(true)).toContain('About Folk Dance Player')
+  })
+})
+
+describe('the Windows menu', () => {
+  test('has no macOS-only roles, and no Apple Music item', () => {
+    const { menu } = setup(false, false, 'windows')
+    const all = walk(menu)
+    expect(all.filter((i) => i.role && MAC_ONLY.includes(i.role))).toEqual([])
+    expect(all.some((i) => /Apple/.test(i.label ?? ''))).toBe(false)
+  })
+
+  test('File has Settings… (Ctrl+,) and Exit', () => {
+    const { menu, actions } = setup(false, false, 'windows')
+    const file = submenu(menu, 'File')
+    click(item(file, 'Settings…'))
+    expect(actions.showSettings).toHaveBeenCalled()
+    expect(item(file, 'Settings…').accelerator).toBe('CmdOrCtrl+,')
+    expect(file.at(-1)).toMatchObject({ role: 'quit', label: 'Exit' })
+  })
+
+  test('Window offers Minimize but no Close Window (closing quits mid-dance)', () => {
+    const { menu } = setup(false, false, 'windows')
+    expect(submenu(menu, 'Window').map((i) => i.role)).toEqual(['minimize'])
+  })
+
+  test('Help has the tours, Check for Updates…, About and the folders in File Explorer', () => {
+    const { menu, actions } = setup(false, false, 'windows')
+    const help = submenu(menu, 'help')
+    click(item(help, 'Take the Basic Tour…'))
+    click(item(help, 'Check for Updates…'))
+    click(item(help, 'About Folk Dance Player'))
+    click(item(help, 'Show Logs in File Explorer'))
+    click(item(help, 'Show Library Backups in File Explorer'))
+    expect(actions.takeTour).toHaveBeenCalledWith('basic')
+    expect(actions.checkForUpdates).toHaveBeenCalledTimes(1)
+    expect(actions.showAbout).toHaveBeenCalledTimes(1)
+    expect(actions.revealLogs).toHaveBeenCalledTimes(1)
+    expect(actions.revealBackups).toHaveBeenCalledTimes(1)
+  })
+
+  test('Edit and View are present; View offers the developer tools only in development', () => {
+    const labels = (dev: boolean) =>
+      walk(setup(dev, false, 'windows').menu).map((i) => i.role ?? i.label)
+    expect(labels(false)).toContain('editMenu')
+    expect(labels(false)).not.toContain('toggleDevTools')
+    expect(labels(true)).toContain('toggleDevTools')
   })
 })

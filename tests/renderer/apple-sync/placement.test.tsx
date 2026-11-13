@@ -44,7 +44,12 @@ describe('where the Apple Music controls are', () => {
   test('Settings no longer has an Apple Music section', async () => {
     const fake = createFakeApi({
       'appleSync:status': status({ state: 'idle' }),
-      'app:getInfo': { version: '0.2.0', dbPath: '/data/fdp.sqlite', schemaVersion: 4 }
+      'app:getInfo': {
+        version: '0.2.0',
+        dbPath: '/data/fdp.sqlite',
+        schemaVersion: 4,
+        platform: 'mac'
+      }
     })
     renderWithMantine(<SettingsPage api={fake.api} />)
     await screen.findByText('Settings')

@@ -1,4 +1,5 @@
 import type { RendererApi } from '@shared/contract'
+import type { Capabilities } from '@shared/platform'
 import type { TourPart } from '@shared/tour'
 import type { LibraryStore } from '../library/library-store'
 import type { ProgramStore } from '../program/program-store'
@@ -46,4 +47,11 @@ export interface TourStep {
   begin?: (ctx: StepContext) => void
   done?: (ctx: StepContext) => boolean | Promise<boolean> // 'do' steps
   choices?: TourChoice[] // 'choice' steps
+}
+
+// A step as written: its text may depend on the platform, and a step may exist on some platforms
+// only. `resolveSteps` turns definitions into the steps the engine runs.
+export interface TourStepDef extends Omit<TourStep, 'body'> {
+  body: string | ((caps: Capabilities) => string)
+  when?: (caps: Capabilities) => boolean // default: on every platform
 }

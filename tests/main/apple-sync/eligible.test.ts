@@ -3,7 +3,10 @@ import { previewSnapshot, sortTracks } from '../../../src/main/apple-sync/eligib
 import { pid, snapTrack, snapshot } from './fixtures'
 
 describe('sortTracks (sync spec §5.2)', () => {
-  test('local music files in a playable format are synced, with Music tags', () => {
+  // Apple Music's paths are macOS paths: the parser resolves them for the system it runs on.
+  const mac = process.platform === 'win32' ? test.skip : test
+
+  mac('local music files in a playable format are synced, with Music tags', () => {
     const { eligible, skipped, unsupported } = sortTracks([
       snapTrack(1, '/m/Kolo.mp3', { title: 'Kolo', artist: 'Taraf', genre: 'Serbia' })
     ])
@@ -35,7 +38,7 @@ describe('sortTracks (sync spec §5.2)', () => {
     ])
   })
 
-  test('Apple Lossless and AIFF are unsupported formats', () => {
+  mac('Apple Lossless and AIFF are unsupported formats', () => {
     const { eligible, unsupported } = sortTracks([
       snapTrack(1, '/m/a.m4a', { kind: 'Apple Lossless audio file' }),
       snapTrack(2, '/m/b.aiff', { kind: 'AIFF audio file' })

@@ -72,7 +72,13 @@ export interface DemoLibrary {
 
 // Builds `dir/library.sqlite` (migrated) and `dir/music/` with a copy of a tune per song. `tuneDir`
 // holds `hava-nagila.wav` and `korobushka.wav`.
-export function buildDemoLibrary(dir: string, tuneDir: string): DemoLibrary {
+// `appleMirrors: false` leaves out the Apple Music folder and playlist (where Apple Music sync
+// doesn't exist).
+export function buildDemoLibrary(
+  dir: string,
+  tuneDir: string,
+  opts: { appleMirrors?: boolean } = {}
+): DemoLibrary {
   const music = join(dir, 'music')
   mkdirSync(music, { recursive: true })
   const dbPath = join(dir, 'library.sqlite')
@@ -135,25 +141,27 @@ export function buildDemoLibrary(dir: string, tuneDir: string): DemoLibrary {
     ['Hava Nagila', 'Hora Mare', 'Zemer Atik'].map((t) => bySong(t).fileId)
   )
 
-  // A playlist as Apple Music sync makes it: a read-only mirror inside a folder.
-  const pid = (i: number): string => `A${String(i).padStart(15, '0')}` // 16 hex characters
-  const pids = new Map(saved.map((s, i) => [pid(i), s.fileId]))
-  const ids = [...pids.keys()]
-  const snapshot: Snapshot = {
-    version: 1,
-    libraryId: 'B000000000000000',
-    tracks: [],
-    folders: [{ persistentId: 'C000000000000001', name: 'Festival 2026', parentId: null }],
-    playlists: [
-      {
-        persistentId: 'D000000000000001',
-        name: 'Balkan night',
-        parentId: 'C000000000000001',
-        itemIds: [ids[2], ids[3], ids[4], ids[7]] // Legnala Dana, Makedonsko Devojče, Pusteno Ludo, Hora Mare
-      }
-    ]
+  if (opts.appleMirrors !== false) {
+    // A playlist as Apple Music sync makes it: a read-only mirror inside a folder.
+    const pid = (i: number): string => `A${String(i).padStart(15, '0')}` // 16 hex characters
+    const pids = new Map(saved.map((s, i) => [pid(i), s.fileId]))
+    const ids = [...pids.keys()]
+    const snapshot: Snapshot = {
+      version: 1,
+      libraryId: 'B000000000000000',
+      tracks: [],
+      folders: [{ persistentId: 'C000000000000001', name: 'Festival 2026', parentId: null }],
+      playlists: [
+        {
+          persistentId: 'D000000000000001',
+          name: 'Balkan night',
+          parentId: 'C000000000000001',
+          itemIds: [ids[2], ids[3], ids[4], ids[7]] // Legnala Dana, Makedonsko Devojče, Pusteno Ludo, Hora Mare
+        }
+      ]
+    }
+    syncPlaylists(db, snapshot, pids, {}, new Date().toISOString())
   }
-  syncPlaylists(db, snapshot, pids, {}, new Date().toISOString())
 
   const program = createProgram(db, 'Friday warm-up')
   addTracks(

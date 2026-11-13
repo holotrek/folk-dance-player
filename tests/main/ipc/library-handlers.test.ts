@@ -18,7 +18,7 @@ function setup(over: (db: ReturnType<typeof createTestDb>) => Partial<HandlerDep
   const deps: HandlerDeps = {
     db,
     settings,
-    appInfo: () => ({ version: '0', dbPath: '', schemaVersion: 2 }),
+    appInfo: () => ({ version: '0', dbPath: '', schemaVersion: 2, platform: 'mac' }),
     importer: {
       run: async () => emptySummary(),
       cancel: () => undefined,

@@ -2,6 +2,7 @@ import { Button, Stack, Text, Title } from '@mantine/core'
 import type { RendererApi } from '@shared/contract'
 import RestartButton from '../remote/RestartButton'
 import { useRemoteStatus } from '../remote/use-remote-status'
+import { usePlatform } from '../platform'
 
 const KEY_NAMES: Record<string, string> = {
   MediaPlayPause: 'play/pause',
@@ -14,6 +15,7 @@ const KEY_NAMES: Record<string, string> = {
 // global shortcuts. macOS delivers them only to an app trusted for Accessibility.
 export default function RemoteSection({ api }: { api: RendererApi }): React.JSX.Element {
   const [status, refresh] = useRemoteStatus(api)
+  const { computer } = usePlatform()
   if (!status) return <></>
   const missing = Object.keys(KEY_NAMES).filter((key) => !status.keys.includes(key))
   return (
@@ -52,7 +54,7 @@ export default function RemoteSection({ api }: { api: RendererApi }): React.JSX.
       ) : (
         <Text size="sm">
           The remote is ready: play/pause, next, and back (restarts the song). Its volume buttons
-          set the Mac&apos;s volume.
+          set the {computer}&apos;s volume.
         </Text>
       )}
     </Stack>

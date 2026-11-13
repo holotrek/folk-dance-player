@@ -80,6 +80,15 @@ describe('the Advanced tour’s steps', () => {
     expect(step('advanced.mirror').page).toBe('music')
   })
 
+  test('after the playlist is clicked, a Next step shows its songs before the tour moves on', () => {
+    const ids = ADVANCED_STEPS.map((s) => s.id)
+    const at = ids.indexOf('advanced.playlist-contents')
+    expect(at).toBe(ids.indexOf('advanced.playlists') + 1)
+    expect(step('advanced.playlist-contents').kind).toBe('explain')
+    expect(step('advanced.playlist-contents').page).toBe('program')
+    expect(step('advanced.playlist-contents').target).toBe('library.table')
+  })
+
   test('playlists: done once the person has opened a playlist of their own', async () => {
     const { ctx, library } = context()
     library.setState({

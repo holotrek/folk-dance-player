@@ -23,7 +23,8 @@ function stub(body: string): string {
 
 const good = JSON.stringify(snapshot({ tracks: [snapTrack(1, '/m/a.mp3')] }))
 
-describe('createHelperSource', () => {
+// The stub helpers are shell scripts, and the real helper is a macOS program.
+describe.skipIf(process.platform === 'win32')('createHelperSource', () => {
   test('exit 0 with a valid snapshot', async () => {
     const json = dir.file('out.json', good)
     const result = await createHelperSource(stub(`cat '${json}'`)).read()

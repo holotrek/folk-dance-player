@@ -74,16 +74,25 @@ import { PlayerSession } from './session/player-session'
 import { createSessionPorts } from './session/session-ports'
 import { guardNavigation } from './navigation'
 import { userDataOverride } from './user-data'
+import { capabilitiesFor, platformFrom, storeFrom } from '@shared/platform'
 import { registerHandlers } from './ipc/register'
 import { SettingsStore } from './settings/settings-store'
 import { createWindowStateSaver, restoreBounds } from './window-state'
 
 // A separate library for end-to-end tests, smoke runs and development builds, so they never
 // touch the real one.
-const userData = userDataOverride(process.env, app.isPackaged, app.getPath('appData'))
+// Which system this is, decided once (Windows release spec §3.1).
+const platform = platformFrom(process.platform, process.env, app.isPackaged)
+// `process.windowsStore` is Electron's flag for a Microsoft Store (appx) package.
+const caps = capabilitiesFor(
+  platform,
+  storeFrom(platform, process.windowsStore === true, process.env, app.isPackaged)
+)
+const userData = userDataOverride(process.env, app.isPackaged, app.getPath('appData'), platform)
 if (userData) app.setPath('userData', userData)
 
-// The app log (spec §10.1): ~/Library/Logs/Folk Dance Player, or beside a separate library.
+// The app log (spec §10.1): ~/Library/Logs/Folk Dance Player on a Mac, beside the library on
+// Windows, or beside a separate library.
 app.setAppLogsPath(userData ? join(userData, 'logs') : undefined)
 const log = createLogger({ dir: app.getPath('logs') })
 // Logged rather than shown: a side failure must never stop the music (spec §10.1).
@@ -147,7 +156,13 @@ function createProjectorWindow(
   win.setAlwaysOnTop(true, 'screen-saver')
   // skipTransformProcessType: without it, macOS briefly makes the whole app a background app on
   // every call, hiding the control window and the Dock icon, and after sleep it can stay that way.
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true, skipTransformProcessType: true })
+  // Spaces are a macOS idea; Windows has no equivalent to ask for.
+  if (platform === 'mac') {
+    win.setVisibleOnAllWorkspaces(true, {
+      visibleOnFullScreen: true,
+      skipTransformProcessType: true
+    })
+  }
   win.setBounds(bounds)
   guardNavigation(win.webContents)
   win.once('ready-to-show', () => win.showInactive())
@@ -183,11 +198,14 @@ function createMainWindow(settings: SettingsStore): BrowserWindow {
     MAIN_WINDOW_MIN
   )
   const win = new BrowserWindow({
+    // On Windows the sizes are of the content: its title bar and menu bar would otherwise leave
+    // about 575 of the 640, where macOS's title bar leaves 612, and the tour's cards would not fit.
+    useContentSize: platform === 'windows',
     width: 1280,
     height: 800,
     ...bounds,
     minWidth: MAIN_WINDOW_MIN.width,
-    minHeight: MAIN_WINDOW_MIN.height,
+    minHeight: platform === 'windows' ? 612 : MAIN_WINDOW_MIN.height,
     title: 'Folk Dance Player',
     show: false,
     webPreferences: {
@@ -195,6 +213,9 @@ function createMainWindow(settings: SettingsStore): BrowserWindow {
       sandbox: true
     }
   })
+  // useContentSize makes the constructor's sizes the content's, but the saved bounds are the
+  // window's own, so they are applied here (setBounds is always the outer frame).
+  if (platform === 'windows' && bounds) win.setBounds(bounds)
   if (maximized) win.maximize()
   createWindowStateSaver({
     window: win,
@@ -253,7 +274,7 @@ function startApp(): void {
   electronApp.setAppUserModelId('com.folkdanceplayer.app')
   // The packaged app gets its icon from the bundle (build/icon.icns); unpackaged, the Dock would
   // show Electron's.
-  if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(icon)
+  if (platform === 'mac' && !app.isPackaged) app.dock?.setIcon(icon)
   app.on('browser-window-created', (_, window) => optimizer.watchWindowShortcuts(window))
 
   log.info(`Folk Dance Player ${app.getVersion()} starting (Electron ${process.versions.electron})`)
@@ -341,6 +362,8 @@ function startApp(): void {
           ? process.resourcesPath
           : join(app.getAppPath(), 'resources', 'tour'),
         appVersion: app.getVersion(),
+        platform,
+        store: caps.store,
         send
       }),
     sendToWindow: sendTo,
@@ -364,7 +387,8 @@ function startApp(): void {
       onState: (state) => broadcast('updates:state', state)
     }
   )
-  updates.start()
+  // The Microsoft Store updates its own version: no checks of ours.
+  if (!caps.store) updates.start()
   app.on('will-quit', () => updates.stop())
 
   // Sync with Apple Music (sync spec §3): the bundled helper, or a snapshot file in development and
@@ -372,7 +396,7 @@ function startApp(): void {
   const appleLibraryFile = process.env['FDP_APPLE_LIBRARY']
   const now = (): string => new Date().toISOString()
   const appleSync: AppleSync = new AppleSync({
-    available: process.platform === 'darwin' || appleLibraryFile !== undefined,
+    available: caps.appleMusicSync || appleLibraryFile !== undefined,
     source: appleLibraryFile
       ? createFileSource(appleLibraryFile)
       : createHelperSource(
@@ -489,7 +513,7 @@ function startApp(): void {
   })
   // macOS delivers media keys only to an app trusted for Accessibility; other platforms don't ask.
   const trusted = (prompt: boolean) =>
-    process.platform !== 'darwin' || systemPreferences.isTrustedAccessibilityClient(prompt)
+    !caps.mediaKeyTrust || systemPreferences.isTrustedAccessibilityClient(prompt)
   // Keys registered before the permission was allowed stay dead, so a grant after launch means a
   // restart (1.0.0 spec §3.1). Checked whenever the control window gains focus.
   const remoteWatcher = new RemoteWatcher({
@@ -539,6 +563,14 @@ function startApp(): void {
       menuTemplate({
         appName: 'Folk Dance Player',
         dev: is.dev,
+        caps,
+        showAbout: () =>
+          void dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'About Folk Dance Player',
+            message: 'Folk Dance Player',
+            detail: `Version ${app.getVersion()}\n© 2026 Evan Kaiser\nFor folk dance organizers. Inspired by MITPlayer.`
+          }),
         showSettings: () => showPage({ page: 'settings' }),
         revealLogs: reveal(log.dir),
         revealBackups: reveal(backupsDir),
@@ -643,7 +675,18 @@ function startApp(): void {
     )
   })
   for (const event of ['display-added', 'display-removed', 'display-metrics-changed'] as const) {
-    screen.on(event as 'display-added', () => controller.displaysChanged())
+    screen.on(event as 'display-added', () => {
+      const control = mainWindow.isDestroyed()
+        ? 'gone'
+        : screen.getDisplayMatching(mainWindow.getBounds()).id
+      log.info(
+        `Display event ${event}: displays ${screen
+          .getAllDisplays()
+          .map((d) => d.id)
+          .join(', ')}; the control window is on ${control}`
+      )
+      controller.displaysChanged()
+    })
   }
 
   mainWindow.on('moved', () => controller.keepControlReachable())
@@ -666,7 +709,13 @@ function startApp(): void {
   realHandlers = createHandlers({
     db,
     settings,
-    appInfo: () => ({ version: app.getVersion(), dbPath, schemaVersion: getSchemaVersion(db) }),
+    appInfo: () => ({
+      version: app.getVersion(),
+      dbPath,
+      schemaVersion: getSchemaVersion(db),
+      platform,
+      store: caps.store
+    }),
     importer,
     dialogs: importDialogs,
     attachments,
@@ -724,7 +773,7 @@ function startApp(): void {
   // sure the control window is showing.
   powerMonitor.on('resume', () => {
     controller.displaysChanged()
-    if (process.platform === 'darwin') void app.dock?.show()
+    if (platform === 'mac') void app.dock?.show()
     if (!mainWindow.isDestroyed() && !mainWindow.isVisible()) mainWindow.show()
   })
 
@@ -762,5 +811,5 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  if (platform !== 'mac') app.quit()
 })

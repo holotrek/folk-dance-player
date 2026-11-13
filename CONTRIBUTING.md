@@ -34,7 +34,7 @@ npm run dev
 | `npm run format`        | Prettier                                        |
 | `npm run icon`          | Rebuild the app icon from the logo (macOS)      |
 | `npm run build:helper`  | Build the Music library helper (macOS, Swift)   |
-| `npm run dist`          | Build the Universal .dmg and .zip into `dist/`  |
+| `npm run dist`          | Build this system's installer into `dist/`      |
 | `npm run test:e2e`      | End-to-end tests (Playwright) on the build      |
 | `npm run test:e2e:dist` | The same tests on the packaged app              |
 
@@ -61,6 +61,16 @@ npm run dev
   2. Add it to `INVOKE_CHANNELS`. Typecheck fails until you do.
   3. Implement it in `createHandlers`.
 
+## Building the Windows installer (unsigned)
+
+On a Windows machine with Node 24 (see `.nvmrc`) and npm 12: `npm ci`, then `npm run dist`. The
+installer is `dist/Folk-Dance-Player-Setup-<version>.exe`, and the unpacked app is
+`dist/win-unpacked/`. It is not signed, so SmartScreen shows "Windows protected your PC" (More info →
+Run anyway). Installed per user, its library is in `%LOCALAPPDATA%\Folk Dance Player`. A development
+run (`npm run dev`) uses `Folk Dance Player (dev)` under `%APPDATA%`. To see the Windows interface
+from a Mac, run the unpackaged app with `FDP_PLATFORM=windows` (a packaged app ignores it); the PR Gate walks both tours that way (`npm run test:e2e:tour`). The
+hardware checklist is `docs/manual-testing/pre-release-hardware-windows.md`.
+
 ## Continuous integration
 
 GitHub Actions (spec §13.4) runs on every pull request and every push to main:
@@ -69,7 +79,7 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 - **The CHANGELOG check:** a pull request that changes `src/` must add a line to `CHANGELOG.md`. If nobody would notice the change, label the PR `no changelog`. Dependabot's PRs are skipped.
 - **Adding an OS:**
   - **End-to-end tests:** add it to the `e2e` job's `matrix.os` in `pr-gate.yml` (for example `ubuntu-latest`, under a virtual display, or `windows-latest`), and add its check to the required checks of the `main` ruleset (Settings → Rules).
-  - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml`. Windows also needs its electron-builder target and a `dist` script without `env -u`, which is Unix-only.
+  - **Releases:** add `{ os: …, installer: … }` to the `build` job's matrix in `create-release.yml` (for Windows: `windows-latest`, `dist/*.exe`, `dist/*.exe.blockmap`, `dist/latest.yml`; done). `check-feed` checks every feed it finds in `dist/`. The Windows jobs in the PR Gate (`Unit tests (Windows)`, `End-to-end (windows-latest)`) are not required checks until you add them to the ruleset.
 - **Pull requests from forks** run with read-only permissions and no secrets. GitHub asks a maintainer to approve a first-time contributor's runs.
 - **Dependabot** opens weekly update PRs (npm packages and the workflows' actions), only for releases at least 14 days old. It skips major npm upgrades: make those on purpose (Vite stays on 7 for electron-vite 5; `@types/node` follows Node's major).
 
@@ -104,7 +114,39 @@ GitHub Actions (spec §13.4) runs on every pull request and every push to main:
 
    An account's first submission can take hours. Don't use `notarytool wait` in a terminal you need. The ticket is stapled to the `.dmg`, not the app inside it; check the app by mounting the dmg and running `spctl -a -t exec -vv` on it ("Notarized Developer ID"). `spctl` on the dmg itself says "no usable signature", which is normal: only the app is signed.
 
-In CI, the certificate (as `CSC_LINK` and `CSC_KEY_PASSWORD`) and the notarization credentials become repo secrets, passed to Create Release's build job.
+In CI, the certificate (as `CSC_LINK` and `CSC_KEY_PASSWORD`) and the App Store Connect key for notarization (`APPLE_API_KEY`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER`) are secrets of the `Package` environment, passed to Create Release's build job.
+
+### The Windows installer is unsigned
+
+Create Release builds the Windows installer without a signature, so Windows shows SmartScreen's
+warning, and Smart App Control (Windows 11) blocks it where it is turned on. The signed way in is the
+Microsoft Store version, which Microsoft signs (design: `docs/superpowers/specs/2026-11-02-windows-store-design.md`).
+The site tells Windows visitors that the direct download may be blocked. SignPath's free program
+declined the project, so there is no signing service in the workflow.
+
+### The Microsoft Store package
+
+CI builds the Store package (an `appx`, unsigned: Microsoft signs it) in the PR Gate (job **Store
+package (Windows)**) and in Create Release, and keeps it as the workflow artifact `store-package`
+(it is never part of the GitHub release). To submit it:
+
+1. In Partner Center, open the app → **Product management → Product identity**, and copy three values
+   into repository **variables** (Settings → Secrets and variables → Actions → Variables; they are not
+   secrets): `STORE_IDENTITY_NAME` (Package/Identity/Name), `STORE_PUBLISHER` (Package/Identity/Publisher,
+   `CN=…`), `STORE_PUBLISHER_DISPLAY_NAME` (Package/Properties/PublisherDisplayName). Without them CI builds
+   a placeholder package that cannot be submitted.
+2. Run the PR Gate (or a Create Release dry run) and download the `store-package` artifact from the run.
+3. In the submission's **Packages** step upload the `.appx`.
+
+The package version is the app's (`1.4.0` is `1.4.0.0`; the Store reserves the fourth part). The Store
+rejects a version that starts with 0, so the first package that can be submitted is from 1.0.0; a 0.x build
+still works for testing and warns (`storeVersion` in `scripts/store.mts`). The Store version has no updater of its own (`Capabilities.store`): the Store updates
+it. `npm run dist:store` builds the package on a Windows machine with the same variables set, or
+`node scripts/store.mts --test` with a placeholder identity.
+
+Later submissions can be automated with the Microsoft Store Developer CLI (`msstore publish`), which needs
+an Azure AD app with Partner Center access (tenant, seller and client IDs and a client secret) and an
+existing app whose first submission was made by hand in Partner Center. Not set up yet.
 
 ### Testing the remote
 

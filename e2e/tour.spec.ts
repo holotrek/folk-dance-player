@@ -197,22 +197,29 @@ const onStep = async (title: string): Promise<void> => {
     })
     .first()
   if (await card.count()) {
-    await expect
-      .poll(async () => {
-        const box = await card.boundingBox()
-        const view = await running.page.evaluate(() => ({
-          width: window.innerWidth,
-          height: window.innerHeight
-        }))
-        return (
-          box !== null &&
-          box.x >= 0 &&
-          box.y >= 0 &&
-          box.x + box.width <= view.width &&
-          box.y + box.height <= view.height
-        )
-      })
-      .toBe(true)
+    // On failure the message says which step, and how big the card and the window were.
+    let seen = ''
+    try {
+      await expect
+        .poll(async () => {
+          const box = await card.boundingBox()
+          const view = await running.page.evaluate(() => ({
+            width: window.innerWidth,
+            height: window.innerHeight
+          }))
+          seen = `card ${JSON.stringify(box)} in window ${JSON.stringify(view)}`
+          return (
+            box !== null &&
+            box.x >= 0 &&
+            box.y >= 0 &&
+            box.x + box.width <= view.width &&
+            box.y + box.height <= view.height
+          )
+        })
+        .toBe(true)
+    } catch (err) {
+      throw new Error(`the "${title}" card does not fit the window: ${seen}`, { cause: err })
+    }
   }
 }
 // The tour switches pages itself, a moment after showing a step: wait for it before using the page.
@@ -384,11 +391,18 @@ async function doAdvancedTour(): Promise<void> {
 
   await onStep('Playlists')
   await page.getByText('Easy circle dances').first().click()
-  await onStep('Folders from Music')
-  await page.getByText('Festival 2026').first().click()
-  await onStep('Changing a synced playlist')
-  await page.getByRole('button', { name: 'Options for Balkan night' }).click()
-  await page.getByRole('menuitem', { name: 'Duplicate as my playlist' }).click()
+  await onStep('What is in the playlist')
+  await next()
+  // The Apple Music folder and synced playlist exist (and have steps) only where sync does; run
+  // this spec with FDP_PLATFORM=windows to walk the Windows tour from a Mac (a Windows machine
+  // walks it as itself).
+  if (process.env['FDP_PLATFORM'] !== 'windows' && process.platform !== 'win32') {
+    await onStep('Folders from Music')
+    await page.getByText('Festival 2026').first().click()
+    await onStep('Changing a synced playlist')
+    await page.getByRole('button', { name: 'Options for Balkan night' }).click()
+    await page.getByRole('menuitem', { name: 'Duplicate as my playlist' }).click()
+  }
 
   for (const title of [
     'Settings: Appearance',

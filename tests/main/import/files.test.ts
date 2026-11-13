@@ -61,12 +61,13 @@ describe('findAudioFiles', () => {
     dir.file('Old/Song.aiff', 'x')
     dir.file('Top.m4a', 'x')
     const found = await findAudioFiles([dir.path])
-    expect(found.audio.map((p) => p.slice(dir.path.length + 1)).sort()).toEqual([
+    const rel = (p: string): string => p.slice(dir.path.length + 1).replaceAll('\\', '/')
+    expect(found.audio.map(rel).sort()).toEqual([
       'Balkan/Ajde Jano.mp3',
       'Balkan/Serbia/Kolo.flac',
       'Top.m4a'
     ])
-    expect(found.unsupported.map((p) => p.slice(dir.path.length + 1))).toEqual(['Old/Song.aiff'])
+    expect(found.unsupported.map(rel)).toEqual(['Old/Song.aiff'])
   })
 
   test('accepts individual files as well as folders, without duplicates', async () => {

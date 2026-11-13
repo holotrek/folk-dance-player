@@ -39,13 +39,66 @@ jobs:
       - run: npm test
       - run: npx electron-vite build
 
+  # The unit tests on Windows catch what Linux cannot: path separators, line endings and the scripts.
+  # Not a required check until the maintainer adds it to the main ruleset (CONTRIBUTING).
+  windows-check:
+    name: Unit tests (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.1.0
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npx electron-vite build
+
+  # The Microsoft Store package (Windows Store design) builds on every pull request, so a change that
+  # breaks it is seen early. It uses the repository variables STORE_IDENTITY_NAME, STORE_PUBLISHER and
+  # STORE_PUBLISHER_DISPLAY_NAME (Partner Center → the app → Product identity) when they are set, and
+  # a placeholder identity when not. The package is kept for the maintainer to upload.
+  windows-store:
+    name: Store package (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm install --global npm@12.1.0
+      - run: npm ci
+      - name: Build the Store package
+        shell: bash
+        env:
+          STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          if [ -n "$STORE_IDENTITY_NAME" ] && [ -n "$STORE_PUBLISHER" ] && [ -n "$STORE_PUBLISHER_DISPLAY_NAME" ]; then
+            node scripts/store.mts
+          else
+            echo "::notice::The STORE_* variables are not set: building with a placeholder identity (a package that cannot be submitted)."
+            node scripts/store.mts --test
+          fi
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-package
+          path: dist/*.appx
+          retention-days: 7
+          if-no-files-found: error
+
   e2e:
     name: End-to-end (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        # macOS first; ubuntu-latest (under a virtual display) and windows-latest can join later.
-        os: [macos-latest]
+        # macOS is required; windows-latest runs too but is not a required check until it is added to
+        # the main ruleset. ubuntu-latest (under a virtual display) can join later.
+        os: [macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -57,7 +110,15 @@ jobs:
       - run: npm ci
       # The Swift helper must build on macOS (sync spec §8); the release's npm run dist builds it too.
       - run: npm run build:helper
+        if: runner.os == 'macOS'
       - run: npm run test:e2e
+      # The tours as Windows runs them (no Apple Music steps), from the Mac runner; the Windows runner
+      # walks them as itself in the full run above.
+      - name: The tours as on Windows
+        if: runner.os == 'macOS'
+        run: npm run test:e2e:tour
+        env:
+          FDP_PLATFORM: windows
       - name: Keep Playwright's report of a failure
         if: failure()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

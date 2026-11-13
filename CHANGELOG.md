@@ -8,18 +8,26 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Unplugging the projector's display and plugging it back in now returns the projector view to that display, instead of sometimes swapping places with the app window.
+- **Auto-show when playing** now appears on the same display as the Projector switch (the TV or projector), not over the screen you are working on, whenever a second display is connected. It works as if you had turned the Projector switch on: moving the mouse or pressing Esc does not close it, and turning the switch off does.
+
+### Changed
+
+- The projector's **Automatic** display is now the first display the app's window is not on, so on a desktop with a monitor and a TV the projector goes to the other screen. With a laptop it still picks the external display.
+- In the Advanced tour, clicking a playlist now stops on a step that shows what is in it, with a **Next**, instead of moving on at once. The Remote control step mentions macOS's permission only on a Mac.
+- The projector view is easier to read from across the room: a heavier line separates the songs in Previously played and Up next, and Now playing (or Up next) sits on a lighter panel that stands out from the lists.
+
 ### Added
 
+- **Windows (beta).** Folk Dance Player runs on Windows 10 and later, from a per-user installer (`Folk-Dance-Player-Setup-<version>.exe`) that keeps your library in `%LOCALAPPDATA%\Folk Dance Player` and updates itself like the Mac version. Apple Music sync is a Mac feature, so the Windows app doesn't show it, and its menus, tours and wording follow Windows. The first Windows builds are not signed, so Windows SmartScreen warns before the first launch (More info → Run anyway).
 - A small photo icon now marks a song whose dance has a Canva slide or a slide image, in the library lists (Music page and Program page), Holding and the program. Hover it to see which; songs with neither show nothing.
 - Drag the right edge of a column header to resize it, on the Music page and the Program page's library list (Alt+Shift+←/→ with a header focused also works). Sizes are remembered, scale with the window, and **Reset columns** clears them along with the order.
 - A saved program can be shown in the Music page's list: choose **Show in library** in its ⋯ menu (or right-click it). The list shows the program's songs once each, numbered in program order, and you can search, sort and select within it. **Show all music** goes back.
 - The window now reopens at the size and position you left it, and maximized if it was. If the screen it was on is gone, it opens on one that is connected.
 - A **Clear** button in Previously played on the Program page stops the song that is playing and empties Previously played, so the page is ready for the next run. Songs already played stay played (nothing returns to the program) and the history is kept; the projector clears too.
 - When you allow Folk Dance Player in System Settings → Accessibility, a notice (and Settings → Remote control) offers a **Restart** button so the remote starts working; Settings also explains how to fix an Accessibility entry that looks on but doesn't work.
-
-### Changed
-
-- The projector view is easier to read from across the room: a heavier line separates the songs in Previously played and Up next, and Now playing (or Up next) sits on a lighter panel that stands out from the lists.
 
 ## [0.3.0] - 2026-11-01
 

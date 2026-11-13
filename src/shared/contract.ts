@@ -1,3 +1,4 @@
+import type { Platform } from './platform'
 import type {
   ApplePlaylistConflict,
   ApplePreview,
@@ -50,6 +51,8 @@ export interface AppInfo {
   version: string
   dbPath: string
   schemaVersion: number
+  platform: Platform
+  store?: boolean // the Microsoft Store version; absent means no
 }
 
 export interface LibraryStats {

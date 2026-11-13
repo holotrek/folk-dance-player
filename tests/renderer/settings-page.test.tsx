@@ -6,6 +6,7 @@ import { IDLE_PLAYER_STATE, type RemoteStatus } from '@shared/program'
 import { APPLE_SYNC_OFF } from '@shared/apple-sync'
 import { DEFAULT_SETTINGS, type Settings } from '@shared/settings'
 import SettingsPage from '@renderer/pages/SettingsPage'
+import { PlatformProvider } from '@renderer/platform'
 import { renderWithMantine } from './render'
 
 function fakeApi(
@@ -32,7 +33,12 @@ function fakeApi(
         return { enabled: false, open: false, mode: null, display: null, notice: null }
       }
       if (channel === 'app:getInfo')
-        return { version: '0.1.0', dbPath: '/data/folk-dance-player.sqlite', schemaVersion: 1 }
+        return {
+          version: '0.1.0',
+          dbPath: '/data/folk-dance-player.sqlite',
+          schemaVersion: 1,
+          platform: 'mac'
+        }
       if (channel === 'settings:set') {
         const [key, value] = args as [keyof Settings, unknown]
         if (key === 'autoContinue.seconds' && (value as number) < 0) {
@@ -84,6 +90,32 @@ describe('SettingsPage', () => {
     expect(toggle).toBeChecked()
     await userEvent.click(toggle)
     expect(calls).toContainEqual(['settings:set', 'updates.check', false])
+  })
+
+  test('the Microsoft Store version has no update setting: the Store updates the app', async () => {
+    const { api } = fakeApi()
+    const invoke = api.invoke
+    api.invoke = ((channel: string, ...args: unknown[]) =>
+      channel === 'app:getInfo'
+        ? Promise.resolve({
+            version: '1.4.0',
+            dbPath: '/x',
+            schemaVersion: 1,
+            platform: 'windows',
+            store: true
+          })
+        : (invoke as (c: string, ...a: unknown[]) => Promise<unknown>)(
+            channel,
+            ...args
+          )) as RendererApi['invoke']
+    renderWithMantine(
+      <PlatformProvider api={api}>
+        <SettingsPage api={api} />
+      </PlatformProvider>
+    )
+    await screen.findByText(/Folk Dance Player, version 1\.4\.0/)
+    expect(screen.queryByLabelText('Check for updates automatically')).toBeNull()
+    expect(screen.getByText(/updated by the Microsoft Store/i)).toBeInTheDocument()
   })
 
   test('saves a toggled setting', async () => {
@@ -228,7 +260,7 @@ describe('SettingsPage', () => {
     const { api, calls } = fakeApi()
     renderWithMantine(<SettingsPage api={api} />)
     // Select labels a hidden input too (like TagsInput), so find it by the value it shows.
-    const select = await screen.findByDisplayValue('Automatic (the first external display)')
+    const select = await screen.findByDisplayValue('Automatic (the first other display)')
     await userEvent.click(select)
     await userEvent.click(await screen.findByRole('option', { name: 'Epson Projector' }))
     expect(calls).toContainEqual(['projector:setDisplay', 2])

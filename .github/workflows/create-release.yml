@@ -3,8 +3,9 @@
 # 2. Build, one job per OS (a matrix, like the PR Gate's end-to-end tests): test, build the
 #    installer, check it with the end-to-end tests, keep it as an artifact.
 # 3. Publish, once every build has passed: tag vX.Y.Z and publish one GitHub release with every
-#    installer, the update files the in-app updater reads (the zip and latest-mac.yml) and the
-#    CHANGELOG notes, so a release is never half-published.
+#    installer, the update files the in-app updater reads (the macOS zip with latest-mac.yml, and
+#    the Windows installer with latest.yml) and the CHANGELOG notes, so a release is never
+#    half-published. The Windows installer is not signed.
 # A dry run (any branch) does everything but publish, and keeps the installers for a week.
 name: Create Release
 
@@ -59,15 +60,18 @@ jobs:
       fail-fast: true
       matrix:
         include:
-          # Each OS builds its own installer and the files the in-app updater reads. Windows joins
-          # with its electron-builder target, e.g. { os: windows-latest, installer: 'dist/*.exe' }
-          # (plus its latest.yml).
+          # Each OS builds its own installer and the files the in-app updater reads.
           - os: macos-latest
             installer: |
               dist/*.dmg
               dist/*.zip
               dist/*.zip.blockmap
               dist/latest-mac.yml
+          - os: windows-latest
+            installer: |
+              dist/*.exe
+              dist/*.exe.blockmap
+              dist/latest.yml
     runs-on: ${{ matrix.os }}
     # The signing certificate and Apple's notarization key are secrets of this environment.
     environment: Package
@@ -115,15 +119,36 @@ jobs:
           npm run dist -- -c.mac.identity="Evan Kaiser (AQM822PPT3)" \
             -c.mac.hardenedRuntime=true -c.mac.notarize=true
           rm -f "$APPLE_API_KEY"
-      - name: Build
-        if: runner.os != 'macOS'
+      # Windows: the installer is unsigned (the direct download warns about it on the site); the
+      # Microsoft Store version is the signed way in.
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
         run: npm run dist
-      # The in-app updater reads latest-mac.yml: a release whose feed is wrong would strand every
-      # installed copy. Checked on every run, dry runs included.
-      - name: The update feed matches the release (macOS)
-        if: runner.os == 'macOS'
+      # The in-app updater reads latest-mac.yml and latest.yml: a release whose feed is wrong would
+      # strand every installed copy. Checked on every run, dry runs included.
+      - name: The update feeds match the release
         run: node scripts/release.mts check-feed dist
       - run: npm run test:e2e:dist
+      # The Microsoft Store package: built when the Partner Center identity is set (repository
+      # variables), and kept for the maintainer to upload. It is never part of the GitHub release. After
+      # the end-to-end tests: it rewrites dist/win-unpacked with the Store version.
+      - name: Build the Store package (Windows)
+        if: runner.os == 'Windows' && vars.STORE_IDENTITY_NAME != ''
+        shell: bash
+        env:
+          STORE_IDENTITY_NAME: ${{ vars.STORE_IDENTITY_NAME }}
+          STORE_PUBLISHER: ${{ vars.STORE_PUBLISHER }}
+          STORE_PUBLISHER_DISPLAY_NAME: ${{ vars.STORE_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          node scripts/store.mts
+      - name: Keep the Store package
+        if: runner.os == 'Windows' && vars.STORE_IDENTITY_NAME != ''
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: store-package
+          path: dist/*.appx
+          retention-days: 30
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: installer-${{ matrix.os }}

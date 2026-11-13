@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 
-// Whether the Mac has an internet connection, following the browser's online and offline events.
+// Whether the computer has an internet connection, following the browser's online and offline events.
 export function useOnline(): boolean {
   const [online, setOnline] = useState(() => navigator.onLine)
   useEffect(() => {

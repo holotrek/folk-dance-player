@@ -9,7 +9,12 @@ import { InvalidSettingError, SettingsStore } from '../../../src/main/settings/s
 import { createTestDb } from '../helpers/test-db'
 import { testPlayer } from '../helpers/test-player'
 
-const appInfo = { version: '0.1.0', dbPath: '/tmp/test.sqlite', schemaVersion: 1 }
+const appInfo = {
+  version: '0.1.0',
+  dbPath: '/tmp/test.sqlite',
+  schemaVersion: 1,
+  platform: 'mac' as const
+}
 
 const summary = emptySummary()
 

@@ -1,3 +1,4 @@
+import { join } from 'node:path'
 import { describe, expect, test } from 'vitest'
 import type { CaptureStatus } from '@shared/canva'
 import { CaptureQueue } from '../../../src/main/canva/capture-queue'
@@ -61,8 +62,8 @@ describe('capturing slide images', () => {
     await queue.idle()
     expect(captured).toEqual(['P1', 'P2'])
     expect([...files.keys()]).toEqual([
-      `/data/slides/${deckId}-P1.png`,
-      `/data/slides/${deckId}-P2.png`
+      join('/data/slides', `${deckId}-P1.png`),
+      join('/data/slides', `${deckId}-P2.png`)
     ])
     expect(getDanceSlide(db, hora)).toMatchObject({
       imageUrl: expect.stringMatching(/^fdp-media:\/\/slide\//),

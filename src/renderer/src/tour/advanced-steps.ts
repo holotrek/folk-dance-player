@@ -1,5 +1,7 @@
 import { INTRO } from './text'
-import type { StepContext, TourStep } from './steps'
+import { capabilitiesFor } from '@shared/platform'
+import { resolveSteps } from './resolve'
+import type { StepContext, TourStepDef } from './steps'
 
 // The Advanced tour (tour spec §3, steps 16b–25). Its first step is the intro card, shown inside
 // the tour after "Learn more"; entered directly, the tour starts after it. The projector, deleting
@@ -10,9 +12,9 @@ import type { StepContext, TourStep } from './steps'
 const programCount = (ctx: StepContext): number => ctx.program.getState().programs.length
 const mine = (ctx: StepContext) => ctx.library.getState().playlists.filter((p) => !p.mirror)
 
-const step = (s: Omit<TourStep, 'part'>): TourStep => ({ part: 'advanced', ...s })
+const step = (s: Omit<TourStepDef, 'part'>): TourStepDef => ({ part: 'advanced', ...s })
 
-export const ADVANCED_STEPS: TourStep[] = [
+export const ADVANCED_DEFS: TourStepDef[] = [
   step({
     id: 'advanced.intro',
     page: null,
@@ -85,7 +87,12 @@ export const ADVANCED_STEPS: TourStep[] = [
     target: 'sidebar.playlist:Easy circle dances',
     placement: 'right',
     title: 'Playlists',
-    body: 'Playlists group your songs however you like, for example easy circle dances. Ones you make are yours to change.\n\nPlaylists from Apple Music are marked with a note icon. They mirror the Music app, so you cannot change them here, and anything you add in Music appears here by itself.\n\nClick Easy circle dances to see what is in it.',
+    body: (caps) =>
+      'Playlists group your songs however you like, for example easy circle dances. Ones you make are yours to change.\n\n' +
+      (caps.appleMusicSync
+        ? 'Playlists from Apple Music are marked with a note icon. They mirror the Music app, so you cannot change them here, and anything you add in Music appears here by itself.\n\n'
+        : '') +
+      'Click Easy circle dances to see what is in it.',
     done: (ctx) => {
       const { filter, playlists } = ctx.library.getState()
       const mine = playlists.find((p) => p.name === 'Easy circle dances')
@@ -93,7 +100,17 @@ export const ADVANCED_STEPS: TourStep[] = [
     }
   }),
   step({
+    id: 'advanced.playlist-contents',
+    page: 'program',
+    kind: 'explain',
+    target: 'library.table',
+    placement: 'left',
+    title: 'What is in the playlist',
+    body: 'The library now shows only the songs in Easy circle dances. Click All Music in the sidebar any time to see everything again.'
+  }),
+  step({
     id: 'advanced.open-folder',
+    when: (caps) => caps.appleMusicSync,
     page: 'music',
     kind: 'do',
     target: 'sidebar.folder:Festival 2026',
@@ -105,6 +122,7 @@ export const ADVANCED_STEPS: TourStep[] = [
   }),
   step({
     id: 'advanced.mirror',
+    when: (caps) => caps.appleMusicSync,
     page: 'music',
     kind: 'do',
     target: 'sidebar.playlist-options:Balkan night',
@@ -121,7 +139,8 @@ export const ADVANCED_STEPS: TourStep[] = [
     target: 'settings.appearance',
     placement: 'right',
     title: 'Settings: Appearance',
-    body: 'Settings holds the choices you rarely change. Appearance picks light or dark, or follows your Mac.'
+    body: (caps) =>
+      `Settings holds the choices you rarely change. Appearance picks light or dark, or follows your ${caps.computer}.`
   }),
   step({
     id: 'advanced.settings-import',
@@ -139,7 +158,9 @@ export const ADVANCED_STEPS: TourStep[] = [
     target: 'settings.remote',
     placement: 'right',
     title: 'Settings: Remote control',
-    body: 'If you use a presentation remote or keyboard media keys, they play, pause and skip songs even when the app is in the background. macOS asks you to allow it here.'
+    body: (caps) =>
+      'If you use a presentation remote or keyboard media keys, they play, pause and skip songs even when the app is in the background.' +
+      (caps.mediaKeyTrust ? ' macOS asks you to allow it here.' : '')
   }),
   step({
     id: 'advanced.settings-about',
@@ -159,3 +180,6 @@ export const ADVANCED_STEPS: TourStep[] = [
     choices: [{ id: 'done', label: 'Done' }]
   })
 ]
+
+// The tour as it reads on a Mac, with every step.
+export const ADVANCED_STEPS = resolveSteps(ADVANCED_DEFS, capabilitiesFor('mac'))

@@ -7,7 +7,7 @@ your music library, play it with auto-continue and teaching stops, and show danc
 **projector view** of what was played, what's playing (with the dance's Canva slide) and what's
 coming up — while you keep programming on your laptop.
 
-> **Status:** v0.x, feature-complete for v1 and in testing. macOS first; Windows later.
+> **Status:** v0.x, feature-complete for v1 and in testing. macOS first; Windows is in beta.
 
 ## Features
 
@@ -28,15 +28,19 @@ coming up — while you keep programming on your laptop.
    isn't signed with an Apple Developer ID yet: open **System Settings → Privacy & Security** and
    click **Open Anyway**.
 
+**Windows (beta):** download `Folk-Dance-Player-Setup-<version>.exe` and run it; it installs for your
+user only. The first Windows builds are not signed, so SmartScreen says "Windows protected your PC":
+click **More info → Run anyway**. Windows 10 or later, 64-bit.
+
 Where your things live:
 
-- **Your library:** `~/Library/Application Support/Folk Dance Player`
+- **Your library:** `~/Library/Application Support/Folk Dance Player` (Windows: `%LOCALAPPDATA%\Folk Dance Player`)
 - **Backups** (one per start, the last 5): its `backups` folder (Help → Reveal Library Backups in Finder). They copy the database only: PDFs attached to dances (`dance-notes/`) and slide images (`slide-images/`) are not in them
-- **The app log:** `~/Library/Logs/Folk Dance Player` (Help → Reveal Logs in Finder)
+- **The app log:** `~/Library/Logs/Folk Dance Player` (Help → Reveal Logs in Finder); on Windows, the `logs` folder of your library (Help → Show Logs in File Explorer)
 
 ## Getting started (developers)
 
-Requires macOS, Node 24 and npm 12.
+Requires Node 24 and npm 12 on macOS or Windows (building the Mac installer needs a Mac, and the Windows installer needs Windows).
 
 ```bash
 npm install
