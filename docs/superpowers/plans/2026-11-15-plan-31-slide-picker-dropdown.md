@@ -75,7 +75,11 @@ None expected: no e2e spec or tour step uses the slide number (the tour's practi
 
 The existing step linking a dance to a Canva slide (`pre-release-hardware.md`, line ~21) stays valid; add "pick the slide from the dropdown" wording only if the maintainer wants a real-Canva check (open question 2).
 
-## Open questions
+## Answers from the maintainer (PR #107)
+
+1. No cap: all options, search narrows. 2. Yes: hardware step 61 (appended, so nothing renumbered). 3. A typed number lists that slide first (custom `slideFilter`, digits-only search sorts the exact number first).
+
+## Open questions (answered above)
 
 1. Very long decks: leave all options in the list (default), or cap with `limit` (for example 100, typing narrows)? Default proposed: no cap.
 2. Should the hardware checklist gain a step for the picker against a real deck?
