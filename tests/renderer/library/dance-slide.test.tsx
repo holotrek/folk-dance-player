@@ -53,16 +53,76 @@ async function open(button = 'Link a slide…') {
 }
 
 describe('a dance’s Canva slide (spec §6.3)', () => {
-  test('links a slide by its number in a deck, showing the slide’s title', async () => {
+  test('links a slide chosen from the list, which shows each position and title', async () => {
     const fake = setup(null)
     const dialog = await open()
-    const number = await dialog.findByLabelText('Slide number')
-    await userEvent.clear(number)
-    await userEvent.type(number, '3')
-    expect(await dialog.findByText('Ali Paşa')).toBeInTheDocument()
+    await userEvent.click(await dialog.findByLabelText('Slide'))
+    expect(await screen.findByRole('option', { name: '1 · Ajde Jano' })).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: '2 · Untitled slide' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('option', { name: '3 · Ali Paşa' }))
     await userEvent.click(dialog.getByRole('button', { name: 'Link' }))
     expect(fake.callsTo('canva:linkSlide')).toEqual([[11, 4, 3]])
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+  })
+
+  test('an untitled slide can be linked by its position', async () => {
+    const fake = setup(null)
+    const dialog = await open()
+    await userEvent.click(await dialog.findByLabelText('Slide'))
+    await userEvent.click(await screen.findByRole('option', { name: '2 · Untitled slide' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Link' }))
+    expect(fake.callsTo('canva:linkSlide')).toEqual([[11, 4, 2]])
+  })
+
+  test('typing narrows the list by title, and says when nothing matches', async () => {
+    setup(null)
+    const dialog = await open()
+    const field = await dialog.findByLabelText('Slide')
+    await userEvent.click(field)
+    await userEvent.clear(field)
+    await userEvent.type(field, 'pa')
+    expect(await screen.findByRole('option', { name: '3 · Ali Paşa' })).toBeInTheDocument()
+    expect(screen.queryByRole('option', { name: '1 · Ajde Jano' })).toBeNull()
+    await userEvent.clear(field)
+    await userEvent.type(field, 'zzz')
+    expect(await screen.findByText('No slides match')).toBeInTheDocument()
+  })
+
+  test('a typed number lists that slide first, then others containing it', async () => {
+    const many = Array.from({ length: 120 }, (_, i) => ({
+      id: `Q${i + 1}`,
+      title: `Dance ${i + 1}`
+    }))
+    setup(null, { 'canva:deckPages': many })
+    const dialog = await open()
+    const field = await dialog.findByLabelText('Slide')
+    await userEvent.click(field)
+    await userEvent.clear(field)
+    await userEvent.type(field, '12')
+    const options = await screen.findAllByRole('option')
+    expect(options[0]).toHaveTextContent('12 · Dance 12')
+    expect(options.map((o) => o.textContent)).toContain('112 · Dance 112')
+  })
+
+  test('a re-read that removes the picked slide clears the pick instead of linking another', async () => {
+    let refreshed = false
+    let finish!: () => void
+    setup(null, {
+      'canva:refreshDecks': () =>
+        new Promise((resolve) => {
+          finish = () => {
+            refreshed = true
+            resolve({ decks: 1, formatChanged: 0, unreachable: 0 })
+          }
+        }),
+      'canva:deckPages': () => (refreshed ? pages.filter((p) => p.id !== 'P3') : pages)
+    })
+    const dialog = await open()
+    await userEvent.click(await dialog.findByLabelText('Slide'))
+    await userEvent.click(await screen.findByRole('option', { name: '3 · Ali Paşa' }))
+    expect(dialog.getByRole('button', { name: 'Link' })).toBeEnabled()
+    await act(async () => finish())
+    await waitFor(() => expect(dialog.getByRole('button', { name: 'Link' })).toBeDisabled())
   })
 
   test('opening the dialog re-reads the decks, so the slide numbers follow an edit made in Canva', async () => {
@@ -76,16 +136,15 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
         refreshed ? [{ id: 'PNEW', title: 'Added in Canva' }, ...pages] : pages
     })
     const dialog = await open()
-    expect(await dialog.findByText('Added in Canva')).toBeInTheDocument()
+    await waitFor(() => expect(dialog.getByLabelText('Slide')).toHaveValue('1 · Added in Canva'))
     expect(fake.callsTo('canva:refreshDecks')).toHaveLength(1)
-    expect(dialog.getByText('1 to 4')).toBeInTheDocument()
+    expect(dialog.getByLabelText('Slide')).toHaveValue('1 · Added in Canva')
   })
 
-  test('Change… starts on the slide’s current number in its deck', async () => {
+  test('Change… starts on the slide’s current place in its deck', async () => {
     setup(linked)
     const dialog = await open('Change…')
-    expect(await dialog.findByLabelText('Slide number')).toHaveValue('3')
-    expect(await dialog.findByText('Ali Paşa')).toBeInTheDocument()
+    await waitFor(() => expect(dialog.getByLabelText('Slide')).toHaveValue('3 · Ali Paşa'))
   })
 
   test('Change… follows the slide to its new number when the deck was edited in Canva', async () => {
@@ -99,11 +158,10 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
         refreshed ? [{ id: 'PNEW', title: 'Added in Canva' }, ...pages] : pages
     })
     const dialog = await open('Change…')
-    await waitFor(() => expect(dialog.getByLabelText('Slide number')).toHaveValue('4'))
-    expect(dialog.getByText('Ali Paşa')).toBeInTheDocument()
+    await waitFor(() => expect(dialog.getByLabelText('Slide')).toHaveValue('4 · Ali Paşa'))
   })
 
-  test('a number typed before the check finishes is kept', async () => {
+  test('a slide picked before the check finishes is kept', async () => {
     let done = false
     let finish!: () => void
     setup(linked, {
@@ -117,20 +175,18 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
       'canva:deckPages': () => (done ? [{ id: 'PNEW', title: 'Added' }, ...pages] : pages)
     })
     const dialog = await open('Change…')
-    const number = await dialog.findByLabelText('Slide number')
-    await waitFor(() => expect(number).toHaveValue('3'))
-    await userEvent.clear(number)
-    await userEvent.type(number, '2')
+    const field = await dialog.findByLabelText('Slide')
+    await waitFor(() => expect(field).toHaveValue('3 · Ali Paşa'))
+    await userEvent.click(field)
+    await userEvent.click(await screen.findByRole('option', { name: '1 · Ajde Jano' }))
     await act(async () => finish())
-    await dialog.findByText('1 to 4')
-    expect(number).toHaveValue('2')
+    await waitFor(() => expect(field).toHaveValue('2 · Ajde Jano'))
   })
 
-  test('a slide that is no longer in its deck leaves the number at 1', async () => {
+  test('a slide that is no longer in its deck starts on the first slide', async () => {
     setup({ ...linked, pageId: 'GONE', position: null, status: 'missing', title: null })
     const dialog = await open('Change…')
-    expect(await dialog.findByLabelText('Slide number')).toHaveValue('1')
-    expect(await dialog.findByText('Ajde Jano')).toBeInTheDocument()
+    await waitFor(() => expect(dialog.getByLabelText('Slide')).toHaveValue('1 · Ajde Jano'))
   })
 
   test('says so while it checks Canva, and when it could not reach Canva', async () => {
@@ -148,7 +204,7 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
       await dialog.findByText(/Couldn't reach Canva.*showing the last saved slide list/)
     ).toBeInTheDocument()
     expect(dialog.queryByText('Checking Canva for changes…')).toBeNull()
-    expect(await dialog.findByText('Ajde Jano')).toBeInTheDocument()
+    expect(await dialog.findByDisplayValue('1 · Ajde Jano')).toBeInTheDocument()
   })
 
   test('still works from the saved list when the check fails', async () => {
@@ -158,7 +214,7 @@ describe('a dance’s Canva slide (spec §6.3)', () => {
       }
     })
     const dialog = await open()
-    expect(await dialog.findByText('Ajde Jano')).toBeInTheDocument()
+    expect(await dialog.findByDisplayValue('1 · Ajde Jano')).toBeInTheDocument()
     expect(dialog.queryByRole('alert')).toBeNull()
     expect(dialog.queryByText('Checking Canva for changes…')).toBeNull()
   })

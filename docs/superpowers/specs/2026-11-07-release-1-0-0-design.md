@@ -61,6 +61,7 @@ The GitHub issue (in the table in §2) holds the original request.
 | 3.7 | Show a saved program as a filtered set in the library | #83 | `list.ts`, library store, `ProgramsSection` | Not started |
 | 3.8 | Auto-show and the Projector switch | #71 | `ProjectorController`, player bar | **Decision only** |
 | 3.9 | Resizable columns in the Music and Program tables | #81 | `LibraryTable`, settings | Done |
+| 3.10 | Pick a dance's slide from a searchable list | #106 | `SlideLinkDialog` | Built (Plan 31) |
 
 ## 3. Details
 
@@ -320,6 +321,36 @@ the table's width.
 - **Keyboard:** Alt+Shift+←/→ on a focused header resizes by 1% (the issue's suggestion; next to
   Alt+←/→ for order).
 - **Reset columns** (the header's right-click item) clears order and sizes both.
+
+### 3.10 Pick a dance's slide from a searchable list (#106)
+
+**Problem.** The slide link dialog asks for a slide number and then shows that slide's title, so
+the organizer must already know the number, and a wrong number is found only by reading the title
+beside it. The app already holds every slide's title for the deck.
+
+**Decided (the issue and the maintainer's answers).** Replace the number box with a searchable
+dropdown, **Slide**, of the deck's slides. Options read "12 · Hava Nagila" (position, then title);
+a slide with no title reads "12 · Untitled slide", so it is pickable by position. Typing narrows the
+list by any part of that text.
+
+**Behavior.**
+
+- **All slides are listed, search narrows them.** No cap and no virtualization: a deck of a few
+  hundred slides is fine for the dropdown.
+- **A typed number lists that slide first.** "12" shows slide 12 before 112 and 120 (a custom
+  filter; the rest keep deck order).
+- **The saved link is still the page ID.** The option's value is the page ID; the position is
+  looked up from the deck's current list when Link is pressed and sent to the unchanged
+  `canva:linkSlide`. No channel, main or migration change.
+- **Starting point:** Change… starts on the dance's slide, by page ID, so after the deck is
+  re-read and renumbered the selection (and its number) follows it until the person picks another.
+  A slide gone from its deck, or a new deck, starts on the first slide; a pick that has left the
+  deck is cleared (Link disabled) rather than linking a different slide.
+- **Stays usable while the deck is re-read** ("Checking Canva for changes…" and the saved-list
+  notice are unchanged). An empty deck disables the picker.
+- **Hardware checklist:** a new step (61) checks the picker against a real deck: titles, an
+  untitled slide, narrowing, the number rule, linking and Change…, and following a slide moved in
+  Canva.
 
 ## 4. Data changes
 
